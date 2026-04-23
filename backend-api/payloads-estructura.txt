@@ -1,0 +1,174 @@
+# Estructura de Payloads por Endpoint
+
+---
+
+## USUARIOS (Admin)
+{
+  "nombre": "string (max 100)",
+  "apellido": "string (max 100)",
+  "email": "string (email, max 100)",
+  "dni": "string (max 20, único, opcional)",
+  "telefono": "string (max 20, opcional)",
+  "password": "string",
+  "id_rol": "integer (existe en rol)",
+  "estado": "Activo | Inactivo | Suspendido"
+}
+
+---
+
+## MÓDULOS (Admin)
+{
+  "id_curso": "integer (existe en cursos)",
+  "titulo": "string (max 100)",
+  "descripcion": "string (opcional)",
+  "orden": "integer (min 1)",
+  "estado": "Activo | Inactivo | Borrador",
+  "fecha_creacion": "date (opcional)",
+  "fecha_actualizacion": "date (opcional)"
+}
+
+---
+
+## MATERIALES (Admin)
+{
+  "id_modulo": "integer (existe en modulos)",
+  "nombre": "string (max 100)",
+  "descripcion": "string (opcional)",
+  "tipo": "PDF | DOC | PPT | Imagen | Otro",
+  "url_archivo": "string (max 255)",
+  "tamanio": "integer (opcional, min 0)",
+  "fecha_creacion": "date (opcional)"
+}
+
+---
+
+## CURSOS (Admin)
+{
+  "nombre": "string (max 100)",
+  "descripcion": "string (opcional)",
+  "imagen": "string (max 255, opcional)",
+  "duracion": "integer",
+  "precio": "decimal",
+  "nivel": "Principiante | Intermedio | Avanzado",
+  "estado": "Publicado | Archivado",
+  "destacado": "boolean",
+  "fecha_creacion": "date (opcional)",
+  "fecha_actualizacion": "date (opcional)"
+}
+
+---
+
+## RUTAS ACADÉMICAS
+{
+  "nombre": "string (max 100)",
+  "descripcion": "string (opcional)",
+  "id_linea_academica": "integer (existe en lineas_academicas)",
+  "imagen": "string (max 255, opcional)",
+  "horas_totales": "integer (min 1)",
+  "nivel": "Principiante | Intermedio | Avanzado",
+  "precio": "decimal (min 0)",
+  "estado": "Activa | Inactiva | Borrador",
+  "destacado": "boolean"
+}
+
+---
+
+## LÍNEAS ACADÉMICAS
+{
+  "nombre": "string (max 100, único)",
+  "descripcion": "string (opcional)",
+  "imagen": "string (max 255, opcional)",
+  "estado": "Publicado | Archivado"
+}
+
+---
+
+## PAGOS
+{
+  "id_tipo_pago": "integer (existe en tipos_pagos)",
+  "monto": "decimal (min 0.01, max 10000)",
+  "concepto": "string (max 255)",
+  "referencia_externa": "string (max 100, opcional)",
+  "detalles_transaccion": "string (opcional)"
+}
+
+---
+
+## CONTACTO
+{
+  "nombre": "string (max 100)",
+  "apellido": "string (max 100)",
+  "email": "string (email, max 100)",
+  "asunto": "string (max 255)",
+  "mensaje": "string",
+  "telefono": "string (max 20, opcional)"
+}
+
+---
+
+## EVALUACIONES (Admin)
+{
+  "id_curso": "integer (existe en cursos)",
+  "titulo": "string (max 100)",
+  "descripcion": "string (opcional)",
+  "puntuacion_requerida": "decimal (min 0, max 100)",
+  "duracion": "integer (min 1, opcional)",
+  "intentos_maximos": "integer (min 1)",
+  "estado": "Publicado | Archivado"
+}
+
+---
+
+## PREGUNTAS (Admin)
+{
+  "id_evaluacion": "integer (existe en evaluaciones)",
+  "texto_pregunta": "string",
+  "tipo": "Opcion multiple | Verdadero/Falso | Texto libre",
+  "puntos": "decimal (min 0.1)",
+  "orden": "integer (min 1)"
+}
+
+---
+
+## OPCIONES DE RESPUESTA (Admin)
+{
+  "id_pregunta": "integer (existe en preguntas)",
+  "texto_opcion": "string",
+  "es_correcta": "boolean"
+}
+
+---
+
+## LECCIONES (Admin)
+{
+  "id_modulo": "integer (existe en modulos)",
+  "titulo": "string (max 100)",
+  "descripcion": "string (opcional)",
+  "url_video": "string (max 255, opcional)",
+  "duracion": "integer (opcional)",
+  "orden": "integer",
+  "estado": "Archivado | Publicado",
+  "fecha_creacion": "date (opcional)",
+  "fecha_actualizacion": "date (opcional)"
+}
+
+---
+
+## COMENTARIOS LECCIÓN
+{
+  "mensaje": "string",
+  "id_usuario": "integer (existe en usuarios)"
+}
+
+---
+
+## TIPOS DE PAGO (Admin)
+{
+  "nombre": "string (max 50)",
+  "descripcion": "string (opcional)",
+  "activo": "boolean",
+  "comision": "decimal",
+  "codigo_referencia": "string (max 20, único)"
+}
+
+---

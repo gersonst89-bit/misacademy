@@ -1,0 +1,17 @@
+# Node / Frontend
+node_modules/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Laravel / Backend
+vendor/
+.env
+.env.*
+/storage/*.key
+/public/storage
+
+# Sistema
+.DS_Store
+Thumbs.db

@@ -1,0 +1,147 @@
+/* ResultsScreen.module.css - Temática frontend limpia y moderna */
+
+.results-dashboard {
+  min-height: 100vh;
+  width: 100vw;
+  background: #0D1A28;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.results-card {
+  width: 100%;
+  max-width: 700px;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(33,150,243,0.07);
+  padding: 2.2rem 2.2rem 1.5rem 2.2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  animation: fadeInUp 0.7s cubic-bezier(.23,1.01,.32,1) both;
+  border: 1px solid #2196f3;
+  position: relative;
+  padding-top: 5rem;
+}
+.results-card-icon {
+  position: absolute;
+  top: -28px;
+  left: 32px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(33,150,243,0.2);
+  padding: 8px;
+  border: 4px solid #2196f3;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+}
+.icon-passed svg, .icon-failed svg {
+  display: block;
+}
+.results-card-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 2.5rem;
+  margin-bottom: 1.2rem;
+  margin-top: 1.2rem;
+}
+.results-card-status {
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: #222;
+}
+.results-card-score {
+  font-size: 3.2rem;
+  font-weight: 800;
+  color: #2196f3;
+}
+.results-card-stats {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  gap: 1.2rem;
+  margin-bottom: 2rem;
+}
+.results-stat {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 1.08rem;
+  color: #222;
+  background: #f4f7fb;
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+  box-shadow: 0 2px 8px rgba(33,150,243,0.04);
+  border: 1px solid #e3e8ee;
+}
+.stat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.results-card-actions {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+.results-card-actions button {
+  background: #2196f3;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.8rem 1.7rem;
+  font-size: 1.08rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.results-card-actions button:hover {
+  background: #1769aa;
+}
+.btn-passed {
+  background: #2196f3 !important;
+}
+.btn-passed:hover {
+  background: #1769aa !important;
+}
+.btn-failed {
+  background: #2196f3 !important;
+}
+.btn-failed:hover {
+  background: #1769aa !important;
+}
+.btn-secondary {
+  background: #0D1A28 !important;
+  color: #fff !important;
+}
+.btn-secondary:hover {
+  background: #1769aa !important;
+}
+.btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -1,0 +1,8 @@
+# Deshabilitar listado de archivos
+Options -Indexes
+
+# Permitir acceso solo a imágenes
+<FilesMatch "\.(jpg|jpeg|png)$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>

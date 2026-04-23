@@ -1,0 +1,524 @@
+---
+
+## CURSOS
+
+### Público
+- GET `/api/cursos`  (sin payload)
+- GET `/api/cursos/destacados`  (sin payload)
+- GET `/api/cursos/buscar`  (sin payload)
+- GET `/api/cursos/{id}`  (sin payload)
+- POST `/api/cursos/{id}/comprar`  (requiere payload, autenticado)
+
+### Admin
+- POST `/api/admin/cursos`  (requiere payload)
+- PUT `/api/admin/cursos/{id}`  (requiere payload)
+- PATCH `/api/admin/cursos/{id}/estado`  (requiere payload)
+
+---
+
+## CONTACTO
+
+**Enviar contacto**
+- Método: POST
+- URL: /api/contacto
+- Payload:
+{
+  "nombre": "Ana",
+  "apellido": "García",
+  "email": "ana.garcia@email.com",
+  "asunto": "Consulta sobre cursos",
+  "mensaje": "Quisiera saber más sobre el curso de Python.",
+  "telefono": "999888777"
+}
+
+---
+
+## RUTAS ACADÉMICAS
+
+- GET `/api/rutas`  (sin payload)
+- GET `/api/rutas/destacadas`  (sin payload)
+- GET `/api/rutas/buscar`  (sin payload)
+- GET `/api/rutas/{id}`  (sin payload)
+- POST `/api/rutas`  (requiere payload)
+- PUT `/api/rutas/{id}`  (requiere payload)
+- DELETE `/api/rutas/{id}`  (sin payload)
+
+---
+
+## LÍNEAS ACADÉMICAS
+
+- GET `/api/lineas`  (sin payload)
+- GET `/api/lineas/{id}`  (sin payload)
+- POST `/api/lineas`  (requiere payload)
+- PUT `/api/lineas/{id}`  (requiere payload)
+- DELETE `/api/lineas/{id}`  (sin payload)
+
+---
+
+## PAGOS
+
+- POST `/api/pagos`  (requiere payload, autenticado)
+- GET `/api/pagos/historial`  (sin payload, autenticado)
+- GET `/api/pagos`  (sin payload, autenticado)
+- PUT `/api/pagos/{id}/estado`  (requiere payload, autenticado)
+
+---
+
+## TIPOS DE PAGO
+
+- GET `/api/tipos-pagos`  (sin payload)
+- POST `/api/tipos-pagos`  (requiere payload, autenticado)
+- PUT `/api/tipos-pagos/{id}`  (requiere payload, autenticado)
+- PUT `/api/tipos-pagos/{id}/activar`  (requiere payload, autenticado)
+
+---
+
+## LECCIONES
+
+### Público
+- GET `/api/lecciones`  (sin payload)
+- GET `/api/lecciones/{id}`  (sin payload)
+- GET `/api/lecciones/modulo/{id_modulo}`  (sin payload)
+- GET `/api/lecciones/{id}/materiales`  (sin payload, autenticado)
+- GET `/api/lecciones/{id}/comentarios`  (sin payload, autenticado)
+- POST `/api/lecciones/{id}/comentarios`  (requiere payload, autenticado)
+
+### Admin
+- GET `/api/admin/lecciones`  (sin payload)
+- GET `/api/admin/lecciones/{id}`  (sin payload)
+- POST `/api/admin/lecciones`  (requiere payload)
+- PUT `/api/admin/lecciones/{id}`  (requiere payload)
+- DELETE `/api/admin/lecciones/{id}`  (sin payload)
+- PATCH `/api/admin/lecciones/{id}/estado`  (requiere payload)
+
+---
+
+## EVALUACIONES (Admin)
+
+- GET `/api/admin/evaluaciones`  (sin payload)
+- POST `/api/admin/evaluaciones`  (requiere payload)
+- GET `/api/admin/evaluaciones/{id}`  (sin payload)
+- PUT `/api/admin/evaluaciones/{id}`  (requiere payload)
+- DELETE `/api/admin/evaluaciones/{id}`  (sin payload)
+
+**Crear evaluación**
+- Método: POST
+- URL: /api/admin/evaluaciones
+- Payload:
+{
+  "id_curso": 1,
+  "titulo": "Evaluación Final",
+  "descripcion": "Examen de cierre",
+  "puntuacion_requerida": 80,
+  "duracion": 60,
+  "intentos_maximos": 2,
+  "estado": "Publicado"
+}
+
+**Actualizar evaluación**
+- Método: PUT
+- URL: /api/admin/evaluaciones/{id}
+- Payload:
+{
+  "id_curso": 1,
+  "titulo": "Evaluación Final",
+  "descripcion": "Examen de cierre",
+  "puntuacion_requerida": 80,
+  "duracion": 60,
+  "intentos_maximos": 2,
+  "estado": "Publicado"
+}
+
+---
+
+## PREGUNTAS (Admin)
+
+**Crear pregunta**
+- Método: POST
+- URL: /api/admin/preguntas
+- Payload:
+{
+  "id_evaluacion": 1,
+  "texto_pregunta": "¿Cuál es la capital de Francia?",
+  "tipo": "Opcion multiple",
+  "puntos": 1,
+  "orden": 1
+}
+
+**Actualizar pregunta**
+- Método: PUT
+- URL: /api/admin/preguntas/{pregunta}
+- Payload:
+{
+  "id_evaluacion": 1,
+  "texto_pregunta": "¿Cuál es la capital de Francia?",
+  "tipo": "Opcion multiple",
+  "puntos": 1,
+  "orden": 1
+}
+
+---
+
+## OPCIONES DE RESPUESTA (Admin)
+
+**Crear opción de respuesta**
+- Método: POST
+- URL: /api/admin/opciones-respuesta
+- Payload:
+{
+  "id_pregunta": 1,
+  "texto_opcion": "París",
+  "es_correcta": true
+}
+
+**Actualizar opción de respuesta**
+- Método: PUT
+- URL: /api/admin/opciones-respuesta/{opcionRespuesta}
+- Payload:
+{
+  "id_pregunta": 1,
+  "texto_opcion": "París",
+  "es_correcta": true
+}
+
+---
+
+# Endpoints y Ejemplos de Payloads (agrupados por recurso)
+
+---
+
+## MÓDULOS
+
+### Público
+- GET `/api/modulos`  (sin payload)
+- GET `/api/modulos/{id}`  (sin payload)
+
+### Admin (protegido)
+- GET `/api/admin/modulos`  (sin payload)
+- POST `/api/admin/modulos`  (requiere payload)
+  Payload:
+  {
+    "id_curso": 1,
+    "titulo": "Módulo 1",
+    "descripcion": "Descripción del módulo",
+    "orden": 1,
+    "estado": "Activo",
+    "fecha_creacion": "2025-10-15",
+    "fecha_actualizacion": "2025-10-15"
+  }
+- GET `/api/admin/modulos/{id}`  (sin payload)
+- PUT `/api/admin/modulos/{id}`  (requiere payload)
+  Payload:
+  {
+    "id_curso": 1,
+    "titulo": "Módulo 1",
+    "descripcion": "Descripción del módulo",
+    "orden": 1,
+    "estado": "Activo",
+    "fecha_creacion": "2025-10-15",
+    "fecha_actualizacion": "2025-10-15"
+  }
+- DELETE `/api/admin/modulos/{id}`  (sin payload)
+
+---
+
+## MATERIALES
+
+### Público
+- GET `/api/materiales`  (sin payload)
+- GET `/api/materiales/{id}`  (sin payload)
+
+### Admin (protegido)
+- GET `/api/admin/materiales`  (sin payload)
+- POST `/api/admin/materiales`  (requiere payload)
+  Payload:
+  {
+    "id_modulo": 1,
+    "nombre": "Material de ejemplo",
+    "descripcion": "Descripción del material",
+    "tipo": "PDF",
+    "url_archivo": "https://ejemplo.com/archivo.pdf",
+    "tamanio": 2048,
+    "fecha_creacion": "2025-10-15"
+  }
+- GET `/api/admin/materiales/{id}`  (sin payload)
+- PUT `/api/admin/materiales/{id}`  (requiere payload)
+  Payload:
+  {
+    "id_modulo": 1,
+    "nombre": "Material de ejemplo",
+    "descripcion": "Descripción del material",
+    "tipo": "PDF",
+    "url_archivo": "https://ejemplo.com/archivo.pdf",
+    "tamanio": 2048,
+    "fecha_creacion": "2025-10-15"
+  }
+- DELETE `/api/admin/materiales/{id}`  (sin payload)
+
+---
+
+## USUARIOS (Admin)
+
+- GET `/api/admin/usuarios`  (sin payload)
+- POST `/api/admin/usuarios`  (requiere payload)
+  Payload:
+  {
+    "nombre": "Juan",
+    "apellido": "Pérez",
+    "email": "juan.perez@email.com",
+    "dni": "12345678",
+    "telefono": "987654321",
+    "password": "Password123!",
+    "id_rol": 2,
+    "estado": "Activo"
+  }
+- PUT `/api/admin/usuarios/{id}`  (requiere payload)
+  Payload:
+  {
+    "nombre": "Juan",
+    "apellido": "Pérez",
+    "email": "juan.perez@email.com",
+    "dni": "12345678",
+    "telefono": "987654321",
+    "password": "Password123!",
+    "id_rol": 2,
+    "estado": "Activo"
+  }
+- DELETE `/api/admin/usuarios/{id}`  (sin payload)
+- DELETE `/api/admin/usuarios/{id}/force`  (sin payload)
+
+---
+
+# Ejemplo de payload para endpoints que reciben datos
+
+## RUTAS ACADÉMICAS
+
+**Crear ruta académica**
+- Método: POST
+- URL: /api/rutas
+- Payload:
+{
+  "nombre": "Ruta de Aprendizaje",
+  "descripcion": "Descripción de la ruta",
+  "id_linea_academica": 1,
+  "imagen": "https://ejemplo.com/imagen.png",
+  "horas_totales": 40,
+  "nivel": "Intermedio",
+  "precio": 199.99,
+  "estado": "Activa",
+  "destacado": true
+}
+
+**Actualizar ruta académica**
+- Método: PUT
+- URL: /api/rutas/{id}
+- Payload:
+{
+  "nombre": "Ruta de Aprendizaje",
+  "descripcion": "Descripción de la ruta",
+  "id_linea_academica": 1,
+  "imagen": "https://ejemplo.com/imagen.png",
+  "horas_totales": 40,
+  "nivel": "Intermedio",
+  "precio": 199.99,
+  "estado": "Activa",
+  "destacado": true
+}
+
+---
+
+## LÍNEAS ACADÉMICAS
+
+**Crear línea académica**
+- Método: POST
+- URL: /api/lineas
+- Payload:
+{
+  "nombre": "Ciencia de Datos",
+  "descripcion": "Descripción de la línea",
+  "imagen": "https://ejemplo.com/linea.png",
+  "estado": "Publicado"
+}
+
+**Actualizar línea académica**
+- Método: PUT
+- URL: /api/lineas/{id}
+- Payload:
+{
+  "nombre": "Ciencia de Datos",
+  "descripcion": "Descripción de la línea",
+  "imagen": "https://ejemplo.com/linea.png",
+  "estado": "Publicado"
+}
+
+---
+
+## PAGOS
+
+**Registrar pago**
+- Método: POST
+- URL: /api/pagos
+- Payload:
+{
+  "id_tipo_pago": 1,
+  "monto": 150.00,
+  "concepto": "Compra de curso",
+  "referencia_externa": "ABC123",
+  "detalles_transaccion": "Pago realizado vía Yape"
+}
+
+**Actualizar estado de pago**
+- Método: PUT
+- URL: /api/pagos/{id}/estado
+- Payload:
+{
+  "estado": "Aprobado"
+}
+
+---
+
+## MÓDULOS (Admin)
+
+**Crear módulo**
+- Método: POST
+- URL: /api/admin/modulos
+- Payload:
+{
+  "id_curso": 1,
+  "titulo": "Módulo 1",
+  "descripcion": "Descripción del módulo",
+  "orden": 1,
+  "estado": "Activo",
+  "fecha_creacion": "2025-10-15",
+  "fecha_actualizacion": "2025-10-15"
+}
+
+**Actualizar módulo**
+- Método: PUT
+- URL: /api/admin/modulos/{id}
+- Payload:
+{
+  "id_curso": 1,
+  "titulo": "Módulo 1",
+  "descripcion": "Descripción del módulo",
+  "orden": 1,
+  "estado": "Activo",
+  "fecha_creacion": "2025-10-15",
+  "fecha_actualizacion": "2025-10-15"
+}
+
+---
+
+## MATERIALES (Admin)
+
+**Crear material**
+- Método: POST
+- URL: /api/admin/materiales
+- Payload:
+{
+  "id_modulo": 1,
+  "nombre": "Material de ejemplo",
+  "descripcion": "Descripción del material",
+  "tipo": "PDF",
+  "url_archivo": "https://ejemplo.com/archivo.pdf",
+  "tamanio": 2048,
+  "fecha_creacion": "2025-10-15"
+}
+
+**Actualizar material**
+- Método: PUT
+- URL: /api/admin/materiales/{id}
+- Payload:
+{
+  "id_modulo": 1,
+  "nombre": "Material de ejemplo",
+  "descripcion": "Descripción del material",
+  "tipo": "PDF",
+  "url_archivo": "https://ejemplo.com/archivo.pdf",
+  "tamanio": 2048,
+  "fecha_creacion": "2025-10-15"
+}
+
+---
+
+## CURSOS (Admin)
+
+**Crear curso**
+- Método: POST
+- URL: /api/admin/cursos
+- Payload:
+{
+  "nombre": "Curso de Python",
+  "descripcion": "Aprende Python desde cero",
+  "imagen": "https://ejemplo.com/python.png",
+  "duracion": 40,
+  "precio": 199.99,
+  "nivel": "Intermedio",
+  "estado": "Publicado",
+  "destacado": true,
+  "fecha_creacion": "2025-10-15",
+  "fecha_actualizacion": "2025-10-15"
+}
+
+**Actualizar curso**
+- Método: PUT
+- URL: /api/admin/cursos/{id}
+- Payload:
+{
+  "nombre": "Curso de Python",
+  "descripcion": "Aprende Python desde cero",
+  "imagen": "https://ejemplo.com/python.png",
+  "duracion": 40,
+  "precio": 199.99,
+  "nivel": "Intermedio",
+  "estado": "Publicado",
+  "destacado": true,
+  "fecha_creacion": "2025-10-15",
+  "fecha_actualizacion": "2025-10-15"
+}
+
+---
+
+## LECCIONES (Admin)
+
+**Actualizar estado de lección**
+- Método: PATCH
+- URL: /api/admin/lecciones/{id}/estado
+- Payload:
+{
+  "estado": "Publicado"
+}
+
+## TIPOS DE PAGO (Admin)
+
+**Activar/desactivar tipo de pago**
+- Método: PUT
+- URL: /api/tipos-pagos/{id}/activar
+- Payload:
+{
+  "activo": true
+}
+
+## CURSOS
+
+**Comprar curso**
+- Método: POST
+- URL: /api/cursos/{id}/comprar
+- Payload:
+{
+  "id_usuario": 1,
+  "id_curso": 2,
+  "metodo_pago": "Yape"
+}
+
+## LECCIONES
+
+**Agregar comentario a lección**
+- Método: POST
+- URL: /api/lecciones/{id}/comentarios
+- Payload:
+{
+  "mensaje": "Excelente explicación!",
+  "id_usuario": 1
+}
+

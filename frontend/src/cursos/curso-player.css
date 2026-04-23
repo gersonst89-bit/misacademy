@@ -1,0 +1,477 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap');
+
+.cp-container{
+  --bg:#050B14;
+  --panel:#050F1F;
+  --panel2:#071526;
+  --line:#12324B;
+  --primary:#38BDF8;   /* azul tipo sky-400 */
+  --sky:#38BDF8;
+  --muted:#9CB3C2;
+  --text:#EAF6FF;
+  --badge:#1D4ED8;
+
+  color:var(--text);
+  background: var(--bg);
+  min-height: 100vh;
+  font-family: 'Montserrat', system-ui, sans-serif;
+  padding: 24px 16px 64px;
+}
+
+.cp-container a{
+  color: var(--sky);
+}
+.muted{
+  color: var(--muted);
+}
+
+.cp-loading,
+.cp-error{
+  max-width: 1100px;
+  margin: 60px auto;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:24px;
+  text-align:center;
+}
+.cp-error .cp-back button{
+  margin-top:12px;
+  background:var(--primary);
+  color:#00111a;
+  font-weight:800;
+  border:0;
+  padding:10px 16px;
+  border-radius:10px;
+  cursor:pointer;
+}
+
+/* Header */
+.cp-header{
+  max-width:1100px;
+  margin:0 auto 12px;
+}
+.cp-breadcrumbs{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  color:var(--muted);
+  font-size:12px;
+}
+.cp-title{
+  font-size:28px;
+  font-weight:800;
+  margin:4px 0 8px;
+  letter-spacing:-0.5px;
+}
+
+/* Grid principal */
+.cp-grid{
+  max-width:1100px;
+  margin:16px auto 0;
+  display:grid;
+  grid-template-columns: 1.7fr 1fr;
+  gap:18px;
+}
+@media (max-width: 1024px){
+  .cp-grid{ grid-template-columns:1fr; }
+}
+
+.cp-left{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+/* Player */
+.cp-player-card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:16px;
+  overflow:hidden;
+}
+.cp-video{
+  position:relative;
+  aspect-ratio:16/9;
+  background: #000;
+}
+.cp-video iframe{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  border:0;
+}
+
+/* Badge de video demo */
+.cp-demo-pill{
+  position:absolute;
+  top:12px;
+  left:12px;
+  padding:4px 10px;
+  border-radius:999px;
+  background:rgba(56,189,248,0.1); /* sky-400 con transparencia */
+  border:1px solid rgba(56,189,248,0.7);
+  font-size:11px;
+  font-weight:600;
+  color:var(--primary);
+  z-index:2;
+}
+
+.cp-video-placeholder{
+  display:grid;
+  place-items:center;
+  height:100%;
+  color:var(--muted);
+}
+
+.cp-video-info{
+  padding:14px 16px 18px;
+  border-top:1px solid var(--line);
+}
+.cp-lesson-title{
+  font-size:18px;
+  font-weight:800;
+  margin:0 0 8px;
+}
+.cp-meta{
+  font-size:12px;
+  color:var(--muted);
+}
+
+/* Comentarios */
+.cp-comments{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:14px;
+}
+.cp-comments h3{
+  margin:2px 4px 8px;
+  font-size:16px;
+  font-weight:800;
+}
+.cp-comment-new{
+  display:flex;
+  gap:10px;
+}
+.cp-comment-new textarea{
+  flex:1;
+  background:var(--panel2);
+  border:1px solid var(--line);
+  color:var(--text);
+  padding:10px;
+  border-radius:10px;
+  min-height:68px;
+  resize:vertical;
+}
+.cp-comment-new button{
+  align-self:flex-end;
+  background:var(--primary);
+  color:#00111a;
+  border:0;
+  padding:10px 14px;
+  border-radius:10px;
+  font-weight:800;
+  cursor:pointer;
+}
+.cp-comment-new button:disabled{
+  opacity:0.6;
+  cursor:not-allowed;
+}
+.cp-comment-list{
+  margin-top:10px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.cp-com-item{
+  display:flex;
+  gap:10px;
+}
+.cp-com-item.reply{
+  margin-left:40px;
+}
+.cp-com-avatar{
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  background:#0f2b46;
+  display:grid;
+  place-items:center;
+  font-weight:800;
+}
+.cp-com-body{
+  flex:1;
+  background:var(--panel2);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:10px;
+}
+.cp-com-meta{
+  font-size:12px;
+  color:var(--muted);
+  display:flex;
+  gap:8px;
+  align-items:center;
+  margin-bottom:4px;
+}
+.cp-com-meta .name{
+  color:var(--text);
+  font-weight:700;
+}
+.cp-com-text{
+  font-size:14px;
+  line-height:1.5;
+}
+.cp-com-actions{
+  margin-top:6px;
+}
+.cp-com-actions .link{
+  background:transparent;
+  border:0;
+  color:var(--sky);
+  cursor:pointer;
+  font-size:12px;
+}
+
+.cp-replies{
+  margin-top:10px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.cp-reply-box{
+  margin-top:8px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.cp-reply-box textarea{
+  background:var(--bg);
+  border:1px solid var(--line);
+  color:var(--text);
+  padding:8px;
+  border-radius:8px;
+  min-height:56px;
+}
+.cp-reply-actions{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+}
+.cp-reply-actions .secondary{
+  background:transparent;
+  border:1px solid var(--line);
+  color:var(--muted);
+  padding:8px 12px;
+  border-radius:8px;
+  cursor:pointer;
+}
+.cp-reply-actions button{
+  background:var(--primary);
+  border:0;
+  color:#00111a;
+  padding:8px 12px;
+  border-radius:8px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+/* Derecha */
+.cp-right{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+.cp-tabs{
+  display:flex;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:16px;
+  overflow:hidden;
+}
+.cp-tab{
+  flex:1;
+  padding:12px;
+  text-align:center;
+  font-weight:700;
+  color:var(--muted);
+  background:transparent;
+  border:0;
+}
+.cp-tab-active{
+  color:var(--text);
+  background:var(--panel2);
+}
+
+.cp-mods{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:6px 8px;
+}
+.cp-accordion{
+  border:1px solid var(--line);
+  background:var(--panel2);
+  margin:8px 0;
+  border-radius:12px;
+  padding:8px;
+}
+.cp-accordion summary{
+  cursor:pointer;
+  display:flex;
+  gap:8px;
+  align-items:center;
+  list-style:none;
+}
+.cp-accordion summary::-webkit-details-marker{
+  display:none;
+}
+.cp-accordion .dot{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:var(--primary);
+  display:inline-block;
+}
+.cp-lessons{
+  list-style:none;
+  margin:8px 0 0;
+  padding:0;
+}
+.cp-lesson{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  padding:8px;
+  border-radius:10px;
+  cursor:pointer;
+}
+.cp-lesson:hover{
+  background:#10223a;
+}
+.cp-lesson.active{
+  background:#0b2540;
+}
+.cp-lesson .bullet{
+  width:7px;
+  height:7px;
+  background:var(--sky);
+  border-radius:50%;
+}
+.cp-lesson .name{
+  font-size:14px;
+}
+.cp-lesson.cp-lesson-empty{
+  cursor:default;
+}
+
+/* Materiales */
+.cp-materials{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:10px 12px;
+}
+.cp-materials h4{
+  margin:2px 2px 8px;
+  font-size:14px;
+  font-weight:800;
+}
+.cp-materials ul{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.cp-materials li{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.cp-materials .file-ico{
+  opacity:.8;
+}
+
+/* ===================================================== */
+/* NUEVO: Botonera y acciones para la vista de video    */
+/* ===================================================== */
+
+.cp-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+
+.cp-btn{
+  appearance:none;
+  background:var(--primary);
+  color:#00111a;
+  border:0;
+  padding:10px 14px;
+  border-radius:10px;
+  font-weight:800;
+  cursor:pointer;
+  transition:transform .06s ease, filter .2s ease, opacity .2s ease;
+}
+.cp-btn:hover{ filter:brightness(1.05); }
+.cp-btn:active{ transform:translateY(1px); }
+.cp-btn:disabled{ opacity:.5; cursor:not-allowed; }
+
+.cp-btn-secondary{
+  background:transparent;
+  color:var(--text);
+  border:1px solid var(--line);
+}
+.cp-btn-secondary:hover{
+  background:#0b2540;
+  border-color:#164a6b;
+}
+
+/* ===================================================== */
+/* NUEVO: Bloques de evaluación                          */
+/* ===================================================== */
+
+.cp-eval{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:16px;
+}
+
+.cp-eval-form{ margin-top:6px; }
+
+.cp-q{
+  border:1px solid var(--line);
+  border-radius:12px;
+  margin:10px 0;
+  padding:10px 12px;
+}
+.cp-q legend{
+  padding:0 6px;
+  font-weight:600;
+}
+
+.cp-option{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  margin:6px 0;
+  font-size:14px;
+}
+
+.cp-eval-result p{
+  margin:6px 0 10px;
+}
+
+/* Pequeños ajustes responsivos */
+@media (max-width:600px){
+  .cp-actions{ gap:8px; }
+  .cp-btn{ width:100%; text-align:center; }
+}
