@@ -1,6 +1,10 @@
+"use client";
+
 import { useState } from "react";
-import InputComponent from "../components/InputComponent";
-import { apiUrl,API_URL } from "../../config/api";
+import InputComponent from "../Components/InputComponent";
+import { API_URL } from "../../config/api";
+import AdminModal from "../Components/AdminModal";
+import { IoWalletOutline } from "react-icons/io5";
 
 interface TipoPago {
   id_tipo_pago: number;
@@ -24,115 +28,134 @@ export default function EditarTipoPagoModal({ tipoPago, onClose, onSuccess }: Pr
   const [comision, setComision] = useState(Number(tipoPago.comision) || 0);
   const [codigoReferencia, setCodigoReferencia] = useState(tipoPago.codigo_referencia || "");
   const [loading, setLoading] = useState(false);
-  // @ts-ignore
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const [error, setError] = useState<string | null>(null);
+
+  const handleUpdate = async () => {
+    if (!nombre.trim()) return setError("El nombre es obligatorio.");
+    setError(null);
     setLoading(true);
 
     try {
-      const token = localStorage.getItem("token");
-
       const payload = {
         nombre: nombre.trim(),
-        descripcion: descripcion.trim() === "" ? null : descripcion.trim(),
-        activo: activo ? 1 : 0, // 👈 enviado como número
+        descripcion: descripcion.trim() || null,
+        activo: activo ? 1 : 0,
         comision: !isNaN(Number(comision)) ? Number(comision) : 0,
-        codigo_referencia:
-          codigoReferencia.trim() === "" ? null : codigoReferencia.trim(),
+        codigo_referencia: codigoReferencia.trim() || null,
       };
 
-console.log("📦 Enviando payload:", JSON.stringify(payload, null, 2));
-
-      const response = await fetch(
-        `${API_URL}/tipos-pagos/${tipoPago.id_tipo_pago}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+      const response = await fetch(`${API_URL}/tipos-pagos/${tipoPago.id_tipo_pago}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
       const data = await response.json();
       if (data.status === "success") {
-        alert("✅ Tipo de pago actualizado correctamente");
         onSuccess();
       } else {
-        alert(data.mensaje || "⚠️ Error al actualizar tipo de pago");
-        console.error(data);
+        setError(data.mensaje || "Error al actualizar tipo de pago");
       }
     } catch (err) {
-      console.error("❌ Error al actualizar tipo de pago:", err);
-      alert("❌ Error de red o formato al actualizar tipo de pago");
+      setError("Error de red al intentar actualizar.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center min-h-screen">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg max-h-screen overflow-y-auto animate-fade-in">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4 text-center">
-          Editar Tipo de Pago
-        </h2>
+    <AdminModal
+      isOpen={true}
+      onClose={onClose}
+      title={`Editar Método: ${tipoPago.nombre}`}
+      maxWidth="max-w-lg"
+      footer={
+        <>
+          <div className="flex items-center gap-2 text-slate-400 font-extrabold text-[10px] uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100/50 w-full md:w-auto justify-center md:justify-start md:mr-auto">
+            Configuración de Pasarela
+          </div>
+          <button 
+            onClick={handleUpdate} 
+            disabled={loading} 
+            className="w-full md:w-auto bg-gradient-to-br from-[#0E1C2B] to-[#1a3a5a] text-white px-10 py-4 rounded-2xl font-black tracking-tight hover:shadow-2xl hover:shadow-slate-900/20 transition-all active:scale-95 shadow-lg border border-white/5 disabled:opacity-50 text-sm"
+          >
+            {loading ? "Sincronizando..." : "Guardar Cambios"}
+          </button>
+          <button onClick={onClose} className="w-full md:w-auto px-6 py-3 rounded-2xl font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all text-sm">
+            Cancelar
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-6">
+        <div className="flex flex-col items-center justify-center py-6 md:py-8 bg-amber-50/40 rounded-[2rem] md:rounded-[2.5rem] border border-amber-100/50 mb-2 md:mb-4 relative overflow-hidden group">
+           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+           <div className="w-16 h-16 md:w-20 md:h-20 bg-white rounded-[1.25rem] md:rounded-[1.5rem] shadow-xl shadow-amber-200/50 flex items-center justify-center text-amber-500 mb-4 relative z-10 transition-transform duration-500 group-hover:scale-110 border border-white">
+              <IoWalletOutline size={34} />
+           </div>
+           <div className="flex flex-col items-center relative z-10 text-center px-4">
+              <h3 className="text-[9px] md:text-[10px] font-black text-amber-600 uppercase tracking-[0.3em] bg-amber-100 px-4 py-1 rounded-full border border-amber-200/50">Editor de Configuración</h3>
+              <p className="text-[12px] md:text-[13px] font-bold text-slate-400 mt-2">Modificar parámetros de pasarela</p>
+           </div>
+        </div>
 
-          <InputComponent
-            label="Nombre del tipo de pago"
-            value={nombre}
-            placeholder="Ingresa el nombre del tipo de pago"
-            onChange={(e) => setNombre(e.target.value)}
+        <InputComponent
+          label="Nombre del Método"
+          value={nombre}
+          placeholder="Ej: Stripe, PayPal"
+          onChange={(e) => setNombre(e.target.value)}
+          required
+        />
 
-          />
-
-          <InputComponent
-            label="Descripción"
-            placeholder="Ingresa una breve descripción"
-            value={descripcion || ""}
+        <div>
+          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5 ml-1">Descripción de la Operativa</label>
+          <textarea
+            value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
+            className="w-full px-5 md:px-6 py-4 md:py-5 bg-slate-50/40 border border-slate-200 rounded-[1.5rem] md:rounded-[2rem] focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 focus:bg-white transition-all text-[13px] font-bold h-24 md:h-28 text-slate-900 placeholder:text-slate-300 shadow-inner"
+            placeholder="Información interna sobre este método..."
           />
+        </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           <InputComponent
-            label="Comisión"
-            value={comision}
-            placeholder="Ingresa la comisión a cobrar"
+            label="Comisión (%)"
+            type="number"
+            value={String(comision)}
             onChange={(e) => setComision(Number(e.target.value))}
-            min="0"
-            step="0.01"
           />
-
           <InputComponent
-            label="Código de Referencia"
-            placeholder="Ingresa el código de referencia"
-            value={codigoReferencia || ""}
+            label="Código de Ref."
+            placeholder="Opcional"
+            value={codigoReferencia}
             onChange={(e) => setCodigoReferencia(e.target.value)}
           />
+        </div>
 
-          <div className="flex items-center gap-2">
+        <label className="flex items-center gap-4 p-4 md:p-5 bg-slate-50/40 rounded-[1.25rem] md:rounded-[1.5rem] border border-slate-100 cursor-pointer group hover:bg-emerald-50/30 hover:border-emerald-200/50 transition-all duration-300">
+          <div className="relative flex items-center">
             <input
               type="checkbox"
+              className="w-6 h-6 rounded-lg border-slate-300 text-emerald-500 focus:ring-emerald-500/20 transition-all cursor-pointer"
               checked={activo}
               onChange={(e) => setActivo(e.target.checked)}
             />
-            <label className="text-gray-700">Activo</label>
           </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-500 group-hover:text-emerald-600 transition-colors">Estado del Método</span>
+            <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-tight">Activa o desactiva la disponibilidad global</span>
+          </div>
+        </label>
 
-          <div className="flex justify-end gap-3 mt-6">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400 text-gray-800">
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700">
-              {loading ? "Guardando..." : "Guardar Cambios"}
-            </button>
+        {error && (
+          <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 animate-shake">
+            <div className="w-2 h-2 rounded-full bg-rose-500" />
+            <p className="text-xs font-bold text-rose-600 uppercase tracking-wider">{error}</p>
           </div>
+        )}
       </div>
-    </div>
+    </AdminModal>
   );
 }

@@ -1,9 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import InputComponent from "../components/InputComponent";
+import InputComponent from "../Components/InputComponent";
+import TextareaComponent from "../Components/TextareaComponent";
+import SelectComponent from "../Components/SelectComponent";
+import AdminModal from "../Components/AdminModal";
+import SearchableSelect from "../Components/SearchableSelect";
 import type { Curso, RutaAcademica } from "../../types/models";
 import { API_URL } from "../../config/api";
+import { IoBookOutline, IoTimeOutline, IoWalletOutline, IoLayersOutline, IoSaveOutline, IoSparklesOutline } from "react-icons/io5";
 
 interface EditCursoModalProps {
   isOpen: boolean;
@@ -30,25 +35,15 @@ export const EditCursoModal: React.FC<EditCursoModalProps> = ({
   const [tiempo, setTiempo] = useState("");
   const [precio, setPrecio] = useState("");
   const [nivel, setNivel] = useState("Principiante");
-  const [estado, setEstado] = useState<"Publicado" | "Archivado">("Publicado");
+  const [estado, setEstado] = useState<"Publicado" | "Activo" | "Inactivo" | "Archivado">("Publicado");
   const [destacado, setDestacado] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const [rutas, setRutas] = useState<RutaAcademica[]>([]);
-  const [busquedaRuta, setBusquedaRuta] = useState("");
-  const [mostrarSugerenciasRuta, setMostrarSugerenciasRuta] = useState(false);
-  const [rutaSeleccionada, setRutaSeleccionada] =
-    useState<Partial<RutaAcademica> | null>(null);
+  const [idRutaSeleccionada, setIdRutaSeleccionada] = useState<number | "">("");
 
-  const [docentes, setDocentes] = useState<
-    { id_usuario: number; nombre: string; apellido: string }[]
-  >([]);
-  const [busquedaDocente, setBusquedaDocente] = useState("");
-  const [mostrarSugerenciasDocente, setMostrarSugerenciasDocente] =
-    useState(false);
-  const [idDocenteSeleccionado, setIdDocenteSeleccionado] = useState<
-    number | null
-  >(null);
+  const [docentes, setDocentes] = useState<{ id_usuario: number; nombre: string; apellido: string }[]>([]);
+  const [idDocenteSeleccionado, setIdDocenteSeleccionado] = useState<number | "">("");
 
   useEffect(() => {
     if (isOpen && curso) {
@@ -60,117 +55,58 @@ export const EditCursoModal: React.FC<EditCursoModalProps> = ({
       setVideo(curso.video_previsualizacion ?? "");
       setLoQueAprenderas(curso.lo_que_aprenderas ?? "");
       setRequisitos(curso.requisitos ?? "");
-      setDuracion(curso.duracion?.toString() ?? "");
+      setDuracion((curso.duracion_horas || curso.duracion)?.toString() ?? "");
       setTiempo(curso.tiempo?.toString() ?? "");
       setPrecio(curso.precio?.toString() ?? "");
       setNivel(curso.nivel ?? "Principiante");
-      setEstado(
-        curso.estado === "Archivado" || curso.estado === "Publicado"
-          ? curso.estado
-          : "Publicado"
-      );
+      setEstado(curso.estado as any);
       setDestacado(curso.destacado === true || curso.destacado === 1);
-      setIdDocenteSeleccionado(curso.id_docente || curso.docente?.id_docente || null);
-      setBusquedaDocente(curso.docente?.nombre || "");
+      
+      const docId = curso.id_docente || curso.docente?.id_usuario || "";
+      setIdDocenteSeleccionado(docId as number | "");
+      
+      if (curso.rutas && curso.rutas.length > 0) {
+        const firstRuta = curso.rutas[0];
+        setIdRutaSeleccionada(typeof firstRuta === 'object' ? (firstRuta as any).id_ruta : (firstRuta as number));
+      }
     }
   }, [isOpen, curso]);
 
-  
-useEffect(() => {
-  const fetchRutas = async () => {
-    try {
-      const res = await fetch(`${API_URL}/rutas`);
-      const data = await res.json();
-
-      const todas = data.data || [];
-      const activas = todas.filter(
-        (r: any) =>
-          r.estado &&
-          r.estado.toLowerCase() === "activa" // asegura coincidencia sin importar mayúsculas
-      );
-
-      setRutas(activas);
-    } catch (error) {
-      console.error("Error cargando rutas académicas:", error);
-    }
-  };
-
-  if (isOpen) fetchRutas();
-}, [isOpen]);
-
-  
-useEffect(() => {
-  const fetchDocentes = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/admin/usuarios`, {
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-
-      const data = await res.json();
-
- 
-      const docentesFiltrados = (data.data || []).filter(
-        (u: any) => u.id_rol === 3 && u.estado === "Activo"
-      );
-
-      setDocentes(
-        docentesFiltrados.map((d: any) => ({
-          id_usuario: d.id_usuario,
-          nombre: d.nombre,
-          apellido: d.apellido,
-        }))
-      );
-    } catch (error) {
-      console.error("Error al obtener docentes:", error);
-      setDocentes([]);
-    }
-  };
-
-  if (isOpen) fetchDocentes();
-}, [isOpen]);
-
+  useEffect(() => {
+    const fetchRutas = async () => {
+      try {
+        const res = await fetch(`${API_URL}/rutas-academicas`);
+        const data = await res.json();
+        setRutas(data.data || []);
+      } catch (error) {
+        console.error("Error cargando rutas académicas:", error);
+      }
+    };
+    if (isOpen) fetchRutas();
+  }, [isOpen]);
 
   useEffect(() => {
-    if (curso && rutas.length > 0) {
-      if (curso.rutas && curso.rutas.length > 0) {
-        const primeraRuta = curso.rutas[0];
-        if (typeof primeraRuta === "object" && "id_ruta" in primeraRuta) {
-          setRutaSeleccionada({
-            id_ruta: primeraRuta.id_ruta,
-            nombre: primeraRuta.nombre || "Ruta desconocida",
-          });
-          setBusquedaRuta(primeraRuta.nombre || "");
-        } else {
-          const rutaEncontrada = rutas.find(
-            (r) => r.id_ruta === (primeraRuta as number)
-          );
-          if (rutaEncontrada) {
-            setRutaSeleccionada(rutaEncontrada);
-            setBusquedaRuta(rutaEncontrada.nombre);
-          }
-        }
-      } else {
-        setRutaSeleccionada(null);
-        setBusquedaRuta("");
-      }
-    }
-  }, [curso, rutas]);
+    const fetchDocentes = async () => {
+      try {
 
-  // Guardar cambios
+        const res = await fetch(`${API_URL}/admin/usuarios`, {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        const data = await res.json();
+        const docentesFiltrados = (data.data || []).filter((u: any) => (u.id_rol === 2 || u.id_rol === 1) && u.estado === "Activo");
+        setDocentes(docentesFiltrados.map((d: any) => ({ id_usuario: d.id_usuario, nombre: d.nombre, apellido: d.apellido })));
+      } catch (error) {
+        console.error("Error al obtener docentes:", error);
+      }
+    };
+    if (isOpen) fetchDocentes();
+  }, [isOpen]);
+
   const handleSave = async () => {
     if (!nombre.trim()) return alert("El nombre del curso es obligatorio.");
-    if (!duracion || parseInt(duracion) <= 0)
-      return alert("La duración debe ser mayor a 0.");
-    if (!precio || parseFloat(precio) < 0)
-      return alert("El precio debe ser válido.");
-    if (!rutaSeleccionada && (!curso.rutas || curso.rutas.length === 0))
-      return alert("Selecciona una ruta académica.");
-    if (!idDocenteSeleccionado)
-      return alert("Selecciona un docente asignado al curso.");
+    if (!duracion || parseInt(duracion) <= 0) return alert("La duración debe ser mayor a 0.");
 
     const cursoActualizado: Curso = {
       ...curso,
@@ -182,248 +118,181 @@ useEffect(() => {
       video_previsualizacion: video || null,
       lo_que_aprenderas: loQueAprenderas || null,
       requisitos: requisitos || null,
-      duracion: parseInt(duracion, 10),
+      duracion_horas: parseInt(duracion, 10),
       tiempo: tiempo ? parseInt(tiempo, 10) : null,
       precio: precio ? parseFloat(precio) : 0,
       nivel,
       estado,
-      destacado: destacado ? 1 : 0,
-      id_docente: idDocenteSeleccionado,
+      destacado: !!destacado,
+      id_docente: idDocenteSeleccionado ? Number(idDocenteSeleccionado) : undefined,
       fecha_actualizacion: new Date().toISOString(),
-      rutas: rutaSeleccionada
-        ? ([rutaSeleccionada.id_ruta] as unknown as {
-            id_ruta: number;
-            nombre: string;
-          }[])
-        : (curso.rutas as { id_ruta: number; nombre: string }[]),
+      rutas: idRutaSeleccionada ? [idRutaSeleccionada] as any : curso.rutas,
     };
 
     setIsSaving(true);
     const fueExitosa = await onSave(cursoActualizado);
     setIsSaving(false);
-
     if (fueExitosa) onClose();
-    else alert("Ocurrió un error al guardar los cambios del curso.");
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center min-h-screen">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg max-h-screen overflow-y-auto animate-fade-in">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4 text-center">
-          Editar Curso
-        </h2>
-
-        {/* Ruta académica */}
-        <div className="mb-4">
-          <label className="block text-sm font-semibold text-gray-700">
-            Ruta Académica
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={busquedaRuta}
-              onChange={(e) => {
-                setBusquedaRuta(e.target.value);
-                setMostrarSugerenciasRuta(true);
-              }}
-              onFocus={() => setMostrarSugerenciasRuta(true)}
-              className="mt-1 p-2 w-full border border-gray-300 rounded-md focus:ring-2 focus:ring-sky-600"
-              placeholder="Buscar ruta..."
-            />
-            {mostrarSugerenciasRuta && busquedaRuta.length > 0 && (
-              <ul className="absolute z-50 bg-white border w-full rounded shadow max-h-40 overflow-y-auto mt-1">
-                {rutas
-                  .filter((r) =>
-                    r.nombre.toLowerCase().includes(busquedaRuta.toLowerCase())
-                  )
-                  .map((ruta) => (
-                    <li
-                      key={ruta.id_ruta}
-                      className="p-2 hover:bg-sky-100 cursor-pointer"
-                      onClick={() => {
-                        setRutaSeleccionada(ruta);
-                        setBusquedaRuta(ruta.nombre);
-                        setMostrarSugerenciasRuta(false);
-                      }}
-                    >
-                      {ruta.nombre}
-                    </li>
-                  ))}
-              </ul>
-            )}
+    <AdminModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Editar Curso"
+      maxWidth="max-w-3xl"
+      footer={
+        <>
+          <div className="flex items-center gap-2 text-sky-600 font-extrabold text-[10px] uppercase tracking-widest bg-sky-50 px-4 py-2 rounded-xl border border-sky-100/50 animate-pulse w-full md:w-auto justify-center md:justify-start md:mr-auto">
+            <IoSparklesOutline className="animate-spin-slow" /> 
+            <span>Campos premium activados</span>
           </div>
-        </div>
-
-        {/* Docente */}
-        <div className="mb-4">
-          <label className="block text-sm font-semibold text-gray-700">
-            Docente Asignado
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={busquedaDocente}
-              onChange={(e) => {
-                setBusquedaDocente(e.target.value);
-                setMostrarSugerenciasDocente(true);
-              }}
-              onFocus={() => setMostrarSugerenciasDocente(true)}
-              className="mt-1 p-2 w-full border border-gray-300 rounded-md focus:ring-2 focus:ring-sky-600"
-              placeholder="Buscar docente..."
-            />
-            {mostrarSugerenciasDocente && busquedaDocente.length > 0 && (
-              <ul className="absolute z-50 bg-white border w-full rounded shadow max-h-40 overflow-y-auto mt-1">
-                {docentes
-                  .filter((d) =>
-                    `${d.nombre} ${d.apellido}`
-                      .toLowerCase()
-                      .includes(busquedaDocente.toLowerCase())
-                  )
-                  .map((d) => (
-                    <li
-                      key={d.id_usuario}
-                      className="p-2 hover:bg-sky-100 cursor-pointer"
-                      onClick={() => {
-                        setIdDocenteSeleccionado(d.id_usuario);
-                        setBusquedaDocente(`${d.nombre} ${d.apellido}`);
-                        setMostrarSugerenciasDocente(false);
-                      }}
-                    >
-                      {d.nombre} {d.apellido}
-                    </li>
-                  ))}
-              </ul>
-            )}
-          </div>
-        </div>
-
-        <InputComponent
-          label="Nombre del Curso"
-          placeholder="Ingresa el nombre del curso"
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-        />
-
-        <div className="mb-3">
-          <label className="block text-sm font-semibold text-gray-700">
-            Descripción
-          </label>
-          <textarea
-            value={descripcion}
-            placeholder="Ingresa una breve descripción"
-            maxLength={48}
-            onChange={(e) => setDescripcion(e.target.value)}
-            className="mt-1 p-2 w-full border border-gray-300 rounded-md h-24 resize-none focus:ring-2 focus:ring-sky-600"
-          />
-          <p className="text-sm text-gray-500 mt-1">
-            {descripcion.length}/48 caracteres
-          </p>
-        </div>
-
-        <div className="mb-3">
-  <InputComponent
-    label="Descripción corta"
-    placeholder="Ingresa descripción corta"
-    maxLength={50}
-    value={descripcionCorta}
-    onChange={(e) => setDescripcionCorta(e.target.value)}
-  />
-  <p className="text-sm text-gray-500 mt-1">
-    {descripcionCorta.length}/50 caracteres
-  </p>
-</div>
-
-
-        <div className="mb-3">
-          <label className="block text-sm font-semibold text-gray-700">
-            Descripción larga
-          </label>
-          <textarea
-            value={descripcionLarga}           
-            placeholder="Ingresa descripción larga"            
-             maxLength={70}
-            onChange={(e) => setDescripcionLarga(e.target.value)}
-            className="mt-1 p-2 w-full border border-gray-300 rounded-md h-24 resize-none focus:ring-2 focus:ring-sky-600"
-          />
-           <p className="text-sm text-gray-500 mt-1">
-    {descripcionLarga.length}/70 caracteres
-  </p>
-        </div>
-
-        <InputComponent label="Imagen (URL)"  placeholder="Ingresa imagen" value={imagen} onChange={(e) => setImagen(e.target.value)} />
-        <InputComponent label="Video (URL)"   placeholder="Ingresa url del video"value={video} onChange={(e) => setVideo(e.target.value)} />
-        <InputComponent label="Lo que aprenderás"   placeholder="Ingresa lo que se aprenderá en el curso" value={loQueAprenderas} onChange={(e) => setLoQueAprenderas(e.target.value)} />
-        <InputComponent label="Requisitos"     placeholder="Ingresa los requisitos para el curso"value={requisitos} onChange={(e) => setRequisitos(e.target.value)} />
-        <InputComponent label="Duración (horas)"   placeholder="Ingresa la duración del curso" type="number" value={duracion} onChange={(e) => setDuracion(e.target.value)} />
-        <InputComponent label="Tiempo estimado (semanas)"             placeholder="Ingresa el tiempo de duración del curso" type="number" value={tiempo} onChange={(e) => setTiempo(e.target.value)} />
-        <InputComponent label="Precio (S/)"    placeholder="Ingresa el precio del curso" type="number" value={precio} onChange={(e) => setPrecio(e.target.value)} />
-
-        <div className="mb-3">
-          <label className="block text-sm font-semibold text-gray-700">
-            Nivel
-          </label>
-          <select
-            value={nivel}
-            onChange={(e) => setNivel(e.target.value)}
-            className="mt-1 p-2 w-full border border-gray-300 rounded-md"
-          >
-            <option value="Principiante">Principiante</option>
-            <option value="Intermedio">Intermedio</option>
-            <option value="Avanzado">Avanzado</option>
-          </select>
-        </div>
-
-        <div className="mb-3">
-          <label className="block text-sm font-semibold text-gray-700">
-            Estado
-          </label>
-          <select
-            value={estado}
-            onChange={(e) =>
-              setEstado(e.target.value as "Publicado" | "Archivado")
-            }
-            className="mt-1 p-2 w-full border border-gray-300 rounded-md"
-          >
-            <option value="Publicado">Publicado</option>
-            <option value="Archivado">Archivado</option>
-          </select>
-        </div>
-
-        <div className="mb-4 flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={destacado}
-            onChange={(e) => setDestacado(e.target.checked)}
-            id="destacado"
-            className="w-4 h-4 text-sky-600 border-gray-300 rounded"
-          />
-          <label htmlFor="destacado" className="text-sm text-gray-700">
-            ¿Marcar como destacado?
-          </label>
-        </div>
-
-        <div className="flex justify-center gap-3 mt-6">
-          <button
-            onClick={handleSave}
+          <button 
+            onClick={handleSave} 
             disabled={isSaving}
-            className={`px-4 py-2 rounded text-white transition ${
-              isSaving
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-sky-600 hover:bg-sky-700"
-            }`}
+            className="w-full md:w-auto bg-gradient-to-br from-[#0E1C2B] to-[#1a3a5a] text-white px-10 py-4 rounded-2xl font-black tracking-tight hover:shadow-2xl hover:shadow-sky-900/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 border border-white/5 text-sm"
           >
-            {isSaving ? "Guardando..." : "Guardar Cambios"}
+            <IoSaveOutline size={18} /> {isSaving ? "Cargando..." : "Guardar Cambios"}
           </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
-          >
+          <button onClick={onClose} className="w-full md:w-auto px-6 py-3 rounded-2xl font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all text-sm">
             Cancelar
           </button>
+        </>
+      }
+    >
+      <div className="space-y-4 md:space-y-6">
+        {/* Section 1: Basic Info */}
+        <div className="bg-slate-50/40 p-4 rounded-[1.5rem] border border-slate-100/50 space-y-4">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-9 h-9 rounded-xl bg-white text-sky-600 flex items-center justify-center shadow-sm border border-sky-100/50">
+              <IoBookOutline size={18} />
+            </div>
+            <div className="flex flex-col">
+              <h3 className="text-[9px] font-black uppercase tracking-[0.25em] text-sky-600/70">Módulo 01</h3>
+              <span className="text-[13px] font-black text-slate-900 tracking-tight">Información Principal</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <InputComponent label="Nombre del Curso" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Especialista en Power BI" />
+          
+          <SearchableSelect 
+            label="Docente Asignado"
+            value={idDocenteSeleccionado}
+            onChange={(v) => setIdDocenteSeleccionado(v)}
+            options={docentes.map(d => ({ value: d.id_usuario, label: `${d.nombre} ${d.apellido}` }))}
+            placeholder="Selecciona docente..."
+          />
+
+          <SearchableSelect 
+            label="Ruta Académica"
+            value={idRutaSeleccionada}
+            onChange={(v) => setIdRutaSeleccionada(v)}
+            options={rutas.map(r => ({ value: r.id_ruta, label: r.nombre }))}
+            placeholder="Selecciona ruta..."
+          />
+
+          <SelectComponent 
+            label="Nivel"
+            value={nivel}
+            onChange={(e) => setNivel(e.target.value)}
+            options={[
+              { value: "Principiante", label: "Principiante" },
+              { value: "Intermedio", label: "Intermedio" },
+              { value: "Avanzado", label: "Avanzado" }
+            ]}
+          />
         </div>
       </div>
-    </div>
+
+        {/* Section 2: Descriptions */}
+        <div className="bg-slate-50/40 p-4 rounded-[1.5rem] border border-slate-100/50 space-y-4">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-9 h-9 rounded-xl bg-white text-emerald-600 flex items-center justify-center shadow-sm border border-emerald-100/50">
+              <IoLayersOutline size={18} />
+            </div>
+            <div className="flex flex-col">
+              <h3 className="text-[9px] font-black uppercase tracking-[0.25em] text-emerald-600/70">Módulo 02</h3>
+              <span className="text-[13px] font-black text-slate-900 tracking-tight">Contenido y Medios</span>
+            </div>
+          </div>
+
+          <TextareaComponent 
+            label="Descripción General (Breve)" 
+            maxLength={300} 
+            value={descripcion} 
+            onChange={(e) => setDescripcion(e.target.value)} 
+            placeholder="Breve resumen..." 
+            className="h-28"
+          />
+
+          <InputComponent 
+            label="Descripción Corta" 
+            maxLength={150} 
+            value={descripcionCorta} 
+            onChange={(e) => setDescripcionCorta(e.target.value)} 
+            placeholder="Subtítulo o frase corta" 
+          />
+          
+          <TextareaComponent 
+            label="Descripción Detallada" 
+            maxLength={5000} 
+            value={descripcionLarga} 
+            onChange={(e) => setDescripcionLarga(e.target.value)} 
+            placeholder="Contenido extenso..." 
+            className="h-36"
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <InputComponent label="Imagen de Portada (URL)" value={imagen} onChange={(e) => setImagen(e.target.value)} placeholder="URL de la imagen" />
+            <InputComponent label="Video Promocional (URL)" value={video} onChange={(e) => setVideo(e.target.value)} placeholder="URL del video" />
+          </div>
+        </div>
+
+        {/* Section 3: Specs and Pricing */}
+        <div className="bg-slate-50/40 p-4 rounded-[1.5rem] border border-slate-100/50 space-y-4">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-9 h-9 rounded-xl bg-white text-amber-600 flex items-center justify-center shadow-sm border border-amber-100/50">
+              <IoTimeOutline size={18} />
+            </div>
+            <div className="flex flex-col">
+              <h3 className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600/70">Módulo 03</h3>
+              <span className="text-[13px] font-black text-slate-900 tracking-tight">Detalles de Valor</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <InputComponent label="Duración (Horas)" type="number" value={duracion} onChange={(e) => setDuracion(e.target.value)} placeholder="Ej: 40" />
+            <InputComponent label="Semanas Est." type="number" value={tiempo} onChange={(e) => setTiempo(e.target.value)} placeholder="Ej: 4" />
+            <InputComponent label="Precio (S/)" type="number" value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder="Ej: 199.00" />
+          </div>
+        </div>
+
+        {/* Section 4: Settings */}
+        <div className="pt-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-8">
+            <SelectComponent 
+              label="Estado del Curso"
+              value={estado}
+              onChange={(e) => setEstado(e.target.value as any)}
+              options={[
+                { value: "Publicado", label: "Publicado" },
+                { value: "Activo", label: "Activo (Borrador)" },
+                { value: "Inactivo", label: "Inactivo" },
+                { value: "Archivado", label: "Archivado" }
+              ]}
+              className="!py-2.5 !px-5 text-sm"
+            />
+            
+            <label className="flex items-center gap-3 cursor-pointer group pt-6">
+              <div className="relative">
+                <input type="checkbox" checked={destacado} onChange={(e) => setDestacado(e.target.checked)} className="sr-only" />
+                <div className={`w-12 h-6 rounded-full transition-colors ${destacado ? "bg-sky-500" : "bg-gray-200"}`} />
+                <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${destacado ? "translate-x-6" : ""}`} />
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-sky-600 transition-colors">¿Destacado?</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </AdminModal>
   );
 };

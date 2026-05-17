@@ -37,12 +37,7 @@ const MaterialesModulo: React.FC<Props> = ({ idModulo }) => {
   useEffect(() => {
     if (!idModulo) return;
     setLoading(true);
-    const token = localStorage.getItem("token");
-    axios.get(`${API_URL}/materiales?estado=Publicado&id_modulo=${idModulo}&page=${page}`,
-      {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      }
-    )
+    axios.get(`${API_URL}/materiales?estado=Publicado&id_modulo=${idModulo}&page=${page}`)
       .then(res => {
         // Adaptar los campos del response para el frontend
         const materiales: Material[] = (res.data.data || []).map((mat: any) => ({

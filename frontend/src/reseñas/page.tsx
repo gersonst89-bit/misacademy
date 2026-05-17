@@ -61,37 +61,24 @@ export default function MisResenas() {
 
   useEffect(() => {
     const fetchResenas = async () => {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        setError("Debes iniciar sesión para ver tus reseñas.");
-        setLoading(false);
-        return;
-      }
-
       try {
         let page = 1;
-        let allResenas: any[] | ((prevState: Resena[]) => Resena[]) = [];
+        let allResenas: Resena[] = [];
         let hasMore = true;
 
         while (hasMore) {
           const res = await fetch(`${API_URL}/mis-resenas?page=${page}`, {
             headers: {
-              Authorization: `Bearer ${token}`,
               Accept: "application/json",
             },
+            credentials: "include",
           });
 
           const data = await res.json();
-          console.log(`Página ${page}:`, data);
 
           if (res.ok && data && Array.isArray(data.resenas)) {
             allResenas = [...allResenas, ...data.resenas];
-
-            // Detectar si hay más páginas (depende de tu API)
             hasMore = data.nextPage !== null && data.nextPage !== undefined;
-
-            // Avanzar página
             page++;
           } else {
             setError(
@@ -103,10 +90,8 @@ export default function MisResenas() {
           }
         }
 
-        // Guardar todas las reseñas juntas
         setResenas(allResenas);
       } catch (err) {
-        console.error("Error al conectar con el servidor:", err);
         setError("Error de conexión con el servidor.");
       } finally {
         setLoading(false);

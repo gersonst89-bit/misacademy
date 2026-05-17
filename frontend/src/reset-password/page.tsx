@@ -55,6 +55,7 @@ export default function ResetPasswordPage() {
           password,
           password_confirmation: passwordConfirmation,
         }),
+        credentials: "include",
       });
 
       const data = await res.json();

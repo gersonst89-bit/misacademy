@@ -8,6 +8,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   className?: string;
   label?: string;
   value?: string | number;
+  error?: boolean;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
@@ -17,21 +18,39 @@ export default function InputComponent({
   className = "",
   value,
   onChange,
+  error,
   ...props
 }: InputProps) {
+  const isExceeded = props.maxLength && value && value.toString().length > props.maxLength;
+
   return (
-    <div className="mb-4">
+    <div className="flex flex-col gap-2 w-full group">
       {props.label && (
-        <label className="block text-sm pb-1 font-semibold text-gray-700">
-          {props.label}
-        </label>
+        <div className="flex justify-between items-center px-1">
+          <label className={`text-[10px] font-black uppercase tracking-[0.15em] transition-colors
+            ${isExceeded || error ? "text-rose-500" : "group-focus-within:text-sky-500 text-gray-400"}
+          `}>
+            {props.label}
+          </label>
+          {props.maxLength && value !== undefined && (
+            <span className={`text-[9px] font-bold ${isExceeded ? "text-rose-500" : "text-gray-300"}`}>
+              {value.toString().length}/{props.maxLength}
+            </span>
+          )}
+        </div>
       )}
       <input
         type={type}
         placeholder={placeholder}
         value={value}
         onChange={onChange}
-        className={`w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-600 focus:border-sky-600 ${className}`}
+        className={`w-full px-6 py-4 bg-gray-50/50 border rounded-[1.25rem] outline-none transition-all duration-300 text-[#0E1C2B] font-semibold placeholder:text-gray-300 shadow-sm
+          ${isExceeded || error 
+            ? "border-rose-200 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 bg-rose-50/30" 
+            : "border-gray-100 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 focus:bg-white focus:shadow-xl focus:shadow-sky-500/5"
+          }
+          ${className}
+        `}
         {...props}
       />
     </div>

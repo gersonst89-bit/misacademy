@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import type { Curso } from "../../types/models";
-import InputComponent from "../components/InputComponent";
-import { API_URL } from "../../config/api";
+import InputComponent from "../Components/InputComponent";
+import { apiUrl } from "../../config/api";
+import AdminModal from "../Components/AdminModal";
+import SearchableSelect from "../Components/SearchableSelect";
 
-const API_PUBLIC = API_URL;
 
 type EstadoEval = "Publicado" | "Archivado";
 
@@ -23,9 +24,7 @@ export const EditEvaluacionModal: React.FC<Props> = ({
   onSave,
 }) => {
   const [cursos, setCursos] = useState<Curso[]>([]);
-
   const [tipoLibre, setTipoLibre] = useState<string>("");
-
   const [idCurso, setIdCurso] = useState<number | "">("");
   const [titulo, setTitulo] = useState("");
   const [descripcion, setDescripcion] = useState("");
@@ -35,201 +34,182 @@ export const EditEvaluacionModal: React.FC<Props> = ({
   const [estado, setEstado] = useState<EstadoEval>("Publicado");
 
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !evaluacion) return;
 
-    setTipoLibre(evaluacion?.tipo || "");
-    setIdCurso(evaluacion?.id_curso || "");
-    setTitulo(evaluacion?.titulo || "");
-    setDescripcion(evaluacion?.descripcion || "");
-    setPuntuacion(evaluacion?.puntuacion_requerida || "");
-    setDuracion(evaluacion?.duracion || "");
-    setIntentos(evaluacion?.intentos_maximos || "");
-    setEstado(
-      evaluacion?.estado === "Archivado" ? "Archivado" : "Publicado"
-    );
+    setTipoLibre(evaluacion.tipo || "");
+    setIdCurso(evaluacion.id_curso || "");
+    setTitulo(evaluacion.titulo || "");
+    setDescripcion(evaluacion.descripcion || "");
+    setPuntuacion(evaluacion.puntaje_aprobatorio || "");
+    setDuracion(evaluacion.duracion_minutos || "");
+    setIntentos(evaluacion.intentos_permitidos || "");
+    setEstado(evaluacion.estado === "Archivado" ? "Archivado" : "Publicado");
+    setError(null);
 
     (async () => {
       try {
-        let pagina = 1;
-        let ultima = 1;
-        let todos: Curso[] = [];
-
+        let pagina = 1, ultima = 1, todos: Curso[] = [];
         do {
-          const r = await fetch(`${API_PUBLIC}/cursos?page=${pagina}`);
+          const r = await fetch(apiUrl(`/admin/cursos?page=${pagina}`), { credentials: "include" });
           const d = await r.json();
-          const pageItems: Curso[] = d.data || d || [];
-          todos = [...todos, ...pageItems];
+          todos = [...todos, ...(d.data || [])];
           ultima = d.last_page || 1;
           pagina++;
         } while (pagina <= ultima);
-
         setCursos(todos);
-      } catch {
-        setCursos([]);
+      } catch (e) {
+        console.error(e);
       }
     })();
   }, [isOpen, evaluacion]);
 
   const handleSave = async () => {
-    if (!idCurso) return alert("Selecciona un curso.");
-    if (!titulo.trim()) return alert("El título es obligatorio.");
-    if (!puntuacion || Number(puntuacion) < 1)
-      return alert("La puntuación requerida debe ser >= 1.");
-    if (!intentos || Number(intentos) < 1)
-      return alert("Los intentos máximos deben ser >= 1.");
-
-    const tipoParaEnviar = tipoLibre.trim() === "" ? null : tipoLibre.trim();
+    setError(null);
+    if (!idCurso) return setError("Debes seleccionar un curso.");
+    if (!titulo.trim()) return setError("El título es obligatorio.");
+    if (!puntuacion || Number(puntuacion) < 1) return setError("La puntuación debe ser ≥ 1.");
+    if (!intentos || Number(intentos) < 1) return setError("Los intentos deben ser ≥ 1.");
 
     const payload = {
       id_evaluacion: evaluacion.id_evaluacion,
       id_curso: Number(idCurso),
       titulo: titulo.trim(),
-      tipo: tipoParaEnviar,
+      tipo: tipoLibre.trim() || null,
       descripcion: descripcion.trim() || null,
-      puntuacion_requerida: Number(puntuacion),
-      duracion: duracion === "" ? null : Number(duracion),
-      intentos_maximos: Number(intentos),
-      estado: estado, 
-      fecha_actualizacion: new Date().toISOString(),
+      puntaje_aprobatorio: Number(puntuacion),
+      duracion_minutos: duracion === "" ? null : Number(duracion),
+      intentos_permitidos: Number(intentos),
+      estado: estado,
     };
 
     setSaving(true);
     const ok = await onSave(payload);
     setSaving(false);
-
     if (ok) onClose();
+    else setError("Error al actualizar la evaluación.");
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center min-h-screen">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-3xl max-h-[95vh] overflow-y-auto animate-fade-in">
-
-        <h2 className="text-xl font-semibold text-gray-800 mb-4 text-center">
-          Editar Evaluación
-        </h2>
-
-        <div className="mb-3">
-          <label className="block text-sm font-semibold text-gray-700">Curso</label>
-          <select
-            value={idCurso}
-            onChange={(e) => setIdCurso(e.target.value ? Number(e.target.value) : "")}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-600 focus:border-sky-600"
+    <AdminModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Actualizar Configuración de Evaluación"
+      maxWidth="max-w-3xl"
+      footer={
+        <div className="flex gap-4">
+          <button 
+            onClick={onClose} 
+            className="px-8 py-3 rounded-[1.25rem] font-black uppercase tracking-widest text-[10px] text-slate-400 hover:bg-slate-50 transition-all"
           >
-            <option value="">Selecciona un curso…</option>
-            {cursos.map((c) => (
-              <option key={c.id_curso} value={c.id_curso}>
-                {c.nombre}
-              </option>
-            ))}
-          </select>
+            Descartar
+          </button>
+          <button 
+            onClick={handleSave} 
+            disabled={saving}
+            className={`px-10 py-3 bg-gradient-to-br from-amber-500 to-amber-600 text-white rounded-[1.25rem] font-black uppercase tracking-widest text-[10px] hover:shadow-2xl hover:shadow-amber-500/20 transition-all active:scale-95 border border-white/10 shadow-lg shadow-amber-900/10 ${saving ? "opacity-50 cursor-not-allowed" : ""}`}
+          >
+            {saving ? "Guardando..." : "Actualizar Evaluación"}
+          </button>
         </div>
+      }
+    >
+      <div className="space-y-6">
+        {/* Sección: Identidad (Modo Edición) */}
+        <div className="p-6 bg-slate-50/40 rounded-[2.5rem] border border-slate-100/50 space-y-6">
+          <div className="flex items-center gap-3 mb-2 ml-1">
+            <div className="w-1.5 h-4 bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+            <label className="text-[10px] font-black text-amber-600 uppercase tracking-[0.2em]">Modificando Parámetros</label>
+          </div>
 
-        <div className="mb-3">
-          <label className="block text-sm font-semibold text-gray-700">
-            Tipo 
-          </label>
-          <input
-            value={tipoLibre}
-            onChange={(e) => setTipoLibre(e.target.value)}
-            placeholder='Ej.: "test", "final"'
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-600 focus:border-sky-600"
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Curso Vinculado</label>
+              <SearchableSelect
+                value={idCurso}
+                onChange={setIdCurso}
+                options={cursos.map(c => ({ value: c.id_curso, label: c.nombre }))}
+                placeholder="Selecciona curso..."
+              />
+            </div>
+            <InputComponent
+              label="Tipo de Prueba"
+              value={tipoLibre}
+              onChange={(e) => setTipoLibre(e.target.value)}
+            />
+          </div>
+
+          <InputComponent
+            label="Título de la Evaluación"
+            value={titulo}
+            onChange={(e) => setTitulo(e.target.value)}
           />
         </div>
 
-        <InputComponent
-          label="Título"
-          value={titulo}
-                      placeholder="Título de la evaluación"
-
-          onChange={(e) => setTitulo(e.target.value)}
-          required
-        />
-
-        <div className="mb-3">
-          <label className="block text-sm font-semibold text-gray-700">
-            Descripción
-          </label>
+        {/* Sección: Contenido */}
+        <div className="p-6 bg-slate-50/40 rounded-[2.5rem] border border-slate-100/50">
+          <div className="flex items-center gap-3 mb-4 ml-1">
+            <div className="w-1.5 h-4 bg-slate-400 rounded-full" />
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Instrucciones Actualizadas</label>
+          </div>
+          
           <textarea
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-600 focus:border-sky-600"
-            placeholder="Opcional"
+            className="w-full px-6 py-5 bg-white border border-slate-200 rounded-[2rem] focus:outline-none focus:ring-4 focus:ring-amber-500/5 focus:border-amber-500 transition-all text-[13px] font-medium h-32 text-slate-700 placeholder:text-slate-300 resize-none shadow-sm"
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <InputComponent
-            label="Puntuación requerida"
-            type="number"
-            value={String(puntuacion)}
-                        placeholder="Puntuación"
+        {/* Sección: Reglas Académicas */}
+        <div className="p-6 bg-slate-50/40 rounded-[2.5rem] border border-slate-100/50 space-y-6">
+          <div className="flex items-center gap-3 mb-4 ml-1">
+            <div className="w-1.5 h-4 bg-slate-400 rounded-full" />
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Reglas y Umbrales</label>
+          </div>
 
-            onChange={(e) =>
-              setPuntuacion(e.target.value === "" ? "" : Number(e.target.value))
-            }
-            min={1}
-            required
-          />
-          <InputComponent
-            label="Duración (min)"
-            type="number"
-            value={String(duracion)}
-            onChange={(e) =>
-              setDuracion(e.target.value === "" ? "" : Number(e.target.value))
-            }
-            placeholder="Opcional"
-            min={1}
-          />
-          <InputComponent
-            label="Intentos máximos"
-            type="number"
-                        placeholder="Intentos"
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <InputComponent
+              label="Puntaje Mínimo"
+              type="number"
+              value={String(puntuacion)}
+              onChange={(e) => setPuntuacion(e.target.value === "" ? "" : Number(e.target.value))}
+            />
+            <InputComponent
+              label="Tiempo (Min)"
+              type="number"
+              value={String(duracion)}
+              onChange={(e) => setDuracion(e.target.value === "" ? "" : Number(e.target.value))}
+            />
+            <InputComponent
+              label="Intentos Máx."
+              type="number"
+              value={String(intentos)}
+              onChange={(e) => setIntentos(e.target.value === "" ? "" : Number(e.target.value))}
+            />
+          </div>
 
-            value={String(intentos)}
-            onChange={(e) =>
-              setIntentos(e.target.value === "" ? "" : Number(e.target.value))
-            }
-            min={1}
-            required
-          />
+          <div>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Estado de Visibilidad</label>
+            <select
+              value={estado}
+              onChange={(e) => setEstado(e.target.value as EstadoEval)}
+              className="w-full px-6 py-3.5 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-amber-500/5 focus:border-amber-500 transition-all text-[11px] font-black uppercase tracking-widest text-slate-700 cursor-pointer shadow-sm"
+            >
+              <option value="Publicado">Publicado</option>
+              <option value="Archivado">Archivado</option>
+            </select>
+          </div>
         </div>
 
-        <div className="mt-3">
-          <label className="block text-sm font-semibold text-gray-700">
-            Estado
-          </label>
-          <select
-            value={estado}
-            onChange={(e) => setEstado(e.target.value as EstadoEval)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-600 focus:border-sky-600"
-          >
-            <option value="Publicado">Publicado</option>
-            <option value="Archivado">Archivado</option>
-          </select>
-        </div>
-
-        <div className="flex justify-center gap-3 mt-6">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-4 py-2 bg-sky-600 rounded text-white hover:bg-sky-700 transition"
-          >
-            {saving ? "Guardando..." : "Guardar"}
-          </button>
-
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
-          >
-            Cancelar
-          </button>
-        </div>
-
+        {error && (
+          <div className="p-4 bg-rose-50 border border-rose-100 rounded-[1.5rem] flex items-center gap-3 animate-shake">
+            <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]" />
+            <p className="text-[10px] font-black text-rose-600 uppercase tracking-[0.15em]">{error}</p>
+          </div>
+        )}
       </div>
-    </div>
+    </AdminModal>
   );
 };

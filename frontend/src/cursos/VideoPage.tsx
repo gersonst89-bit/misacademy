@@ -3,6 +3,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import "./curso-player.css";
 import mockDB from "../data/mockDatabase";
 import { API_URL } from "../config/api";
@@ -42,18 +43,19 @@ function parseList(json: any): any[] {
 }
 
 function authHeaders(extra?: Record<string, string>) {
-  const t =
-    typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
   return {
     Accept: "application/json",
     "Content-Type": "application/json",
-    ...(t ? { Authorization: `Bearer ${t}` } : {}),
     ...(extra || {}),
   };
 }
 
 async function getJson(url: string) {
-  const r = await fetch(url, { headers: authHeaders(), cache: "no-store" });
+  const r = await fetch(url, { 
+    headers: authHeaders(), 
+    cache: "no-store",
+    credentials: "include"
+  });
   if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
   try {
     return await r.json();
@@ -66,6 +68,7 @@ async function postJson(url: string, body: any) {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify(body),
+    credentials: "include",
   });
   try {
     const js = await r.json();
@@ -97,7 +100,13 @@ const getLeccionUrl = (o: any) =>
 
 const getMaterialNombre = (o: any) =>
   pick<string>(o, ["nombre", "titulo"], "Material");
-const getMaterialUrl = (o: any) => pick<string>(o, ["url_archivo", "url"], "#");
+const getMaterialUrl = (o: any) => {
+  const path = pick<string>(o, ["url_archivo", "url", "archivo"], "");
+  if (!path || path.startsWith('http')) return path || "#";
+  // Si la ruta ya incluye 'storage/', no la duplicamos
+  const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+  return `${API_BASE}/${cleanPath}`;
+};
 
 /* Tipos simples */
 type Mod = { id: number; titulo: string; peso: number; lecciones: any[] };
@@ -110,30 +119,96 @@ type Coment = {
   parent_id?: number | string | null;
   replies?: Coment[];
 };
-type EvalPregunta = {
-  enunciado: string;
-  opciones: string[];
-  correcta: number; // índice
-  puntaje: number; // default 1
-};
-type EvalConfig = {
-  id: number;
-  titulo: string;
-  puntajeMinimo: number; // 0-100
-  intentosMax?: number;
-  preguntas: EvalPregunta[];
-};
+
 
 /* =========================
    COMPONENTE
 ========================= */
-const VideoPage: React.FC = () => {
-  const { cursoIdSlug } = useParams();
-  const navigate = useNavigate();
-  const cursoId = useMemo(
-    () => num(String(cursoIdSlug || "").split("-")[0]),
-    [cursoIdSlug]
+const CommentItem = ({
+  c,
+  onReply,
+}: {
+  c: Coment;
+  onReply: (txt: string) => void;
+}) => {
+  const [showReply, setShowReply] = useState(false);
+  const [replyTxt, setReplyTxt] = useState("");
+
+  return (
+    <div className="group/com relative p-6 rounded-3xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all">
+      <div className="flex gap-4">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-500/20 to-blue-500/20 border border-white/10 flex items-center justify-center text-sm font-black text-sky-400">
+          {c.usuario?.nombre?.charAt(0) || "U"}
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-white/80">{c.usuario?.nombre || "Estudiante"}</span>
+            <span className="text-[9px] text-white/20 uppercase font-bold tracking-tighter">{c.created_at ? new Date(c.created_at).toLocaleDateString() : 'Reciente'}</span>
+          </div>
+          <p className="text-sm text-white/60 leading-relaxed mb-4">{c.texto}</p>
+          
+          <button 
+            onClick={() => setShowReply(!showReply)}
+            className="text-[9px] font-black uppercase tracking-widest text-sky-400 hover:text-white transition-colors flex items-center gap-2"
+          >
+            <span>↩ Responder</span>
+          </button>
+
+          {showReply && (
+            <div className="mt-6 space-y-4 animate-in fade-in slide-in-from-top-2">
+              <textarea
+                className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-xs text-white placeholder:text-white/20 focus:border-sky-500/50 outline-none transition-all resize-none"
+                placeholder="Escribe tu respuesta..."
+                value={replyTxt}
+                rows={2}
+                onChange={(e) => setReplyTxt(e.target.value)}
+              />
+              <div className="flex justify-end gap-2">
+                <button 
+                  onClick={() => setShowReply(false)}
+                  className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-white transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={() => {
+                    if (replyTxt.trim()) {
+                      onReply(replyTxt);
+                      setReplyTxt("");
+                      setShowReply(false);
+                    }
+                  }}
+                  className="px-6 py-2 bg-white text-black text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-sky-400 transition-colors"
+                >
+                  Enviar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {c.replies && c.replies.length > 0 && (
+            <div className="mt-6 pl-6 border-l border-white/5 space-y-6">
+              {c.replies.map((r, ri) => (
+                <div key={ri} className="relative">
+                  <div className="flex items-center gap-3 mb-1">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-sky-400/60">{r.usuario?.nombre || "Soporte"}</span>
+                  </div>
+                  <p className="text-xs text-white/40 leading-relaxed">{r.texto}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
+};
+
+const VideoPage: React.FC = () => {
+  const params = useParams();
+  const cursoIdSlug = params.cursoIdSlug; // Usar solo el parámetro específico de esta ruta
+  const navigate = useNavigate();
+  const cursoId = cursoIdSlug; 
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -142,29 +217,46 @@ const VideoPage: React.FC = () => {
   const [mods, setMods] = useState<Mod[]>([]);
   const [materiales, setMateriales] = useState<any[]>([]);
   const [examenDesbloqueado, setExamenDesbloqueado] = useState(false);
+  const [evaluationStatus, setEvaluationStatus] = useState<any>(null);
 
   const [activeLeccion, setActiveLeccion] = useState<any | null>(null);
   const [activeModuloId, setActiveModuloId] = useState<number | null>(null);
 
-  const [comments, setComments] = useState<Coment[]>([]);
+  const [comments, setComments] = useState<any[]>([]);
   const [sending, setSending] = useState(false);
   const [newComment, setNewComment] = useState("");
 
-  // evaluación
-  const [evalVisible, setEvalVisible] = useState(false);
-  const [evalCfg, setEvalCfg] = useState<EvalConfig | null>(null);
-  const [evalRespuestas, setEvalRespuestas] = useState<number[]>([]);
-  const [evalPuntaje, setEvalPuntaje] = useState<number | null>(null);
-  const [evalAprobado, setEvalAprobado] = useState<boolean | null>(null);
-  const [evalIntentos, setEvalIntentos] = useState<number>(0);
-  const [generandoCert, setGenerandoCert] = useState(false);
+  /* --------- Verificar si puede hacer el examen --------- */
+  const checkEligibility = async () => {
+    if (!cursoId || cursoId === "undefined" || cursoId === "NaN") return;
+    try {
+      const res = await fetch(`${API_BASE}/courses/${cursoId}/evaluation/check-eligibility`, {
+        headers: {
+          'Accept': 'application/json'
+        },
+        credentials: "include",
+        cache: "no-store",
+      });
+      const data = await res.json();
+      console.log("[DEBUG] Elegibilidad recibida:", data);
+      setEvaluationStatus(data);
+      
+      const hasPassed = data.hasPassed || (data.lastAttempt && data.lastAttempt.porcentaje >= (data.configuration?.passingPercentage || 60));
+      
+      if (hasPassed) {
+        console.log("[DEBUG] Desbloqueando examen en UI (Ya aprobado)");
+        setExamenDesbloqueado(true);
+      } else if (data.eligible) {
+        setExamenDesbloqueado(true);
+      } else {
+        setExamenDesbloqueado(false);
+      }
+    } catch (error) {
+      console.error("Error verificando elegibilidad:", error);
+    }
+  };
 
-  // NUEVO: tipo de evaluación y módulos aprobados
-  const [modoEval, setModoEval] = useState<"modulo" | "final" | null>(null);
-  const [moduloEvaluadoId, setModuloEvaluadoId] = useState<number | null>(null);
-  const [modulosAprobados, setModulosAprobados] = useState<
-    Record<number, boolean>
-  >({});
+
 
   /* --------- Cargar curso + módulos + lecciones --------- */
   useEffect(() => {
@@ -172,7 +264,8 @@ const VideoPage: React.FC = () => {
 
 
     (async () => {
-      if (!cursoId || Number.isNaN(cursoId)) {
+      // Validación estricta para evitar peticiones basura
+      if (!cursoId || cursoId === "undefined" || cursoId === "NaN" || Number.isNaN(Number(cursoId)) && cursoId.length < 3) {
         setError("Curso no válido");
         setLoading(false);
         return;
@@ -185,143 +278,100 @@ const VideoPage: React.FC = () => {
         // ----- Curso -----
         let jc: any = null;
         try {
-          jc = await getJson(`${API_BASE}/cursos/${cursoId}?_${Date.now()}`);
+          // Intentamos cargar por slug primero
+          jc = await getJson(`${API_BASE}/cursos/slug/${cursoIdSlug}?_${Date.now()}`);
         } catch {
-          jc = mockDB.cursos.find((c) => c.id_curso === cursoId) || null;
+          try {
+            // Si falla, intentamos por ID (por si acaso)
+            jc = await getJson(`${API_BASE}/cursos/${cursoIdSlug}?_${Date.now()}`);
+          } catch {
+            jc = mockDB.cursos.find((c) => c.id_curso === Number(cursoIdSlug)) || null;
+          }
         }
         if (!jc || Object.keys(jc).length === 0) {
           try {
             const list = parseList(
               await getJson(`${API_BASE}/cursos?_${Date.now()}`)
             );
-            jc = list.find((c) => num(getCursoId(c)) === cursoId) || jc;
+            jc = list.find((c) => num(getCursoId(c)) === num(cursoId)) || jc;
           } catch {}
         }
         if (cancel) return;
         setCurso(jc);
+        const actualId = num(getCursoId(jc));
+
+        if (!actualId || Number.isNaN(actualId)) {
+           // Si no pudimos obtener un ID numérico válido, no seguimos cargando contenido
+           if (!cancel) setLoading(false);
+           return;
+        }
 
         // ----- Progreso del curso (para examen final)
         try {
-          const progresoResp = await getJson(`${API_BASE}/cursos/${cursoId}/progreso`);
+          const progresoResp = await getJson(`${API_BASE}/cursos/${actualId}/progreso`);
           if (progresoResp && typeof progresoResp.examen_desbloqueado !== 'undefined') {
             setExamenDesbloqueado(!!progresoResp.examen_desbloqueado);
           }
         } catch {}
 
-        // ----- Módulos -----
-        let modsRaw: any[] = [];
+        // ----- Carga Completa (Módulos + Lecciones + Progreso) -----
+        let modsWithLessons: Mod[] = [];
         try {
-          modsRaw = parseList(
-            await getJson(`${API_BASE}/cursos/${cursoId}/modulos?_${Date.now()}`)
-          );
-        } catch {
-          modsRaw = mockDB.modulos.filter((m) => m.id_curso === cursoId);
-        }
-        if (!modsRaw.length) {
-          try {
-            modsRaw = parseList(
-              await getJson(
-                `${API_BASE}/modulos?curso_id=${cursoId}&_${Date.now()}`
-              )
-            );
-          } catch {}
-        }
-
-        if (modsRaw.length) {
-          const withCursoId = modsRaw.filter(
-            (m) =>
-              !Number.isNaN(
-                num(
-                  (m as any).id_curso ??
-                    (m as any).curso_id ??
-                    (m as any).course_id ??
-                    null
-                )
-              )
-          );
-          if (withCursoId.length) {
-            modsRaw = withCursoId.filter(
-              (m) =>
-                num(
-                  (m as any).id_curso ??
-                    (m as any).curso_id ??
-                    (m as any).course_id ??
-                    null
-                ) === cursoId
-            );
-          }
-          const seen = new Set<number>();
-          modsRaw = modsRaw.filter((m) => {
-            const mid = num(getModuloId(m));
-            if (!mid || Number.isNaN(mid)) return false;
-            if (seen.has(mid)) return false;
-            seen.add(mid);
-            return true;
+          const resp = await getJson(`${API_BASE}/cursos/${actualId}/contenido?_${Date.now()}`);
+          const content = parseList(resp);
+          
+          modsWithLessons = content.map((m: any) => {
+            // Buscamos las lecciones de forma muy flexible
+            const rawLecciones = m.lecciones || m.lessons || m.items || [];
+            return {
+              id: num(getModuloId(m)),
+              titulo: getModuloTitulo(m),
+              peso: getModuloPeso(m),
+              lecciones: parseList(rawLecciones).sort((a, b) => num(a.orden) - num(b.orden)),
+            };
           });
-          modsRaw.sort((a, b) => {
-            const oa = num((a as any).orden ?? (a as any).order ?? 9999);
-            const ob = num((b as any).orden ?? (b as any).order ?? 9999);
-            return oa - ob;
-          });
-        }
-
-        if (cancel) return;
-
-        setMods(
-          modsRaw.map((m) => ({
+        } catch (e) {
+          console.error("Error cargando contenido detallado:", e);
+          // Fallback simple por si falla el endpoint de contenido
+          const resp = await getJson(`${API_BASE}/modulos/curso/${actualId}?_${Date.now()}`);
+          const modsRaw = parseList(resp);
+          modsWithLessons = modsRaw.map((m) => ({
             id: num(getModuloId(m)),
             titulo: getModuloTitulo(m),
             peso: getModuloPeso(m),
             lecciones: [],
-          }))
-        );
-
-        // ----- Lecciones por módulo -----
-        const modsWithLessons: Mod[] = await Promise.all(
-          modsRaw.map(async (m) => {
-            const mid = num(getModuloId(m));
-            let lecs: any[] = [];
-            if (mid && !Number.isNaN(mid)) {
-              const urls = [
-                `${API_BASE}/modulos/${mid}/lecciones?_${Date.now()}`,
-                `${API_BASE}/lecciones?modulo_id=${mid}&_${Date.now()}`,
-              ];
-              for (const u of urls) {
-                try {
-                  const tmp = parseList(await getJson(u));
-                  if (tmp.length) {
-                    lecs = tmp;
-                    break;
-                  }
-                } catch {}
-              }
-              if (!lecs.length) {
-                lecs = mockDB.lecciones.filter((l) => l.id_modulo === mid);
-              }
-            }
-            lecs.sort((a, b) => {
-              const oa = num((a as any).orden ?? 9999);
-              const ob = num((b as any).orden ?? 9999);
-              return oa - ob;
-            });
-            return {
-              id: mid,
-              titulo: getModuloTitulo(m),
-              peso: getModuloPeso(m),
-              lecciones: lecs,
-            };
-          })
-        );
+          }));
+        }
 
         if (cancel) return;
-
         setMods(modsWithLessons);
 
-        // primera lección
-        const firstMod = modsWithLessons.find((m) => m.lecciones?.length);
-        const first = firstMod?.lecciones?.[0] ?? null;
-        setActiveModuloId(firstMod?.id ?? null);
-        setActiveLeccion(first || null);
+        // Seleccionar lección inicial (por query param o la primera)
+        const params = new URLSearchParams(window.location.search);
+        const targetLeccionId = num(params.get('leccion'));
+        
+        let initialLeccion = null;
+        let initialModuloId = null;
+
+        if (targetLeccionId) {
+          for (const m of modsWithLessons) {
+            const found = m.lecciones.find(l => num(getLeccionId(l)) === targetLeccionId);
+            if (found) {
+              initialLeccion = found;
+              initialModuloId = m.id;
+              break;
+            }
+          }
+        }
+
+        if (!initialLeccion) {
+          const firstMod = modsWithLessons.find((m) => m.lecciones?.length);
+          initialLeccion = firstMod?.lecciones?.[0] ?? null;
+          initialModuloId = firstMod?.id ?? null;
+        }
+
+        setActiveModuloId(initialModuloId);
+        setActiveLeccion(initialLeccion);
       } catch (e: any) {
         if (!cancel) setError(e?.message || "Error cargando el curso");
       } finally {
@@ -334,87 +384,62 @@ const VideoPage: React.FC = () => {
     };
   }, [cursoId]);
 
-  /* --------- Materiales y comentarios de la lección activa --------- */
+  // Optimizar: Solo verificar elegibilidad cuando cambie el curso o cuando los módulos se carguen por primera vez
+  useEffect(() => {
+    if (cursoId && mods.length > 0) {
+      checkEligibility();
+    }
+  }, [cursoId, mods.length]);
+
+  /* --------- Materiales del curso --------- */
   useEffect(() => {
     let cancel = false;
+    (async () => {
+      const cid = num(getCursoId(curso));
+      if (!cid || Number.isNaN(cid)) {
+        setMateriales([]);
+        return;
+      }
+      try {
+        const mats = parseList(
+          await getJson(`${API_BASE}/materiales?id_curso=${cid}&_${Date.now()}`)
+        );
+        if (!cancel) setMateriales(mats);
+      } catch (err) {
+        console.warn("Fallo al cargar materiales:", err);
+        if (!cancel) setMateriales([]);
+      }
+    })();
+    return () => { cancel = true; };
+  }, [curso]);
 
+  /* --------- Comentarios de la lección activa --------- */
+  useEffect(() => {
+    let cancel = false;
     (async () => {
       if (!activeLeccion) {
-        setMateriales([]);
         setComments([]);
         return;
       }
-
       const lid = num(getLeccionId(activeLeccion));
       if (!lid || Number.isNaN(lid)) {
-        setMateriales([]);
         setComments([]);
         return;
       }
-
-      // Materiales
-      try {
-        let mats: any[] = [];
-        try {
-          mats = parseList(
-            await getJson(
-              `${API_BASE}/lecciones/${lid}/materiales?_${Date.now()}`
-            )
-          );
-        } catch {}
-        if (!mats.length) {
-          const mid = num((activeLeccion as any).id_modulo);
-          if (mid && !Number.isNaN(mid)) {
-            try {
-              mats = parseList(
-                await getJson(
-                  `${API_BASE}/materiales?modulo_id=${mid}&_${Date.now()}`
-                )
-              );
-            } catch {
-              mats = mockDB.materiales.filter((m) => m.id_modulo === mid);
-            }
-          }
-        }
-        if (!mats.length) {
-          const mid = num((activeLeccion as any).id_modulo);
-          if (mid && !Number.isNaN(mid)) {
-            mats = mockDB.materiales.filter((m) => m.id_modulo === mid);
-          }
-        }
-        if (!cancel) setMateriales(mats);
-      } catch {
-        setMateriales([]);
-      }
-
-      // Comentarios
       try {
         let cmt: any[] = [];
         try {
           cmt = parseList(
-            await getJson(
-              `${API_BASE}/lecciones/${lid}/comentarios?_${Date.now()}`
-            )
+            await getJson(`${API_BASE}/lecciones/${lid}/comentarios?_${Date.now()}`)
           );
-        } catch {}
-        if (!cmt.length) {
-          try {
-            cmt = parseList(
-              await getJson(
-                `${API_BASE}/comentarios?leccion_id=${lid}&_${Date.now()}`
-              )
-            );
-          } catch {
-            cmt = mockDB.comentariosLeccion.filter((c) => c.id_leccion === lid);
-          }
-        }
-        if (!cmt.length) {
+        } catch (err) {
+          console.warn("Fallo al cargar comentarios desde lecciones:", err);
           cmt = mockDB.comentariosLeccion.filter((c) => c.id_leccion === lid);
         }
+        if (cancel) return;
 
         const map = new Map<any, Coment>();
         const roots: Coment[] = [];
-
         cmt.forEach((x) => {
           const item: Coment = {
             id: x?.id ?? x?.id_comentario,
@@ -427,7 +452,6 @@ const VideoPage: React.FC = () => {
           };
           map.set(item.id, item);
         });
-
         map.forEach((v) => {
           if (v.parent_id && map.has(v.parent_id)) {
             map.get(v.parent_id)!.replies!.push(v);
@@ -435,74 +459,37 @@ const VideoPage: React.FC = () => {
             roots.push(v);
           }
         });
-
         if (!cancel) setComments(roots);
       } catch {
-        setComments([]);
+        if (!cancel) setComments([]);
       }
     })();
-
-    return () => {
-      cancel = true;
-    };
+    return () => { cancel = true; };
   }, [activeLeccion]);
 
   /* --------- Acciones --------- */
+
   const handlePlayLeccion = (l: any) => {
     setActiveLeccion(l);
     setActiveModuloId(num((l as any).id_modulo) || activeModuloId || null);
-    setEvalVisible(false);
-    setModoEval(null);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  async function sendComment(texto: string, parentId?: number | string | null) {
+
+
+  async function sendComment(texto: string, parentId?: number | string) {
     if (!activeLeccion) return;
     const lid = num(getLeccionId(activeLeccion));
-    if (!texto.trim()) return;
-
-    const optimistic: Coment = {
-      id: `tmp-${Date.now()}`,
-      leccion_id: lid,
-      texto,
-      parent_id: parentId || null,
-      created_at: new Date().toISOString(),
-      usuario: { nombre: "Tú" },
-      replies: [],
-    };
-
-    if (parentId) {
-      setComments((prev) => {
-        const clone = structuredClone(prev) as Coment[];
-        const stack = [...clone];
-        while (stack.length) {
-          const n = stack.pop()!;
-          if (String(n.id) === String(parentId)) {
-            n.replies = n.replies || [];
-            n.replies.push(optimistic);
-            break;
-          }
-          (n.replies || []).forEach((r) => stack.push(r));
-        }
-        return clone;
-      });
-    } else {
-      setComments((prev) => [optimistic, ...prev]);
-    }
-
     setSending(true);
     try {
-      let res = await postJson(`${API_BASE}/comentarios`, {
-        leccion_id: lid,
-        texto,
-        parent_id: parentId || null,
+      await fetch(`${API_BASE}/lecciones/${lid}/comentarios`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ contenido: texto }), // El backend espera 'contenido'
+        credentials: "include",
       });
-      if (!res.ok) {
-        await postJson(`${API_BASE}/lecciones/${lid}/comentarios`, {
-          texto,
-          parent_id: parentId || null,
-        });
-      }
+      // Refresh comments manually or via trigger
     } catch {}
     setSending(false);
   }
@@ -531,445 +518,88 @@ const VideoPage: React.FC = () => {
     const lid = num(getLeccionId(l));
     if (!lid || Number.isNaN(lid)) return;
     try {
-      const bodies = [
-        { leccion_id: lid, estado: "completada" },
-        { estado: "completada" },
-      ];
-      const urls = [
-        `${API_BASE}/progreso/lecciones/${lid}`,
-        `${API_BASE}/lecciones/${lid}/progreso`,
-        `${API_BASE}/lecciones/${lid}/completar`,
-      ];
-      for (const b of bodies) {
-        for (const u of urls) {
-          const r = await postJson(u, b);
-          if (r.ok) return;
-        }
+      const res = await fetch(`${API_BASE}/lecciones/${lid}/completar`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ porcentaje_completado: 100 }),
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        // Actualizamos el estado local para que aparezca el check inmediatamente
+        setMods((prevMods) => 
+          prevMods.map((m) => ({
+            ...m,
+            lecciones: m.lecciones.map((lec) => {
+              if (num(getLeccionId(lec)) === lid) {
+                return { ...lec, progreso: { estado: 'Completado', porcentaje: 100 } };
+              }
+              return lec;
+            }),
+          }))
+        );
+        checkEligibility();
+        return;
       }
-    } catch {}
+    } catch (error) {
+      console.error("Error al completar lección:", error);
+    }
   }
 
   function goNextFrom(current: any) {
+    // Marcamos la actual como completada en background al darle al botón de "Siguiente"
+    marcarLeccionCompletada(current).catch(console.error);
+
     const { next, nextModule } = findNextLesson(current);
     if (next) {
       setActiveLeccion(next);
       setActiveModuloId(nextModule?.id ?? activeModuloId);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-    // si no hay siguiente lección, el flujo de evaluación (módulo/final)
-    // se maneja desde el botón principal.
-  }
-
-  /* --------- Evaluación por MÓDULO --------- */
-  async function cargarEvaluacionDelModulo(midParam?: number) {
-    const mid = midParam ?? activeModuloId;
-    if (!mid) return;
-
-    try {
-      const tries = [
-        `${API_BASE}/modulos/${mid}/evaluaciones`,
-        `${API_BASE}/evaluaciones?modulo_id=${mid}`,
-      ];
-      let evalData: any[] = [];
-      for (const u of tries) {
-        try {
-          const arr = parseList(await getJson(u));
-          if (arr.length) {
-            evalData = arr;
-            break;
-          }
-        } catch {}
-      }
-
-      if (evalData.length) {
-        const item = evalData[0];
-        const preguntas =
-          parseList(item?.preguntas) && parseList(item?.preguntas).length
-            ? parseList(item?.preguntas).map((p: any) => ({
-                enunciado: p?.enunciado ?? p?.texto ?? "Pregunta",
-                opciones:
-                  p?.opciones ??
-                  p?.alternativas ??
-                  ["Opción 1", "Opción 2", "Opción 3", "Opción 4"],
-                correcta: num(p?.correcta ?? p?.indice_correcta ?? 0) || 0,
-                puntaje: num(p?.puntaje ?? 1) || 1,
-              }))
-            : samplePreguntasModulo(mid);
-
-        const cfg: EvalConfig = {
-          id: num(item?.id ?? item?.id_evaluacion ?? mid),
-          titulo: item?.titulo ?? "Evaluación del módulo",
-          puntajeMinimo:
-            num(item?.puntaje_minimo ?? item?.aprobacion ?? 60) || 60,
-          intentosMax: num(item?.intentos ?? item?.intentos_maximos ?? 3) || 3,
-          preguntas,
-        };
-        setEvalCfg(cfg);
-        setEvalRespuestas(new Array(preguntas.length).fill(-1));
-        setEvalPuntaje(null);
-        setEvalAprobado(null);
-        return;
-      }
-    } catch {}
-
-    // Fallback genérico
-    const cfg: EvalConfig = {
-      id: mid!,
-      titulo: "Evaluación del módulo",
-      puntajeMinimo: 60,
-      intentosMax: 3,
-      preguntas: samplePreguntasModulo(mid),
-    };
-    setEvalCfg(cfg);
-    setEvalRespuestas(new Array(cfg.preguntas.length).fill(-1));
-    setEvalPuntaje(null);
-    setEvalAprobado(null);
-  }
-
-  /* --------- Evaluación FINAL del curso --------- */
-  async function cargarEvaluacionFinal() {
-    if (!curso) {
-      const cfg: EvalConfig = {
-        id: cursoId || 0,
-        titulo: "Examen final del curso",
-        puntajeMinimo: 70,
-        intentosMax: 3,
-        preguntas: samplePreguntasFinal(),
-      };
-      setEvalCfg(cfg);
-      setEvalRespuestas(new Array(cfg.preguntas.length).fill(-1));
-      setEvalPuntaje(null);
-      setEvalAprobado(null);
-      return;
-    }
-
-    const cid = num(getCursoId(curso));
-    if (!cid || Number.isNaN(cid)) {
-      const cfg: EvalConfig = {
-        id: cursoId || 0,
-        titulo: "Examen final del curso",
-        puntajeMinimo: 70,
-        intentosMax: 3,
-        preguntas: samplePreguntasFinal(),
-      };
-      setEvalCfg(cfg);
-      setEvalRespuestas(new Array(cfg.preguntas.length).fill(-1));
-      setEvalPuntaje(null);
-      setEvalAprobado(null);
-      return;
-    }
-
-    try {
-      const urls = [
-        `${API_BASE}/cursos/${cid}/evaluacion-final`,
-        `${API_BASE}/cursos/${cid}/evaluaciones?tipo=final`,
-        `${API_BASE}/evaluaciones?curso_id=${cid}&tipo=final`,
-      ];
-      let evalData: any[] = [];
-      for (const u of urls) {
-        try {
-          const arr = parseList(await getJson(u));
-          if (arr.length) {
-            evalData = arr;
-            break;
-          }
-        } catch {}
-      }
-
-      if (evalData.length) {
-        const item = evalData[0];
-        const preguntas =
-          parseList(item?.preguntas) && parseList(item?.preguntas).length
-            ? parseList(item?.preguntas).map((p: any) => ({
-                enunciado: p?.enunciado ?? p?.texto ?? "Pregunta",
-                opciones:
-                  p?.opciones ??
-                  p?.alternativas ??
-                  ["Opción 1", "Opción 2", "Opción 3", "Opción 4"],
-                correcta: num(p?.correcta ?? p?.indice_correcta ?? 0) || 0,
-                puntaje: num(p?.puntaje ?? 1) || 1,
-              }))
-            : samplePreguntasFinal();
-
-        const cfg: EvalConfig = {
-          id: num(item?.id ?? item?.id_evaluacion ?? cid),
-          titulo: item?.titulo ?? "Examen final del curso",
-          puntajeMinimo:
-            num(item?.puntaje_minimo ?? item?.aprobacion ?? 70) || 70,
-          intentosMax: num(item?.intentos ?? item?.intentos_maximos ?? 3) || 3,
-          preguntas,
-        };
-        setEvalCfg(cfg);
-        setEvalRespuestas(new Array(preguntas.length).fill(-1));
-        setEvalPuntaje(null);
-        setEvalAprobado(null);
-        return;
-      }
-    } catch {}
-
-    const cfg: EvalConfig = {
-      id: cid,
-      titulo: "Examen final del curso",
-      puntajeMinimo: 70,
-      intentosMax: 3,
-      preguntas: samplePreguntasFinal(),
-    };
-    setEvalCfg(cfg);
-    setEvalRespuestas(new Array(cfg.preguntas.length).fill(-1));
-    setEvalPuntaje(null);
-    setEvalAprobado(null);
-  }
-
-  /* --------- Preguntas de ejemplo (Módulo 1, Módulo 2 y Final) --------- */
-  function samplePreguntasModulo(moduloId?: number): EvalPregunta[] {
-    // MÓDULO 2: preguntas diferentes
-    if (moduloId === 2) {
-      return [
-        {
-          enunciado: "¿Qué comando se usa para crear un proyecto con Vite?",
-          opciones: [
-            "npm init vite@latest",
-            "npm start vite",
-            "npx create-react-app",
-            "npm run vite-create",
-          ],
-          correcta: 0,
-          puntaje: 1,
-        },
-        {
-          enunciado:
-            "¿Qué hook de React se utiliza para manejar estado en un componente funcional?",
-          opciones: ["useRef", "useEffect", "useState", "useMemo"],
-          correcta: 2,
-          puntaje: 1,
-        },
-        {
-          enunciado: "¿Qué propiedad se usa para pasar datos a un componente hijo?",
-          opciones: ["state", "props", "context", "hooks"],
-          correcta: 1,
-          puntaje: 1,
-        },
-        {
-          enunciado:
-            "¿Cuál de estas opciones corresponde a una petición HTTP para actualizar datos?",
-          opciones: ["GET", "PUT/PATCH", "HEAD", "OPTIONS"],
-          correcta: 1,
-          puntaje: 1,
-        },
-        {
-          enunciado:
-            "¿Qué ventaja tiene separar el frontend y el backend en una arquitectura fullstack?",
-          opciones: [
-            "Menor uso de memoria",
-            "Mayor acoplamiento",
-            "Escalabilidad y mantenimiento más sencillo",
-            "No se puede trabajar en equipo",
-          ],
-          correcta: 2,
-          puntaje: 1,
-        },
-      ];
-    }
-
-    // MÓDULO 1 (y otros): preguntas base
-    return [
-      {
-        enunciado: "¿Qué es una variable?",
-        opciones: [
-          "Un valor fijo",
-          "Un contenedor de datos que puede cambiar",
-          "Un tipo de bucle",
-          "Una librería",
-        ],
-        correcta: 1,
-        puntaje: 1,
-      },
-      {
-        enunciado: "¿Qué etiqueta embebe videos de YouTube?",
-        opciones: ["<video>", "<iframe>", "<embed>", "<media>"],
-        correcta: 1,
-        puntaje: 1,
-      },
-      {
-        enunciado: "¿Cuál es la extensión de un archivo TypeScript?",
-        opciones: [".js", ".jsx", ".ts", ".tsx"],
-        correcta: 2,
-        puntaje: 1,
-      },
-      {
-        enunciado: "¿Qué método hace una petición HTTP con cuerpo?",
-        opciones: ["GET", "HEAD", "PUT/POST", "TRACE"],
-        correcta: 2,
-        puntaje: 1,
-      },
-      {
-        enunciado: "¿Dónde se almacenan típicamente los tokens?",
-        opciones: [
-          "En variables locales de función",
-          "En el CSS",
-          "En localStorage/secure storage",
-          "No se almacenan",
-        ],
-        correcta: 2,
-        puntaje: 1,
-      },
-    ];
-  }
-
-  function samplePreguntasFinal(): EvalPregunta[] {
-    return [
-      {
-        enunciado:
-          "¿Qué describe mejor el objetivo de un curso fullstack como MIS Academy?",
-        opciones: [
-          "Solo front-end",
-          "Solo bases de datos",
-          "Dominar front-end y back-end para construir aplicaciones completas",
-          "Solo teoría sin práctica",
-        ],
-        correcta: 2,
-        puntaje: 1,
-      },
-      {
-        enunciado:
-          "Para consumir un API segura desde el frontend, ¿qué es una buena práctica?",
-        opciones: [
-          "Enviar el token dentro del HTML",
-          "Usar HTTPS y enviar el token en el encabezado Authorization",
-          "Guardar el token en un archivo .txt",
-          "No usar tokens",
-        ],
-        correcta: 1,
-        puntaje: 1,
-      },
-      {
-        enunciado:
-          "¿Qué ventaja ofrece dividir el curso en módulos y lecciones pequeñas?",
-        opciones: [
-          "Hace el curso más confuso",
-          "No aporta nada",
-          "Facilita el avance progresivo y el seguimiento del progreso",
-          "Impide evaluar al estudiante",
-        ],
-        correcta: 2,
-        puntaje: 1,
-      },
-      {
-        enunciado:
-          "En una API REST, ¿qué código de estado indica que una petición fue exitosa?",
-        opciones: ["200", "301", "404", "500"],
-        correcta: 0,
-        puntaje: 1,
-      },
-      {
-        enunciado:
-          "¿Cuál es el beneficio principal de emitir un certificado al finalizar el curso?",
-        opciones: [
-          "Aumentar el tamaño del proyecto",
-          "No tiene ningún beneficio",
-          "Demostrar formalmente las competencias adquiridas",
-          "Evitar que el estudiante siga aprendiendo",
-        ],
-        correcta: 2,
-        puntaje: 1,
-      },
-    ];
-  }
-
-  function calificar() {
-    if (!evalCfg) return;
-    let total = 0;
-    let ok = 0;
-    evalCfg.preguntas.forEach((p, i) => {
-      total += p.puntaje;
-      if (evalRespuestas[i] === p.correcta) ok += p.puntaje;
-    });
-    const pct = Math.round((ok / total) * 100);
-    setEvalPuntaje(pct);
-    const aprobado = pct >= evalCfg.puntajeMinimo;
-    setEvalAprobado(aprobado);
-    setEvalIntentos((x) => x + 1);
-
-    // marcar módulo aprobado cuando sea evaluación de módulo
-    if (modoEval === "modulo" && aprobado && moduloEvaluadoId) {
-      setModulosAprobados((prev) => ({
-        ...prev,
-        [moduloEvaluadoId]: true,
-      }));
-    }
-
-    reportarResultadoEvaluacion(pct, aprobado).catch(() => {});
-  }
-
-  async function reportarResultadoEvaluacion(
-    porcentaje: number,
-    aprobado: boolean
-  ) {
-    const mid = activeModuloId;
-    if (!mid) return;
-    const payload = { modulo_id: mid, resultado: porcentaje, aprobado };
-    const urls = [
-      `${API_BASE}/evaluaciones/resultados`,
-      `${API_BASE}/modulos/${mid}/resultado`,
-    ];
-    for (const u of urls) {
-      try {
-        const r = await postJson(u, payload);
-        if (r.ok) break;
-      } catch {}
     }
   }
 
-  async function emitirCertificadoYIr() {
-    if (!curso) return;
-    const uidRaw =
-      (typeof window !== "undefined" && localStorage.getItem("user_id")) || "";
-    const usuario_id = num(uidRaw) || undefined;
 
-    setGenerandoCert(true);
-    const body = {
-      id_curso: num(getCursoId(curso)),
-      id_usuario: usuario_id,
-      codigo_certificado: `MISA-${Date.now()}`,
-      calificacion_final: evalPuntaje ?? 0,
-    };
-
-    const urls = [
-      `${API_BASE}/admin/certificaciones`,
-      `${API_BASE}/certificaciones`,
-      `${API_BASE}/certificados`,
-      `${API_BASE}/certificados/enviar`,
-    ];
-    let ok = false;
-    for (const u of urls) {
-      try {
-        const r = await postJson(u, body);
-        if (r.ok) {
-          ok = true;
-          break;
-        }
-      } catch {}
-    }
-    setGenerandoCert(false);
-    navigate("/certificado");
-    if (!ok) console.warn("No se pudo confirmar la emisión del certificado.");
-  }
 
   /* --------- Video embebido --------- */
   const { videoSrc, isDemo } = useMemo(() => {
     const url = getLeccionUrl(activeLeccion);
-    if (!url) return { videoSrc: DEFAULT_DEMO_VIDEO, isDemo: true };
+    if (!url) return { videoSrc: null, isDemo: false };
     let out = url;
     try {
       if (url.includes("youtube.com/watch")) {
         const vid = new URL(url).searchParams.get("v");
-        if (vid) out = `https://www.youtube.com/embed/${vid}`;
+        if (vid) out = `https://www.youtube.com/embed/${vid}?enablejsapi=1&origin=${window.location.origin}`;
       } else if (url.includes("youtu.be/")) {
         const id = url.split("/").pop();
-        if (id) out = `https://www.youtube.com/embed/${id}`;
+        if (id) out = `https://www.youtube.com/embed/${id}?enablejsapi=1&origin=${window.location.origin}`;
       }
     } catch {}
     return { videoSrc: out, isDemo: false };
+  }, [activeLeccion]);
+
+  /* --------- Listener de YouTube para progreso automático --------- */
+  useEffect(() => {
+    const handleYoutubeMessage = async (event: MessageEvent) => {
+      // Solo nos importa si el mensaje viene de YouTube
+      if (!event.origin.includes('youtube.com')) return;
+      
+      try {
+        const data = JSON.parse(event.data);
+        // info: 0 significa que el video ha terminado (ENDED)
+        if (data.event === 'onStateChange' && data.info === 0) {
+          if (activeLeccion) {
+            console.log("🎥 Video terminado detectado. Completando lección automáticamente...");
+            goNextFrom(activeLeccion);
+          }
+        }
+      } catch (e) {
+        // Ignorar mensajes que no sean JSON
+      }
+    };
+
+    window.addEventListener('message', handleYoutubeMessage);
+    return () => window.removeEventListener('message', handleYoutubeMessage);
   }, [activeLeccion]);
 
   /* --------- UI --------- */
@@ -1014,442 +644,301 @@ const VideoPage: React.FC = () => {
   })();
 
   return (
-    <div className="cp-container">
-      {/* Encabezado */}
-      <div className="cp-header">
-        <div className="cp-breadcrumbs">
-          <Link to="/compras">Mis cursos</Link>
-          <span>›</span>
-          <span className="muted">{tituloCurso}</span>
+    <div className="min-h-screen text-white px-4 md:px-12 py-12 bg-[#020609]">
+      {/* Encabezado Urbano Refinado */}
+      <div className="max-w-7xl mx-auto mb-16 relative">
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-sky-500/10 blur-[120px] rounded-full pointer-events-none" />
+        
+        <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-2xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-sky-400 mb-8 backdrop-blur-xl">
+          <Link to="/compras" className="hover:text-white transition-colors">Mis cursos</Link>
+          <span className="text-white/20">/</span>
+          <span className="text-white/60">{tituloCurso}</span>
         </div>
-        <h1 className="cp-title">{tituloCurso}</h1>
-        {/* Botón de evaluación final persistente */}
+        
+        <h1 className="text-5xl md:text-7xl font-black font-['Outfit'] tracking-tight leading-relaxed uppercase italic py-4 overflow-visible">
+          <span className="text-white drop-shadow-[0_5px_15px_rgba(255,255,255,0.1)]">{tituloCurso.split(' ').slice(0, -1).join(' ')}</span>
+          <br/>
+          <span className="inline-block text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-white to-sky-600 drop-shadow-[0_0_20px_rgba(56,189,248,0.4)] pr-6">
+            {tituloCurso.split(' ').pop()}&nbsp;
+          </span>
+        </h1>
+      </div>
+
+      <div className="max-w-7xl mx-auto mb-10">
         {examenDesbloqueado && (
-          <button
-            className="cp-btn cp-btn-final"
-            style={{marginTop: 16, background: '#2563eb', color: '#fff', fontWeight: 600}}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative group cursor-pointer"
             onClick={() => navigate(`/evaluation/${cursoId}`)}
           >
-            🎓 Ir a Evaluación Final
-          </button>
+            {/* Glow Efecto */}
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/50 via-teal-500/20 to-emerald-500/50 rounded-3xl blur opacity-30 group-hover:opacity-60 transition duration-1000" />
+            
+            <div className="relative flex flex-col md:flex-row items-center justify-between gap-6 px-10 py-8 rounded-[2rem] bg-[#0a1219]/80 border border-emerald-500/20 backdrop-blur-3xl overflow-hidden">
+              {/* Decoración de fondo */}
+              <div className="absolute -right-10 -top-10 w-40 h-40 bg-emerald-500/5 blur-[80px] rounded-full pointer-events-none" />
+              
+              <div className="flex items-center gap-6">
+                <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-3xl shadow-inner">
+                  🎓
+                </div>
+                <div>
+                  <h3 className="text-xl font-black italic tracking-tighter text-white uppercase mb-1">
+                    {evaluationStatus?.hasPassed 
+                      ? "Certificación Obtenida" 
+                      : "Examen Final Disponible"}
+                  </h3>
+                  <p className="text-[10px] font-bold text-emerald-400/60 uppercase tracking-[0.2em]">
+                    {evaluationStatus?.hasPassed
+                      ? "Has aprobado con éxito este curso"
+                      : "Has completado el contenido. ¡Es hora de validar tus conocimientos!"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-6">
+                {evaluationStatus?.configuration?.remainingAttempts !== undefined && !evaluationStatus?.hasPassed && (
+                  <div className="hidden md:block text-right">
+                    <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Intentos Disponibles</p>
+                    <p className="text-sm font-black text-white">{evaluationStatus.configuration.remainingAttempts}</p>
+                  </div>
+                )}
+                
+                <button className="px-8 py-4 bg-emerald-500 text-black text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-white transition-all shadow-xl shadow-emerald-500/20 active:scale-95">
+                  {evaluationStatus?.hasPassed
+                    ? "Ver Resultados"
+                    : "Comenzar Ahora"}
+                </button>
+              </div>
+            </div>
+          </motion.div>
         )}
       </div>
 
-      <div className="cp-grid">
-        {/* Columna izquierda */}
-        <div className="cp-left">
-          <div className="cp-player-card">
-            <div className="cp-video">
-              {isDemo && <span className="cp-demo-pill">Video de ejemplo</span>}
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        {/* Columna principal: Video + Info */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="relative group aspect-video rounded-[3rem] overflow-hidden bg-black border border-white/10 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] ring-1 ring-white/5">
+            {/* Aura Neon Ambilight */}
+            <div className="absolute -inset-2 bg-sky-500/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000 -z-10" />
+            
+            {videoSrc ? (
               <iframe
                 src={videoSrc}
                 title={activeTitle}
+                className="w-full h-full relative z-10"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
                 allowFullScreen
               />
-            </div>
-
-            <div className="cp-video-info">
-              <h2 className="cp-lesson-title">{activeTitle}</h2>
-
-              <div className="cp-actions">
-                <button
-                  className="cp-btn"
-                  onClick={async () => {
-                    if (!activeLeccion) return;
-                    await marcarLeccionCompletada(activeLeccion);
-
-                    const mid = num((activeLeccion as any).id_modulo);
-                    const esUltima = esUltimaLeccionDelModulo;
-
-                    if (esUltima && mid && !Number.isNaN(mid)) {
-                      const moduloIndex = mods.findIndex((m) => m.id === mid);
-                      let esUltimoModulo = false;
-                      if (mods.length > 0 && moduloIndex !== -1) {
-                        const indicesConLecciones = mods
-                          .map((m, idx) =>
-                            m.lecciones && m.lecciones.length > 0 ? idx : -1
-                          )
-                          .filter((idx) => idx !== -1);
-                        const lastIndex =
-                          indicesConLecciones[
-                            indicesConLecciones.length - 1
-                          ];
-                        esUltimoModulo = lastIndex === moduloIndex;
-                      }
-
-                      // Si aún no se ha aprobado este módulo, mostrar evaluación de módulo
-                      if (!modulosAprobados[mid]) {
-                        setModoEval("modulo");
-                        setModuloEvaluadoId(mid);
-                        setEvalVisible(true);
-                        await cargarEvaluacionDelModulo(mid);
-                        return;
-                      }
-
-                      // Si ya está aprobado y además es el último módulo, ir al examen final
-                      if (esUltimoModulo) {
-                        setModoEval("final");
-                        setModuloEvaluadoId(null);
-                        setEvalVisible(true);
-                        await cargarEvaluacionFinal();
-                        return;
-                      }
-                    }
-
-                    // Caso por defecto: ir a la siguiente lección/módulo
-                    goNextFrom(activeLeccion);
-                  }}
-                >
-                  {esUltimaLeccionDelModulo ? "Finalizar módulo" : "Siguiente lección"}
-                </button>
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 text-center p-10 bg-gradient-to-b from-[#0a0f16] to-black">
+                <div className="relative w-28 h-28 rounded-[2rem] bg-white/5 border border-white/10 flex items-center justify-center shadow-2xl rotate-3">
+                  <span className="text-5xl filter drop-shadow-[0_0_15px_rgba(56,189,248,0.5)]">🎬</span>
+                  <div className="absolute inset-0 rounded-[2rem] border border-sky-500/20 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-3xl font-black tracking-tighter text-white mb-3 uppercase italic">Contenido en camino</h3>
+                  <p className="text-slate-500 text-sm max-w-xs mx-auto leading-relaxed font-medium">Estamos preparando esta lección para ofrecerte la mejor experiencia de aprendizaje.</p>
+                </div>
               </div>
+            )}
+          </div>
+
+          {/* Info lección activa - Glassmorphism Refined */}
+          <div className="relative rounded-[2.5rem] overflow-hidden border border-white/10 bg-white/5 backdrop-blur-3xl shadow-2xl">
+            <div className="absolute top-0 left-0 w-32 h-32 bg-sky-500/10 blur-[60px] -z-10" />
+            <div className="p-8 flex flex-col md:flex-row md:items-center justify-between gap-8">
+              <div className="min-w-0">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="px-3 py-1 bg-sky-500/20 border border-sky-500/30 rounded-lg text-[9px] font-black text-sky-400 uppercase tracking-widest animate-pulse">
+                    En curso
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Módulo {moduloActual?.titulo.split(' ')[1] || '01'}</span>
+                </div>
+                <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white italic">
+                  {activeTitle}
+                </h2>
+              </div>
+              <button
+                className="group/btn relative shrink-0 px-8 py-4 rounded-2xl overflow-hidden transition-all active:scale-95 shadow-[0_15px_30px_-10px_rgba(14,165,233,0.4)]"
+                onClick={() => {
+                  if (!activeLeccion) return;
+                  goNextFrom(activeLeccion);
+                }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-sky-600 to-blue-500 transition-transform group-hover/btn:scale-105" />
+                <span className="relative z-10 flex items-center gap-3 text-xs font-black uppercase tracking-widest text-white">
+                  {esUltimaLeccionDelModulo ? "Siguiente Módulo" : "Siguiente Clase"}
+                  <span className="group-hover/btn:translate-x-1 transition-transform">→</span>
+                </span>
+              </button>
             </div>
           </div>
 
           {/* Comentarios */}
-          <div className="cp-comments">
-            <h3>Comentarios y consultas</h3>
-            <div className="cp-comment-new">
-              <textarea
-                placeholder="Deja una duda o comentario…"
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-              />
-              <button
-                disabled={!newComment.trim() || sending}
-                onClick={() => {
-                  const t = newComment;
-                  setNewComment("");
-                  sendComment(t);
-                }}
-              >
-                {sending ? "Enviando…" : "Publicar"}
-              </button>
+          <div className="relative rounded-[2rem] border border-white/[0.07] bg-gradient-to-br from-white/[0.03] to-transparent backdrop-blur-xl overflow-hidden">
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
             </div>
+            <div className="p-8">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-sm">💬</div>
+                <h3 className="text-sm font-black uppercase tracking-[0.25em] text-white/70">Comentarios y consultas</h3>
+              </div>
 
-            <div className="cp-comment-list">
-              {comments.length === 0 && (
-                <div className="muted">Sé el primero en comentar.</div>
-              )}
-              {comments.map((c) => (
-                <CommentItem
-                  key={String(c.id)}
-                  c={c}
-                  onReply={(txt) => sendComment(txt, c.id)}
+              <div className="space-y-4 mb-8">
+                <textarea
+                  className="w-full bg-black/30 border border-white/[0.08] rounded-2xl px-5 py-4 text-sm text-white placeholder:text-white/20 focus:border-sky-500/50 focus:bg-black/50 outline-none transition-all resize-none"
+                  placeholder="Escribe tu pregunta o comentario..."
+                  value={newComment}
+                  rows={3}
+                  onChange={(e) => setNewComment(e.target.value)}
                 />
-              ))}
-            </div>
-          </div>
-
-          {/* Evaluación (módulo o final) */}
-          {evalVisible && (
-            <div className="cp-eval">
-              <h3>
-                {modoEval === "final"
-                  ? evalCfg?.titulo || "Examen final del curso"
-                  : evalCfg?.titulo || "Evaluación del módulo"}
-              </h3>
-
-              {!evalCfg && <div className="muted">Cargando evaluación…</div>}
-
-              {evalCfg && evalAprobado === null && (
-                <form
-                  className="cp-eval-form"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    calificar();
-                  }}
-                >
-                  <p className="muted">
-                    Puntaje mínimo para aprobar:{" "}
-                    <b>{evalCfg.puntajeMinimo}%</b>
-                  </p>
-                  {evalCfg.preguntas.map((p, i) => (
-                    <fieldset key={i} className="cp-q">
-                      <legend>
-                        {i + 1}. {p.enunciado}
-                      </legend>
-                      {p.opciones.map((op, j) => (
-                        <label key={j} className="cp-option">
-                          <input
-                            type="radio"
-                            name={`q${i}`}
-                            checked={evalRespuestas[i] === j}
-                            onChange={() => {
-                              const next = [...evalRespuestas];
-                              next[i] = j;
-                              setEvalRespuestas(next);
-                            }}
-                          />
-                          <span>{op}</span>
-                        </label>
-                      ))}
-                    </fieldset>
-                  ))}
-
-                  <div className="cp-actions">
-                    <button className="cp-btn" type="submit">
-                      Enviar evaluación
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {evalCfg && evalAprobado !== null && (
-                <div className="cp-eval-result">
-                  <p>
-                    Tu puntaje: <b>{evalPuntaje}%</b>{" "}
-                    {evalAprobado ? "✅ Aprobado" : "❌ No aprobado"}
-                  </p>
-
-                  {evalAprobado ? (
-                    modoEval === "final" ? (
-                      <div className="cp-actions">
-                        <button
-                          className="cp-btn"
-                          disabled={generandoCert}
-                          onClick={emitirCertificadoYIr}
-                        >
-                          {generandoCert ? "Generando…" : "Ver certificado"}
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="cp-actions">
-                        <button
-                          className="cp-btn"
-                          onClick={() => {
-                            const fakeCurrent =
-                              moduloActual?.lecciones[
-                                moduloActual.lecciones.length - 1
-                              ] || activeLeccion;
-                            const { next } = findNextLesson(fakeCurrent);
-                            if (next) {
-                              // Pasar al siguiente módulo / lección
-                              setEvalVisible(false);
-                              setEvalCfg(null);
-                              setModoEval(null);
-                              setEvalRespuestas([]);
-                              setEvalPuntaje(null);
-                              setEvalAprobado(null);
-                              setEvalIntentos(0);
-                              setActiveLeccion(next);
-                              setActiveModuloId(
-                                num((next as any).id_modulo) || null
-                              );
-                              window.scrollTo({
-                                top: 0,
-                                behavior: "smooth",
-                              });
-                            } else {
-                              // No hay más lecciones -> ir a examen final
-                              setEvalVisible(true);
-                              setModoEval("final");
-                              setModuloEvaluadoId(null);
-                              setEvalRespuestas([]);
-                              setEvalPuntaje(null);
-                              setEvalAprobado(null);
-                              setEvalIntentos(0);
-                              cargarEvaluacionFinal();
-                            }
-                          }}
-                        >
-                          Continuar
-                        </button>
-                      </div>
-                    )
-                  ) : (
-                    <div className="cp-actions">
-                      <button
-                        className="cp-btn"
-                        onClick={() => {
-                          if (
-                            evalCfg?.intentosMax &&
-                            evalIntentos >= evalCfg.intentosMax
-                          ) {
-                            alert(
-                              "Has agotado los intentos permitidos para esta evaluación."
-                            );
-                            return;
-                          }
-                          setEvalRespuestas(
-                            new Array(evalCfg!.preguntas.length).fill(-1)
-                          );
-                          setEvalPuntaje(null);
-                          setEvalAprobado(null);
-                        }}
-                      >
-                        Reintentar
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Columna derecha */}
-        <div className="cp-right">
-          <div className="cp-tabs">
-            <button className="cp-tab cp-tab-active">Módulos</button>
-          </div>
-
-          <div className="cp-mods">
-            {mods.length === 0 && (
-              <div className="muted">Aún no hay módulos.</div>
-            )}
-            {mods.map((m, i) => (
-              <details
-                key={m.id || i}
-                open={m.id === activeModuloId || (!activeModuloId && i === 0)}
-                className="cp-accordion"
-                onToggle={(ev) => {
-                  const open = (ev.target as HTMLDetailsElement).open;
-                  if (open) setActiveModuloId(m.id);
-                }}
-              >
-                <summary>
-                  <span className="dot" /> {getModuloTitulo({ titulo: m.titulo })}
-                  {m.peso ? (
-                    <span className="muted"> · peso {m.peso}</span>
-                  ) : null}
-                </summary>
-                <ul className="cp-lessons">
-                  {m.lecciones?.length === 0 && (
-                    <li className="cp-lesson cp-lesson-empty">
-                      <span className="bullet" />
-                      <span className="name muted">
-                        Aún no hay lecciones en este módulo.
-                      </span>
-                    </li>
-                  )}
-                  {m.lecciones?.map((l) => {
-                    const isActive =
-                      getLeccionId(l) === getLeccionId(activeLeccion);
-                    return (
-                      <li
-                        key={getLeccionId(l)}
-                        className={`cp-lesson ${isActive ? "active" : ""}`}
-                        onClick={() => handlePlayLeccion(l)}
-                      >
-                        <span className="bullet" />
-                        <span className="name">{getLeccionTitulo(l)}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </details>
-            ))}
-          </div>
-
-          <div className="cp-materials">
-            <h4>Materiales disponibles</h4>
-            {materiales.length === 0 && (
-              <div className="muted">No hay materiales aún.</div>
-            )}
-            <ul>
-              {materiales.map((m, idx) => (
-                <li key={idx}>
-                  <span className="file-ico">📄</span>
-                  <a href={getMaterialUrl(m)} target="_blank" rel="noreferrer">
-                    {getMaterialNombre(m)}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/* =========================
-   Comentario (con respuesta)
-========================= */
-const CommentItem: React.FC<{ c: Coment; onReply: (txt: string) => void }> = ({
-  c,
-  onReply,
-}) => {
-  const [showReply, setShowReply] = useState(false);
-  const [txt, setTxt] = useState("");
-
-  return (
-    <div className="cp-com-item">
-      <div className="cp-com-avatar">
-        {c.usuario?.nombre?.[0]?.toUpperCase() || "U"}
-      </div>
-      <div className="cp-com-body">
-        <div className="cp-com-meta">
-          <span className="name">{c.usuario?.nombre || "Usuario"}</span>
-          {c.created_at && (
-            <span className="time">
-              • {new Date(c.created_at).toLocaleString()}
-            </span>
-          )}
-        </div>
-        <div className="cp-com-text">{c.texto}</div>
-        <div className="cp-com-actions">
-          <button className="link" onClick={() => setShowReply((s) => !s)}>
-            Responder
-          </button>
-        </div>
-
-        {showReply && (
-          <div className="cp-reply-box">
-            <textarea
-              value={txt}
-              onChange={(e) => setTxt(e.target.value)}
-              placeholder="Escribe una respuesta…"
-            />
-            <div className="cp-reply-actions">
-              <button
-                className="secondary"
-                onClick={() => {
-                  setShowReply(false);
-                  setTxt("");
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                disabled={!txt.trim()}
-                onClick={() => {
-                  const t = txt;
-                  setTxt("");
-                  setShowReply(false);
-                  onReply(t);
-                }}
-              >
-                Enviar
-              </button>
-            </div>
-          </div>
-        )}
-
-        {(c.replies || []).length > 0 && (
-          <div className="cp-replies">
-            {c.replies!.map((r) => (
-              <div key={String(r.id)} className="cp-com-item reply">
-                <div className="cp-com-avatar">
-                  {r.usuario?.nombre?.[0]?.toUpperCase() || "U"}
-                </div>
-                <div className="cp-com-body">
-                  <div className="cp-com-meta">
-                    <span className="name">{r.usuario?.nombre || "Usuario"}</span>
-                    {r.created_at && (
-                      <span className="time">
-                        • {new Date(r.created_at).toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-                  <div className="cp-com-text">{r.texto}</div>
+                <div className="flex justify-end">
+                  <button
+                    className="relative px-6 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed overflow-hidden group/pub"
+                    disabled={!newComment.trim() || sending}
+                    onClick={() => { const t = newComment; setNewComment(""); sendComment(t); }}
+                  >
+                    <div className="absolute inset-0 bg-white group-hover/pub:bg-sky-400 transition-colors" />
+                    <span className="relative z-10 text-black">{sending ? "Enviando…" : "Publicar"}</span>
+                  </button>
                 </div>
               </div>
-            ))}
+
+              <div className="space-y-4 pt-6 border-t border-white/[0.05]">
+                {comments.length === 0 ? (
+                  <div className="flex flex-col items-center gap-2 py-10 text-white/20">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    <p className="text-[10px] uppercase tracking-widest font-bold">Sé el primero en participar</p>
+                  </div>
+                ) : (
+                  comments.map((c) => (
+                    <CommentItem key={String(c.id)} c={c} onReply={(txt) => sendComment(txt, c.id)} />
+                  ))
+                )}
+            </div>
           </div>
-        )}
+        </div>
+      </div>
+
+      <div className="space-y-6">
+          {/* Sidebar: Contenido del curso - Urban Glass */}
+          <div className="relative rounded-[3rem] border border-white/10 bg-white/5 backdrop-blur-3xl overflow-hidden shadow-2xl">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-sky-500/5 blur-[60px] -z-10" />
+            <div className="p-8">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="w-1.5 h-5 rounded-full bg-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.8)]" />
+                <span className="text-xs font-black uppercase tracking-[0.15em] text-white">Contenido del curso</span>
+              </div>
+ 
+              <div className="space-y-3">
+                {mods.length === 0 && (
+                  <div className="flex flex-col items-center gap-4 py-12 text-slate-500">
+                    <div className="w-8 h-8 border-2 border-sky-500/20 border-t-sky-500 rounded-full animate-spin" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Sincronizando...</span>
+                  </div>
+                )}
+                {mods.map((m, i) => (
+                  <details
+                    key={m.id || i}
+                    open={m.id === activeModuloId || (!activeModuloId && i === 0)}
+                    className="group/mod bg-white/[0.02] border border-white/5 rounded-[2rem] overflow-hidden transition-all hover:bg-white/[0.04]"
+                    onToggle={(ev) => {
+                      if ((ev.target as HTMLDetailsElement).open) setActiveModuloId(m.id);
+                    }}
+                  >
+                    <summary className="flex items-center justify-between cursor-pointer px-6 py-6 list-none group/sum">
+                      <span className="text-[14px] font-bold text-slate-200 group-hover/sum:text-white transition-colors leading-normal tracking-tight pt-1">
+                        {m.titulo}
+                      </span>
+                      <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-open/mod:rotate-180 transition-all duration-500 border border-white/10 shrink-0 ml-4">
+                        <span className="text-sky-400 text-xs">⌄</span>
+                      </div>
+                    </summary>
+ 
+                    <div className="px-3 pb-4 space-y-1.5">
+                      {m.lecciones?.map((l) => {
+                        const isActive = getLeccionId(l) === getLeccionId(activeLeccion);
+                        const isDone = l.progreso?.estado === 'Completado';
+                        return (
+                          <motion.div
+                            key={getLeccionId(l)}
+                            whileHover={{ x: 4 }}
+                            className={`flex items-center gap-4 px-5 py-4 rounded-[1.25rem] cursor-pointer transition-all relative overflow-hidden group/lec ${
+                              isActive
+                                ? 'bg-sky-500/10 border border-sky-500/30 text-sky-400 shadow-[0_10px_20px_-10px_rgba(14,165,233,0.3)]'
+                                : 'hover:bg-white/5 text-slate-400 border border-transparent'
+                            }`}
+                            onClick={() => handlePlayLeccion(l)}
+                          >
+                            {isActive && (
+                              <motion.div 
+                                layoutId="activeInd"
+                                className="absolute left-0 top-0 bottom-0 w-1 bg-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.8)]"
+                              />
+                            )}
+                            <div className={`w-2 h-2 rounded-full shrink-0 transition-all duration-500 ${
+                              isDone ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : isActive ? 'bg-sky-400' : 'bg-white/10'
+                            }`} />
+                            <span className={`text-[12px] font-bold leading-relaxed truncate ${isActive ? 'text-white' : 'group-hover/lec:text-slate-200'}`}>
+                              {getLeccionTitulo(l)}
+                            </span>
+                            {isDone && (
+                              <div className="ml-auto w-5 h-5 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                                <span className="text-emerald-400 text-[10px]">✓</span>
+                              </div>
+                            )}
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar: recursos */}
+          <div className="relative rounded-[2rem] border border-white/[0.07] bg-white/[0.02] backdrop-blur-xl overflow-hidden">
+            <div className="p-6">
+              <div className="flex items-center gap-2.5 mb-5">
+                <div className="w-1 h-4 rounded-full bg-white/20" />
+                <span className="text-[9px] font-black uppercase tracking-[0.35em] text-white/40">Recursos</span>
+              </div>
+              {materiales.length === 0 ? (
+                <div className="text-center py-6">
+                  <div className="text-2xl mb-2 opacity-20">📂</div>
+                  <p className="text-white/20 text-[10px] uppercase tracking-widest font-bold">Sin materiales</p>
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {materiales.map((m, idx) => (
+                    <li key={idx}>
+                      <a
+                        href={getMaterialUrl(m)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.05] text-white/40 hover:text-white/80 transition-all group"
+                      >
+                        <span className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-xs group-hover:border-white/20 group-hover:bg-sky-500/10 group-hover:text-sky-400 transition-all">📄</span>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[10px] font-bold uppercase tracking-wide truncate group-hover:text-white transition-colors">{getMaterialNombre(m)}</span>
+                          <span className="text-[8px] font-medium text-white/20 uppercase tracking-[0.1em] truncate">
+                            {m.modulo ? getModuloTitulo(m.modulo) : 'Recurso General'}
+                          </span>
+                        </div>
+                        <span className="ml-auto text-white/10 group-hover:text-sky-400 text-xs shrink-0 transition-colors">↗</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

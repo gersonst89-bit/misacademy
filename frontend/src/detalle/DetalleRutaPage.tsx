@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import "./learning-path.css";
-import { API_URL } from "../config/api";
+import { API_URL, BASE_URL } from "../config/api";
 
 const API_BASE = API_URL;
 
@@ -52,6 +52,7 @@ async function fetchJson(url: string) {
   const res = await fetch(url, {
     headers: { Accept: "application/json" },
     cache: "no-store",
+    credentials: "include",
   });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   try {
@@ -133,7 +134,10 @@ function cursoPerteneceARuta(curso: any, rutaId: number) {
 }
 
 
+import { useToast } from "../hooks/useToast";
+
 const DetalleRutaPage: React.FC = () => {
+  const { showToast } = useToast();
   const { slug, rutaTitle } = useParams();
   const navigate = useNavigate();
 
@@ -143,18 +147,8 @@ const DetalleRutaPage: React.FC = () => {
   const [cursosDeRuta, setCursosDeRuta] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [isOwned, setIsOwned] = useState(false);
 
-  const [toast, setToast] = useState<{ type: "ok" | "err"; msg: string } | null>(
-    null
-  );
-
-  const toastTimer = useRef<number | null>(null);
-
-  const showToast = (type: "ok" | "err", msg: string, ms = 1500) => {
-    setToast({ type, msg });
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), ms);
-  };
 
   useEffect(() => {
     let cancel = false;
@@ -162,7 +156,7 @@ const DetalleRutaPage: React.FC = () => {
     (async () => {
       setLoading(true);
       try {
-        const json = await fetchJson(`${API_BASE}/rutas?_${Date.now()}`);
+        const json = await fetchJson(`${API_BASE}/rutas-academicas?_${Date.now()}`);
         if (!cancel) setRutas(parseList(json));
       } catch {
         if (!cancel) setError("Error cargando rutas.");
@@ -183,6 +177,33 @@ const DetalleRutaPage: React.FC = () => {
 
   let ruta: any | undefined =
     idxRutaBySlug.get(slugify(rutaTitle ?? slug ?? "")) || rutas[0];
+
+  useEffect(() => {
+    const checkOwnership = async () => {
+      if (!ruta) return;
+      
+      // Si no hay rastro de usuario en localStorage, ni siquiera intentamos preguntar al servidor
+      // Esto evita el error 401 en la consola para usuarios no logueados.
+      const userStored = localStorage.getItem("user");
+      if (!userStored) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/compras/historial`, {
+          credentials: "include",
+        });
+        const data = await res.json();
+        if (res.ok) {
+          const compras = data.compras || data.data || [];
+          const rid = num(getRutaId(ruta));
+          const owned = compras.some((c: any) => c.ruta?.id_ruta === rid || c.id_ruta === rid);
+          setIsOwned(owned);
+        }
+      } catch (err) {
+        console.error("Error al verificar propiedad:", err);
+      }
+    };
+    checkOwnership();
+  }, [ruta]);
 
   useEffect(() => {
     let cancel = false;
@@ -263,51 +284,51 @@ const DetalleRutaPage: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const bearer =
-    typeof window !== "undefined"
-      ? localStorage.getItem("token") ||
-        localStorage.getItem("access_token")
-      : "";
 
-  const authHeaders: HeadersInit = {
+
+  const standardHeaders: HeadersInit = {
     Accept: "application/json",
     "Content-Type": "application/json",
-    ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
   };
 
 async function onAddToCart() {
   if (!ruta) return;
-  if (!bearer) return showToast("err", "Debes iniciar sesión.");
+
+  // ESCUDO DE CONSOLA: Si ya sabemos que no hay usuario, ni siquiera enviamos la petición.
+  // Esto evita que aparezca el error 401 en la consola.
+  const userStored = localStorage.getItem("user");
+  if (!userStored) {
+    return showToast("Por favor, ingresa sesión para agregar la ruta al carrito.", "info");
+  }
 
   try {
     setAdding(true);
 
-    if (cursosDeRuta.length === 0) {
-      return showToast("err", "Esta ruta no tiene cursos aún.");
+    const rid = getRutaId(ruta);
+    if (!rid) {
+      return showToast("Error: No se pudo identificar la ruta.", "error");
     }
 
-    for (const curso of cursosDeRuta) {
-      try {
-        const res = await fetch(`${API_BASE}/carrito/agregar`, {
-          method: "POST",
-          headers: authHeaders,
-          body: JSON.stringify({
-            id_curso: getCursoId(curso)
-          }),
-        });
+    const res = await fetch(`${API_BASE}/carrito/agregar`, {
+      method: "POST",
+      headers: standardHeaders,
+      body: JSON.stringify({
+        id_ruta: rid
+      }),
+      credentials: "include",
+    });
 
-        if (res.status === 409) {
-          continue; 
-        }
-
-      } catch (e) {
-      }
+    if (res.ok) {
+      showToast("Ruta añadida al carrito", "success");
+    } else if (res.status === 401) {
+      showToast("Por favor, ingresa sesión para agregar la ruta al carrito.", "info");
+    } else {
+      const data = await res.json().catch(() => ({}));
+      showToast(data.message || "No se pudo añadir al carrito.", "error");
     }
-
-    showToast("ok", "Cursos añadidos al carrito");
 
   } catch (err) {
-    showToast("err", "No se pudo añadir al carrito.");
+    showToast("Error de conexión.", "error");
   } finally {
     setAdding(false);
   }
@@ -322,104 +343,146 @@ async function onAddToCart() {
     <div
       className="min-h-screen px-4 md:px-8 lg:px-10 py-10 text-white"
       style={{
-        background:
-          "linear-gradient(45deg, #0E1C2B 0%, #09111D 50%, #0E1C2B 100%)",
+        background: "#000000",
       }}
     >
-      {toast && (
-  <div
-    className="
-      fixed
-      bottom-4
-      right-4
-      bg-[#0D1A28]
-      border-l-4
-      text-white
-      px-5
-      py-3
-      rounded-lg
-      shadow-xl
-      z-[9999]
-      transition-opacity
-      duration-500
-      opacity-100
-    "
-    style={{
-      borderColor: toast.type === "ok" ? "#38bdf8" : "#ef4444",
-    }}
-  >
-    {toast.msg}
-  </div>
-)}
 
-      <header className="w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center py-10">
-
-        <div>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4">
-            {getRutaNombre(ruta)}
+      <header className="relative w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center pt-32 pb-20">
+        {/* Abstract Background Elements */}
+        <div className="absolute top-20 left-1/4 w-96 h-96 bg-sky-500/5 blur-[120px] rounded-full -z-10 animate-pulse" />
+        
+        <div className="text-center lg:text-left z-20 max-w-xl mx-auto lg:mx-0">
+          <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/5 border border-white/10 rounded-2xl mb-8 backdrop-blur-md">
+             <span className="text-[10px] font-black tracking-[0.3em] text-sky-400 uppercase">Ruta de Especialización</span>
+          </div>
+          
+          <h1 className="text-5xl md:text-6xl font-black mb-8 tracking-tight leading-[1.1] uppercase font-['Outfit'] italic flex flex-col">
+            <span className="text-white drop-shadow-[0_5px_15px_rgba(255,255,255,0.2)]">
+              {getRutaNombre(ruta).split(' ').slice(0, -2).join(' ')}
+            </span>
+            <span className="text-transparent" style={{ WebkitTextStroke: '1px rgba(255,255,255,0.4)' }}>
+              {getRutaNombre(ruta).split(' ').slice(-2, -1)}
+            </span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-white to-sky-600 drop-shadow-[0_0_20px_rgba(56,189,248,0.4)]">
+              {getRutaNombre(ruta).split(' ').pop()}
+            </span>
           </h1>
 
-          <p className="text-gray-300 text-lg md:text-xl max-w-2xl">
-            Explora esta ruta profesional con contenido actualizado,
-            cursos seleccionados y una experiencia visual moderna.
+          <p className="text-slate-400 text-xl md:text-2xl font-light max-w-2xl leading-relaxed mb-10 mx-auto lg:mx-0">
+            {ruta?.descripcion || "Domina las tecnologías más demandadas con un plan de estudio diseñado por expertos de la industria."}
           </p>
+
+          <div className="flex flex-wrap justify-center lg:justify-start gap-6">
+             <div className="flex items-center gap-3 bg-white/5 px-6 py-3 rounded-2xl border border-white/5">
+                <span className="text-sky-400 font-black italic">01.</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-slate-300">Nivel {ruta?.nivel || "Experto"}</span>
+             </div>
+             <div className="flex items-center gap-3 bg-white/5 px-6 py-3 rounded-2xl border border-white/5">
+                <span className="text-sky-400 font-black italic">02.</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-slate-300">{ruta?.horas_totales || "40+"} Horas</span>
+             </div>
+          </div>
         </div>
 
-        <div className="w-full flex flex-col items-center">
+        <div className="relative group">
           {heroImages.length > 0 ? (
-            <>
+            <div className="relative aspect-[4/3] rounded-[3rem] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] border border-white/10 backdrop-blur-3xl">
               <img
                 src={heroImages[slide]}
-                className="w-full h-[250px] md:h-[320px] lg:h-[360px] rounded-3xl object-cover shadow-[0_0_25px_rgba(56,189,248,0.35)] transition-all duration-700"
+                className="w-full h-full object-cover transition-all duration-1000 group-hover:scale-105"
               />
-
-              <div className="flex gap-3 mt-4">
-                {heroImages.map((_, i) => (
-                  <div
-                    key={i}
-                    className={`w-3 h-3 rounded-full cursor-pointer transition-all
-                      ${slide === i ? "bg-sky-400 scale-125" : "bg-gray-500/40"}`}
-                    onClick={() => setSlide(i)}
-                  ></div>
-                ))}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+              
+              <div className="absolute bottom-10 left-10 right-10 flex justify-between items-end">
+                 <div className="flex gap-2">
+                    {heroImages.map((_, i) => (
+                      <div
+                        key={i}
+                        className={`h-1 rounded-full transition-all duration-500 ${slide === i ? "w-8 bg-sky-400" : "w-2 bg-white/20"}`}
+                        onClick={() => setSlide(i)}
+                      />
+                    ))}
+                 </div>
               </div>
-            </>
+            </div>
           ) : (
-            <div className="text-gray-500"></div>
+            <div className="aspect-[4/3] bg-white/5 rounded-[3rem] animate-pulse border border-white/10" />
           )}
+          
+          {/* Floating Decoration */}
+          <div className="absolute -bottom-10 -right-10 bg-sky-500/10 backdrop-blur-xl border border-white/10 p-8 rounded-3xl hidden md:block animate-bounce-slow">
+             <div className="text-3xl font-black text-white italic tracking-tighter">4.9/5</div>
+             <div className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mt-1">Rating Global</div>
+          </div>
         </div>
       </header>
 
-      <section className="mt-14 w-full">
-        <h2 className="text-3xl font-bold mb-6">Cursos incluidos en la ruta</h2>
+      <section className="mt-32 max-w-7xl mx-auto w-full">
+        <div className="flex items-end justify-between mb-16 px-4">
+           <div>
+              <h2 className="text-5xl font-black uppercase tracking-tighter italic font-['Outfit'] mb-2">
+                Plan de <span className="text-transparent" style={{ WebkitTextStroke: '1px #38bdf8' }}>Estudio</span>
+              </h2>
+              <div className="h-1 w-20 bg-sky-500 rounded-full mb-4" />
+           </div>
+           <div className="hidden md:block text-right">
+              <span className="text-5xl font-black text-white/5 italic select-none">ROADMAP</span>
+           </div>
+        </div>
 
         {loadingCursos ? (
           <LoadingSpinner />
         ) : pasos.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-7">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 px-4">
             {pasos.map((p, i) => (
               <div
                 key={i}
-                onClick={() => navigate(`/curso/${createSlug(p.titulo)}`)}
-                className="relative group cursor-pointer rounded-xl overflow-hidden bg-[#0b1523] shadow-xl h-[240px] hover:scale-[1.02] transition-transform"
+                onClick={() => {
+                  if (isOwned) {
+                    navigate(`/video-page/${p.idCurso}`);
+                  } else {
+                    navigate(`/curso/${p.curso?.slug || createSlug(p.titulo)}`);
+                  }
+                }}
+                className="group relative bg-[#0a0a0a] border border-white/5 rounded-[2.5rem] overflow-hidden hover:border-sky-500/30 transition-all duration-500 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.8)]"
               >
-                <img
-                  src={p?.curso?.imagen || "/placeholder.jpg"}
-                  className="absolute inset-0 w-full h-full object-cover transition-all duration-500 group-hover:scale-110"
-                />
+                {/* Image Section */}
+                <div className="aspect-video relative overflow-hidden">
+                  <img
+                    src={
+                      p?.curso?.imagen
+                        ? p.curso.imagen.startsWith("http")
+                          ? p.curso.imagen
+                          : `${API_URL}/${p.curso.imagen.startsWith("/") ? p.curso.imagen.slice(1) : p.curso.imagen}`
+                        : "/placeholder.jpg"
+                    }
+                    className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent" />
+                  
+                  {/* Badge */}
+                  <div className="absolute top-6 left-6 px-4 py-1.5 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full text-[9px] font-black text-white uppercase tracking-widest">
+                     Módulo {p.n < 10 ? `0${p.n}` : p.n}
+                  </div>
+                </div>
 
-                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent"></div>
-
-                <div className="absolute bottom-4 left-4 right-4">
-                 <h3 className="text-xl font-bold mb-1 group-hover:text-sky-300">
-                      {p.titulo}
-                    </h3>
-                    <p className="text-sky-300 text-sm font-semibold mb-2">
-                      {p.curso?.precio ? `S/. ${Number(p.curso.precio).toFixed(2)}` : "Gratis"}
-                    </p>
-                  <button className="px-4 py-1 text-xs bg-sky-600 rounded-md hover:bg-sky-500">
-                    Ver curso
-                  </button>
+                {/* Content Section */}
+                <div className="p-8">
+                  <h3 className="text-2xl font-bold mb-4 line-clamp-2 leading-tight group-hover:text-sky-400 transition-colors">
+                    {p.titulo}
+                  </h3>
+                  <p className="text-slate-500 text-sm line-clamp-2 mb-8 font-light leading-relaxed">
+                    {p.curso?.descripcion_corta || "Explora los conceptos fundamentales y avanzados de este módulo especializado."}
+                  </p>
+                  
+                  <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                     <span className={`text-[10px] font-black uppercase tracking-widest ${isOwned ? 'text-emerald-400' : 'text-sky-400'}`}>
+                        {isOwned ? "Acceso de por vida" : "Ver Detalles"}
+                     </span>
+                     <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all ${isOwned ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-sky-500/10 border-sky-500/20 text-sky-400'}`}>
+                        →
+                     </div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -432,94 +495,155 @@ async function onAddToCart() {
       </section>
 
       <section className="w-full mt-24 grid lg:grid-cols-2 gap-12 items-center">
-        <div className="p-10 rounded-3xl bg-[#0b1523]/90 border border-sky-600/40 shadow-[0_0_35px_rgba(56,189,248,0.25)] text-center">
-          <h2 className="text-3xl font-extrabold mb-1">Acceso Completo</h2>
-          <p className="text-sky-300 text-lg font-semibold mb-5">
-            {contador}+ estudiantes inscritos
-          </p>
+        <div className={`relative p-12 rounded-[3rem] overflow-hidden transition-all duration-700 ${isOwned ? 'bg-gradient-to-br from-emerald-500/10 via-black/40 to-emerald-900/10 border-emerald-500/30' : 'bg-gradient-to-br from-sky-500/10 via-black/40 to-sky-900/10 border-sky-600/30'} border backdrop-blur-2xl shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] group/card text-center`}>
+          {/* Decorative Glow */}
+          <div className={`absolute -top-24 -right-24 w-48 h-48 ${isOwned ? 'bg-emerald-500/20' : 'bg-sky-500/20'} blur-[100px] rounded-full`} />
+          <div className={`absolute -bottom-24 -left-24 w-48 h-48 ${isOwned ? 'bg-emerald-500/10' : 'bg-sky-500/10'} blur-[100px] rounded-full`} />
 
-          <ul className="text-gray-300 text-left mx-auto max-w-sm space-y-3 mb-8">
-            <li className="flex gap-3"><span className="text-sky-400 text-xl">✓</span>Acceso a todos los cursos</li>
-            <li className="flex gap-3"><span className="text-sky-400 text-xl">✓</span>Actualizaciones ilimitadas</li>
-            <li className="flex gap-3"><span className="text-sky-400 text-xl">✓</span>Material complementario</li>
-            <li className="flex gap-3"><span className="text-sky-400 text-xl">✓</span>Certificado final</li>
-          </ul>
+          <div className="relative z-10">
+            <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border mb-8 ${isOwned ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-sky-500/10 border-sky-500/20 text-sky-400'} text-[10px] font-black uppercase tracking-[0.2em]`}>
+               <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+               {isOwned ? "Acceso Estudiante" : "Membresía Premium"}
+            </div>
 
-          <button
-            onClick={onAddToCart}
-            disabled={adding}
-            className="px-10 py-3 rounded-xl text-xl font-semibold bg-sky-600 hover:bg-sky-500 shadow-lg shadow-sky-500/40"
-          >
-            {adding ? "Procesando..." : "Obtener acceso"}
-          </button>
+            <h2 className="text-5xl font-black mb-6 tracking-tighter uppercase font-['Outfit'] italic leading-none">
+              {isOwned ? "¡Ya es " : "Acceso "}
+              <span className={`text-transparent bg-clip-text bg-gradient-to-r ${isOwned ? 'from-emerald-300 to-emerald-500' : 'from-sky-300 to-sky-500'}`}>
+                {isOwned ? "tuya!" : "Completo"}
+              </span>
+            </h2>
+            
+            {!isOwned && (
+              <div className="text-4xl font-black text-white mb-6 font-['Outfit']">
+                {labelPrecio}
+              </div>
+            )}
+
+            <p className="text-slate-400 text-lg font-light mb-10 max-w-sm mx-auto leading-relaxed">
+              {isOwned 
+                ? "Tienes acceso ilimitado a todos los cursos y futuras actualizaciones de esta ruta." 
+                : `Únete a los más de ${contador} estudiantes que ya están transformando su carrera.`}
+            </p>
+
+            <div className="grid grid-cols-2 gap-4 mb-12 max-w-md mx-auto">
+               {[
+                 { label: "Cursos", icon: "✓" },
+                 { label: "Soporte", icon: "✓" },
+                 { label: "Material", icon: "✓" },
+                 { label: "Diploma", icon: "✓" }
+               ].map((item, i) => (
+                 <div key={i} className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-4 hover:bg-white/10 transition-colors">
+                    <span className={`text-xl font-bold ${isOwned ? 'text-emerald-400' : 'text-sky-400'}`}>{item.icon}</span>
+                    <span className="text-xs font-bold uppercase tracking-widest text-slate-300">{item.label}</span>
+                 </div>
+               ))}
+            </div>
+
+            <button
+              onClick={() => {
+                if (isOwned) {
+                  if (pasos.length > 0) navigate(`/video-page/${pasos[0].idCurso}`);
+                } else {
+                  onAddToCart();
+                }
+              }}
+              disabled={adding}
+              className={`w-full group/btn relative py-6 rounded-[2rem] overflow-hidden transition-all duration-500 active:scale-95 ${isOwned ? 'shadow-[0_20px_40px_-10px_rgba(16,185,129,0.3)]' : 'shadow-[0_20px_40px_-10px_rgba(14,165,233,0.3)]'}`}
+            >
+              <div className={`absolute inset-0 bg-gradient-to-r ${isOwned ? 'from-emerald-600 to-teal-500' : 'from-sky-600 to-blue-500'} group-hover/btn:scale-105 transition-transform duration-500`} />
+              <span className="relative z-10 text-black font-black uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-3">
+                {adding ? "Procesando..." : (isOwned ? "Continuar Aprendiendo" : "Obtener acceso ahora")}
+                <span className="group-hover/btn:translate-x-1 transition-transform">→</span>
+              </span>
+            </button>
+          </div>
         </div>
 
-        <div>
-          <h3 className="text-4xl font-bold text-sky-300 mb-4">
-            Aprende de forma completa y certificada
+        <div className="lg:pl-10">
+          <h3 className="text-5xl font-extrabold text-white mb-8 tracking-tight uppercase font-['Outfit'] leading-[1.1]">
+            Aprende de forma <br/>
+            <span className="text-transparent bg-clip-text bg-gradient-to-b from-sky-300 to-sky-600">Completa y Certificada</span>
           </h3>
 
-          <p className="text-gray-300 text-lg leading-relaxed mb-4">
+          <p className="text-slate-400 text-xl leading-relaxed mb-10 font-light">
             Accede a todos los cursos, recursos, soporte y módulos de esta ruta.
-            Aprende a tu ritmo desde cualquier dispositivo.
+            Aprende a tu ritmo desde cualquier dispositivo y obtén tu acreditación oficial.
           </p>
 
-          <p className="text-gray-400 leading-relaxed">
-            El certificado profesional avala tus conocimientos y aumenta tu valor en el mercado laboral.
-          </p>
+          <div className="space-y-6">
+             {[
+               "Contenido actualizado semanalmente",
+               "Soporte directo con mentores",
+               "Descarga de materiales exclusivos",
+               "Validación de conocimientos práctica"
+             ].map((txt, i) => (
+               <div key={i} className="flex items-center gap-4 group/item">
+                  <div className="w-6 h-6 rounded-full bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 text-xs group-hover/item:bg-sky-500 group-hover/item:text-black transition-all">✓</div>
+                  <span className="text-slate-300 font-medium tracking-wide">{txt}</span>
+               </div>
+             ))}
+          </div>
         </div>
 
       </section>
 
-<section className="w-full mt-24 mb-20">
-  <h2 className="text-4xl font-bold text-sky-300 mb-14 text-center tracking-wide">
-    Certificación Incluida
-  </h2>
-  <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center  px-4 ">
-
-    <div className="flex justify-center lg:justify-start">
-      <img
-        src="/certificado.jpg"
-        alt="Certificado"
-        className="w-full max-w-[520px] rounded-xl shadow-xl border border-sky-600/20"/>
-    </div>
-
-    <div className="flex flex-col text-left">
-
-      <p className="text-gray-300 text-lg leading-relaxed mb-10 max-w-xl">
-        Al finalizar esta ruta recibirás un{" "}
-        <span className="text-sky-400 font-semibold">certificado digital verificable</span>,
-        ideal para fortalecer tu CV, portafolio profesional y destacar en procesos de selección.
-      </p>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-
-        <div className="bg-[#0d1826] border border-sky-600/20 rounded-xl px-5 py-6 text-center shadow-lg hover:scale-[1.03] transition">
-          <p className="text-sky-400 font-bold text-lg mb-1">✓ Oficial</p>
-          <p className="text-gray-300 text-sm">Emitido por la plataforma.</p>
+<section className="w-full mt-40 mb-32 max-w-7xl mx-auto px-4">
+  <div className="relative bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-[4rem] p-12 md:p-20 overflow-hidden backdrop-blur-3xl shadow-2xl">
+    {/* Decorative Shapes */}
+    <div className="absolute top-0 right-0 w-96 h-96 bg-sky-500/10 blur-[100px] rounded-full -z-10" />
+    
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+      <div className="relative order-2 lg:order-1">
+        <div className="absolute -inset-4 bg-sky-500/20 blur-2xl rounded-[3rem] -z-10 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <img
+          src="/certificado.jpg"
+          alt="Certificado Oficial"
+          className="w-full rounded-[2.5rem] shadow-2xl border border-white/10 transform -rotate-2 hover:rotate-0 transition-transform duration-700"
+        />
+        
+        {/* Floating Tag */}
+        <div className="absolute -bottom-6 -right-6 bg-white text-black px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl">
+           Oficial MIS Academy
         </div>
+      </div>
 
-        <div className="bg-[#0d1826] border border-sky-600/20 rounded-xl px-5 py-6 text-center shadow-lg hover:scale-[1.03] transition">
-          <p className="text-sky-400 font-bold text-lg mb-1">✓ Profesional</p>
-          <p className="text-gray-300 text-sm">Perfecto para CV e informes.</p>
+      <div className="order-1 lg:order-2">
+        <div className="inline-flex items-center gap-3 px-4 py-2 bg-sky-500/10 border border-sky-500/20 rounded-2xl mb-8">
+           <span className="text-[10px] font-black tracking-[0.3em] text-sky-400 uppercase">Reconocimiento Global</span>
         </div>
+        
+        <h2 className="text-5xl font-extrabold text-white mb-8 tracking-tight uppercase font-['Outfit']">
+          Tu Éxito Merece ser <br/>
+          <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-500">Certificado</span>
+        </h2>
 
-        <div className="bg-[#0d1826] border border-sky-600/20 rounded-xl px-5 py-6 text-center shadow-lg hover:scale-[1.03] transition">
-          <p className="text-sky-400 font-bold text-lg mb-1">✓ Verificable</p>
-          <p className="text-gray-300 text-sm">Incluye código único.</p>
+        <p className="text-slate-400 text-lg leading-relaxed mb-12 font-light">
+          Al finalizar esta ruta recibirás un certificado digital con tecnología de validación única,
+          listo para compartir en LinkedIn y potenciar tu empleabilidad.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          {[
+            { t: "Oficial", d: "Acreditado por MIS" },
+            { t: "Global", d: "Válido internacional" },
+            { t: "Único", d: "Código QR seguro" }
+          ].map((item, i) => (
+            <div key={i} className="bg-white/5 border border-white/5 rounded-3xl p-6 hover:bg-white/10 transition-all group/feat">
+              <p className="text-sky-400 font-black text-xs uppercase tracking-widest mb-2 group-hover/feat:scale-110 transition-transform">{item.t}</p>
+              <p className="text-slate-500 text-[10px] font-bold leading-tight">{item.d}</p>
+            </div>
+          ))}
         </div>
-
       </div>
     </div>
-
   </div>
 
   {error && (
-    <div className="mt-10 text-center bg-red-900/40 border border-red-600 text-red-300 p-4 rounded-xl max-w-xl mx-auto">
-      <strong>Error:</strong> {error}
+    <div className="mt-16 text-center bg-red-500/10 border border-red-500/20 text-red-400 p-6 rounded-[2rem] max-w-xl mx-auto backdrop-blur-xl">
+      <span className="font-black uppercase tracking-widest text-xs">Error de Sistema:</span>
+      <p className="mt-2 font-light">{error}</p>
     </div>
   )}
-
 </section>
     </div>
   );

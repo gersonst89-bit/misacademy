@@ -371,7 +371,7 @@ export const mockTiposPagos: TipoPago[] = [
 
 // 17. pagos
 export const mockPagos: Pago[] = [
-  { id_pago: 1, id_usuario: 2, id_tipo_pago: 1, monto: 60.0, fecha_pago: "2025-07-10T10:05:00", estado: "Completado", referencia_externa: "PAY-123", detalles_transaccion: null },
+  { id_pago: 1, id_usuario: 2, id_tipo_pago: 1, monto: 60.0, fecha_pago: "2025-07-10T10:05:00", estado: "Completado", referencia_externa: "PAY-123", comprobante_url: null, numero_operacion: null, detalles_transaccion: null },
 ];
 
 // 18. carrito_compras

@@ -1,86 +1,13 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { Modulo, Curso } from "../../types/models";
-import InputComponent from "../components/InputComponent";
-import { API_URL } from "../../config/api";
+import InputComponent from "../Components/InputComponent";
+import { apiUrl, API_URL } from "../../config/api";
+import AdminModal from "../Components/AdminModal";
+import SearchableSelect from "../Components/SearchableSelect";
 
-const API_PUBLIC = API_URL;
-type EstadoUI = "Activo" | "Inactivo";
-
-function SearchableSelect({
-  value,
-  onChange,
-  options,
-  placeholder = "Selecciona…",
-}: {
-  value: number | "";
-  onChange: (v: number | "") => void;
-  options: { value: number; label: string }[];
-  placeholder?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const [q, setQ] = useState("");
-  const labelActual =
-    value === "" ? "" : options.find((o) => o.value === value)?.label || "";
-
-  const filtradas = useMemo(() => {
-    const t = q.toLowerCase();
-    return options.filter((o) => o.label.toLowerCase().includes(t));
-  }, [q, options]);
-
-  return (
-    <div className="relative">
-      <input
-        onFocus={() => setOpen(true)}
-        value={open ? q : labelActual}
-        onChange={(e) => {
-          setQ(e.target.value);
-          if (!open) setOpen(true);
-        }}
-        placeholder={placeholder}
-        className="mt-1 p-2 w-full border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-sky-600 focus:border-sky-600"
-      />
-      {open && (
-        <div
-          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg"
-          onMouseDown={(e) => e.preventDefault()}
-        >
-          {filtradas.length === 0 && (
-            <div className="px-3 py-2 text-sm text-gray-500">
-              Sin resultados
-            </div>
-          )}
-          {filtradas.map((o) => (
-            <button
-              key={o.value}
-              className="block w-full text-left px-3 py-2 hover:bg-gray-100"
-              onClick={() => {
-                onChange(o.value);
-                setQ("");
-                setOpen(false);
-              }}
-            >
-              {o.label}
-            </button>
-          ))}
-          {value !== "" && (
-            <button
-              className="block w-full text-left px-3 py-2 text-gray-600 hover:bg-gray-100 border-t"
-              onClick={() => {
-                onChange("");
-                setQ("");
-                setOpen(false);
-              }}
-            >
-              Limpiar selección
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
+type EstadoUI = "Activo" | "Inactivo" | "Publicado";
 
 interface Props {
   isOpen: boolean;
@@ -102,11 +29,12 @@ export const AddModuloModal: React.FC<Props> = ({ isOpen, onClose, onSave }) => 
   const [errorCurso, setErrorCurso] = useState("");
   const [errorTitulo, setErrorTitulo] = useState("");
   const [errorOrden, setErrorOrden] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    const token = localStorage.getItem("token");
+
 
     // Reset
     setCursoId("");
@@ -119,60 +47,38 @@ export const AddModuloModal: React.FC<Props> = ({ isOpen, onClose, onSave }) => 
     setErrorOrden("");
 
     const cargarDatos = async () => {
-      // =================== CURSOS ===================
+      setLoading(true);
       try {
-        let lista: Curso[] = [];
-        let pagina = 1;
-        let ultimaPagina = 1;
-
+        // CURSOS
+        let listaC: Curso[] = [];
+        let pC = 1;
+        let lastC = 1;
         do {
-          const res = await fetch(`${API_PUBLIC}/cursos?page=${pagina}`);
+          const res = await fetch(apiUrl(`/admin/cursos?page=${pC}`));
           const data = await res.json();
+          listaC = [...listaC, ...(data.data || [])];
+          lastC = data.last_page || 1;
+          pC++;
+        } while (pC <= lastC);
+        setCursos(listaC);
 
-          const paginaCursos: Curso[] = data.data || [];
-          lista = [...lista, ...paginaCursos];
-
-          ultimaPagina = data.last_page || 1;
-          pagina++;
-        } while (pagina <= ultimaPagina);
-
-        setCursos(lista);
-      } catch {
-        setCursos([]);
-      }
-
-      // =================== MODULOS PRIVADOS ===================
-      try {
-        let lista: Modulo[] = [];
-        let pagina = 1;
-        let ultimaPagina = 1;
-
+        // MODULOS
+        let listaM: Modulo[] = [];
+        let pM = 1;
+        let lastM = 1;
         do {
-          const res = await fetch(
-            `${API_PUBLIC}/modulos?page=${pagina}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                Accept: "application/json",
-              },
-            }
-          );
-
-          if (!res.ok) throw new Error("Error en módulos");
-
+          const res = await fetch(apiUrl(`/admin/modulos?page=${pM}`), {
+          });
           const data = await res.json();
-          console.log("MODULOS DATA:", data);
-
-          const paginaModulos: Modulo[] = data.data || [];
-          lista = [...lista, ...paginaModulos];
-
-          ultimaPagina = data.last_page || 1;
-          pagina++;
-        } while (pagina <= ultimaPagina);
-
-        setModulos(lista);
-      } catch {
-        setModulos([]);
+          listaM = [...listaM, ...(data.data || [])];
+          lastM = data.last_page || 1;
+          pM++;
+        } while (pM <= lastM);
+        setModulos(listaM);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -202,19 +108,14 @@ export const AddModuloModal: React.FC<Props> = ({ isOpen, onClose, onSave }) => 
         (m) => m.id_curso === Number(cursoId) && m.orden === Number(orden)
       );
       if (repetido) {
-        setErrorOrden(
-          `El orden ${orden} ya está asignado a otro módulo en este curso.`
-        );
+        setErrorOrden(`El orden ${orden} ya está en uso en este curso.`);
         hasError = true;
       }
     }
 
     if (hasError) return;
 
-    const payload: Omit<
-      Modulo,
-      "id_modulo" | "fecha_creacion" | "fecha_actualizacion"
-    > = {
+    const payload: Omit<Modulo, "id_modulo" | "fecha_creacion" | "fecha_actualizacion"> = {
       id_curso: Number(cursoId),
       titulo: titulo.trim(),
       descripcion: descripcion || null,
@@ -224,105 +125,110 @@ export const AddModuloModal: React.FC<Props> = ({ isOpen, onClose, onSave }) => 
 
     const ok = await onSave(payload);
     if (ok) onClose();
-    else setErrorTitulo("Ocurrió un error al crear el módulo.");
+    else setErrorTitulo("Error al crear el módulo.");
   };
 
-  if (!isOpen) return null;
-
-  const opciones = cursos.map((c) => ({ value: c.id_curso, label: c.nombre }));
+  const opcionesCursos = cursos.map((c) => ({ value: c.id_curso, label: c.nombre }));
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center min-h-screen">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg max-h-screen overflow-y-auto animate-fade-in">
-        <h2 className="text-2xl font-semibold text-center text-gray-800 mb-4">
-          Agregar Módulo
-        </h2>
-
-        <div className="mb-3">
-          <label className="block text-sm font-semibold text-gray-700">
-            Curso
-          </label>
-          <SearchableSelect
-            value={cursoId}
-            onChange={setCursoId}
-            options={opciones}
-            placeholder="Selecciona un curso…"
-          />
-          {errorCurso && (
-            <div className="mb-2 text-red-600 font-medium text-center">
-              {errorCurso}
-            </div>
-          )}
-        </div>
-
-        <InputComponent
-          label="Título"
-          value={titulo}
-          onChange={(e) => setTitulo(e.target.value)}
-          placeholder="Ej.: Introducción"
-        />
-        {errorTitulo && (
-          <div className="mb-2 text-red-600 font-medium text-center">
-            {errorTitulo}
-          </div>
-        )}
-
-        <div className="mb-3">
-          <label className="block text-sm font-semibold text-gray-700">
-            Descripción
-          </label>
-          <textarea
-            value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
-            className="mt-1 p-2 w-full border border-gray-300 rounded-lg h-28 focus:ring-2 focus:ring-sky-600 focus:border-sky-600 outline-none shadow-sm"
-            placeholder="Descripción del módulo (opcional)"
-          />
-        </div>
-
-        <InputComponent
-          label="Orden"
-          type="number"
-          value={orden === "" ? "" : orden}
-          onChange={(e) =>
-            setOrden(e.target.value === "" ? "" : Number(e.target.value))
-          }
-          placeholder="Ej.: 1"
-        />
-        {errorOrden && (
-          <div className="mb-2 text-red-600 font-medium text-center">
-            {errorOrden}
-          </div>
-        )}
-
-        <div className="mb-1">
-          <label className="block text-sm font-semibold text-gray-700">
-            Estado
-          </label>
-          <select
-            value={estado}
-            onChange={(e) => setEstado(e.target.value as EstadoUI)}
-            className="mt-1 p-2 w-full border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-sky-600 focus:border-sky-600"
-          >
-            <option value="Activo">Activo</option>
-            <option value="Inactivo">Inactivo</option>
-          </select>
-        </div>
-
-        <div className="flex justify-center gap-3 mt-6">
-          <button
-            onClick={handleSave}
-            className="px-4 py-2 bg-sky-600 rounded hover:bg-sky-700 transition text-white text-md"
-          >
-            Agregar
-          </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-md"
+    <AdminModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Crear Nuevo Módulo Académico"
+      footer={
+        <div className="flex gap-4">
+          <button 
+            onClick={onClose} 
+            className="px-8 py-3 rounded-[1.25rem] font-black uppercase tracking-widest text-[10px] text-slate-400 hover:bg-slate-50 transition-all"
           >
             Cancelar
           </button>
+          <button 
+            onClick={handleSave} 
+            className="px-10 py-3 bg-gradient-to-br from-[#0E1C2B] to-[#1a3a5a] text-white rounded-[1.25rem] font-black uppercase tracking-widest text-[10px] hover:shadow-2xl hover:shadow-slate-900/20 transition-all active:scale-95 border border-white/10 shadow-lg shadow-slate-900/10"
+          >
+            {loading ? "Procesando..." : "Registrar Módulo"}
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-6">
+        {/* Sección: Identidad del Módulo */}
+        <div className="p-6 bg-slate-50/40 rounded-[2.5rem] border border-slate-100/50 space-y-6">
+          <div className="flex items-center gap-3 mb-2 ml-1">
+            <div className="w-1.5 h-4 bg-sky-500 rounded-full" />
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Identidad Académica</label>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Curso Perteneciente</label>
+            <SearchableSelect
+              value={cursoId}
+              onChange={setCursoId}
+              options={opcionesCursos}
+              placeholder="Buscar curso en la base de datos..."
+            />
+            {errorCurso && <p className="text-[9px] font-bold text-rose-500 uppercase tracking-widest mt-2 ml-1 animate-pulse">{errorCurso}</p>}
+          </div>
+
+          <div>
+            <InputComponent
+              label="Título del Módulo"
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              placeholder="Ej: Fundamentos de Arquitectura Cloud"
+            />
+            {errorTitulo && <p className="text-[9px] font-bold text-rose-500 uppercase tracking-widest mt-1 ml-1 animate-pulse">{errorTitulo}</p>}
+          </div>
+        </div>
+
+        {/* Sección: Contenido y Descripción */}
+        <div className="p-6 bg-slate-50/40 rounded-[2.5rem] border border-slate-100/50">
+          <div className="flex items-center gap-3 mb-4 ml-1">
+            <div className="w-1.5 h-4 bg-amber-500 rounded-full" />
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Contenido y Objetivos</label>
+          </div>
+          
+          <textarea
+            value={descripcion}
+            onChange={(e) => setDescripcion(e.target.value)}
+            className="w-full px-6 py-5 bg-white border border-slate-200 rounded-[2rem] focus:outline-none focus:ring-4 focus:ring-sky-500/5 focus:border-sky-500 transition-all text-[13px] font-medium h-32 text-slate-700 placeholder:text-slate-300 resize-none shadow-sm"
+            placeholder="Describe brevemente los temas que se abordarán en este módulo..."
+          />
+        </div>
+
+        {/* Sección: Configuración Técnica */}
+        <div className="p-6 bg-slate-50/40 rounded-[2.5rem] border border-slate-100/50">
+          <div className="flex items-center gap-3 mb-4 ml-1">
+            <div className="w-1.5 h-4 bg-slate-400 rounded-full" />
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Configuración Técnica</label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <InputComponent
+              label="Orden de Ejecución"
+              type="number"
+              value={orden === "" ? "" : orden}
+              onChange={(e) => setOrden(e.target.value === "" ? "" : Number(e.target.value))}
+              placeholder="Ej: 1"
+            />
+            
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Estado Inicial</label>
+              <select
+                value={estado}
+                onChange={(e) => setEstado(e.target.value as EstadoUI)}
+                className="w-full px-6 py-3.5 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-sky-500/5 focus:border-sky-500 transition-all text-[11px] font-black uppercase tracking-widest text-slate-700 cursor-pointer shadow-sm"
+              >
+                <option value="Publicado">Publicado</option>
+                <option value="Activo">Activo</option>
+                <option value="Inactivo">Inactivo</option>
+              </select>
+            </div>
+          </div>
+          {errorOrden && <p className="text-[9px] font-bold text-rose-500 uppercase tracking-widest mt-2 ml-1 animate-pulse">{errorOrden}</p>}
         </div>
       </div>
-    </div>
+    </AdminModal>
   );
 };

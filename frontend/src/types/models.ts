@@ -41,7 +41,9 @@ export interface Usuario {
 // 4. LineaAcademica
 export interface LineaAcademica {
   id_linea: number;
+  id_linea_academica?: number;
   nombre: string;
+  slug?: string;
   descripcion: string | null;
   imagen: string | null;
   estado: 'Publicado' | 'Archivado' | string;
@@ -61,15 +63,17 @@ export interface Curso {
   lo_que_aprenderas?: string | null;
   requisitos?: string | null;
   duracion: number | string;
+  duracion_horas?: number;
   tiempo?: number | null;
   precio: number;
   nivel: 'Principiante' | 'Intermedio' | 'Avanzado' | string;
-  estado: 'Publicado' | 'Archivado' | string;
+  estado: 'Publicado' | 'Activo' | 'Inactivo' | 'Archivado' | string;
   destacado: boolean | 0 | 1;
   docente?: {
-    id_docente: number;
+    id_usuario: number;
     nombre: string;
-    imagen?: string | null;
+    apellido?: string;
+    imagen_perfil?: string | null;
   } | null;
   id_docente?: number | null;
   fecha_creacion: string;
@@ -93,6 +97,8 @@ export interface RutaAcademica {
   destacado: boolean;
   fecha_creacion: string;
   fecha_actualizacion: string | null;
+  lineaAcademica?: LineaAcademica;
+  cursos?: any[];
 }
 
 // 7. Modulo
@@ -102,7 +108,7 @@ export interface Modulo {
   titulo: string;
   descripcion: string | null;
   orden: number;
-  estado: 'Activo' | 'Inactivo' | string;
+  estado: 'Publicado' | 'Activo' | 'Inactivo' | string;
   fecha_creacion: string;
   fecha_actualizacion: string | null;
 }
@@ -116,7 +122,7 @@ export interface Leccion {
   url_video: string | null;
   duracion: number | null;
   orden: number;
-  estado: 'Publicado' | 'Archivado' | string;
+  estado: 'Publicado' | 'Activo' | 'Inactivo' | 'Archivado' | string;
   fecha_creacion: string;
   fecha_actualizacion: string | null;
 }
@@ -218,6 +224,8 @@ export interface Pago {
   fecha_pago: string;
   estado: 'Pendiente' | 'Completado' | 'Fallido' | 'Reembolsado' | string;
   referencia_externa: string | null;
+  comprobante_url: string | null;
+  numero_operacion: string | null;
   detalles_transaccion: string | null;
   tipo_pago?: TipoPago;
   usuario?: Usuario;
@@ -373,13 +381,18 @@ export interface InscripcionRuta {
 // 29. Material
 export interface Material {
   id_material: number;
-  id_modulo: number;
-  nombre: string;
+  id_curso?: number;
+  id_modulo: number | null;
+  titulo?: string;
+  nombre?: string;
   descripcion: string | null;
   url_archivo: string;
   tamanio: number | null;
   estado: 'Publicado' | 'Archivado' | string;
   fecha_creacion: string;
+  curso?: {
+    nombre: string;
+  };
 }
 
 // 30. Contacto

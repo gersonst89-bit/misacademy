@@ -1,76 +1,19 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { Modulo, Curso } from "../../types/models";
-import InputComponent from "../components/InputComponent";
-import { API_URL } from "../../config/api";
+import InputComponent from "../Components/InputComponent";
+import { apiUrl, API_URL } from "../../config/api";
+import AdminModal from "../Components/AdminModal";
+import SearchableSelect from "../Components/SearchableSelect";
 
-const API_PUBLIC = API_URL;
-type EstadoUI = "Activo" | "Inactivo";
+type EstadoUI = "Activo" | "Inactivo" | "Publicado";
 
-const toUi = (api: string): EstadoUI =>
-  api === "Activo" || api === "Publicado"
-    ? "Activo"
-    : api === "Inactivo" || api === "Archivado"
-    ? "Inactivo"
-    : "Activo";
-
-function SearchableSelect({
-  value,
-  onChange,
-  options,
-  placeholder = "Selecciona…",
-}: {
-  value: number;
-  onChange: (v: number) => void;
-  options: { value: number; label: string }[];
-  placeholder?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const [q, setQ] = useState("");
-
-  const labelActual = options.find((o) => o.value === value)?.label || "";
-
-  const filtradas = useMemo(() => {
-    const t = q.toLowerCase();
-    return options.filter((o) => o.label.toLowerCase().includes(t));
-  }, [q, options]);
-
-  return (
-    <div className="relative">
-      <input
-        onFocus={() => setOpen(true)}
-        value={open ? q : labelActual}
-        onChange={(e) => {
-          setQ(e.target.value);
-          if (!open) setOpen(true);
-        }}
-        placeholder={placeholder}
-        className="mt-1 p-2 w-full border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-sky-600 focus:border-sky-600"
-      />
-      {open && (
-        <div
-          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg"
-          onMouseDown={(e) => e.preventDefault()}
-        >
-          {filtradas.map((o) => (
-            <button
-              key={o.value}
-              className="block w-full text-left px-3 py-2 hover:bg-gray-100"
-              onClick={() => {
-                onChange(o.value);
-                setQ("");
-                setOpen(false);
-              }}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+const toUi = (api: string): EstadoUI => {
+  if (api === "Publicado") return "Publicado";
+  if (api === "Inactivo" || api === "Archivado") return "Inactivo";
+  return "Activo";
+};
 
 interface Props {
   isOpen: boolean;
@@ -87,10 +30,10 @@ export const EditModuloModal: React.FC<Props> = ({
 }) => {
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [modulos, setModulos] = useState<Modulo[]>([]);
-  const [cursoId, setCursoId] = useState<number>(modulo.id_curso);
+  const [cursoId, setCursoId] = useState<number | "">(modulo.id_curso);
   const [titulo, setTitulo] = useState(modulo.titulo);
   const [descripcion, setDescripcion] = useState(modulo.descripcion || "");
-  const [orden, setOrden] = useState<number>(modulo.orden);
+  const [orden, setOrden] = useState<number | "">(modulo.orden);
   const [estado, setEstado] = useState<EstadoUI>(toUi((modulo as any).estado));
   const [saving, setSaving] = useState(false);
   const [errorOrden, setErrorOrden] = useState<string>("");
@@ -99,53 +42,33 @@ export const EditModuloModal: React.FC<Props> = ({
     let todos: Curso[] = [];
     let page = 1;
     let lastPage = 1;
-
     do {
-      const res = await fetch(`${API_PUBLIC}/cursos?page=${page}`);
+      const res = await fetch(apiUrl(`/admin/cursos?page=${page}`));
       const data = await res.json();
-      const pageCursos: Curso[] = data.data || [];
-      todos = [...todos, ...pageCursos];
+      todos = [...todos, ...(data.data || [])];
       lastPage = data.last_page || 1;
       page++;
     } while (page <= lastPage);
-
     return todos;
   };
 
   const fetchAllModulos = async (): Promise<Modulo[]> => {
-    const token = localStorage.getItem("token");
-
     let todos: Modulo[] = [];
     let page = 1;
     let lastPage = 1;
-
     do {
-      const res = await fetch(`${API_PUBLIC}/modulos?page=${page}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
+      const res = await fetch(apiUrl(`/admin/modulos?page=${page}`), {
       });
-
-      if (!res.ok) throw new Error("Error al cargar módulos privados");
-
       const data = await res.json();
-      console.log("MODULOS DATA:", data);
-
-      const pageMods: Modulo[] = data.data || [];
-      todos = [...todos, ...pageMods];
-
+      todos = [...todos, ...(data.data || [])];
       lastPage = data.last_page || 1;
       page++;
     } while (page <= lastPage);
-
     return todos;
   };
 
   useEffect(() => {
     if (!isOpen) return;
-
-    // Reset values
     setCursoId(modulo.id_curso);
     setTitulo(modulo.titulo);
     setDescripcion(modulo.descripcion || "");
@@ -155,30 +78,21 @@ export const EditModuloModal: React.FC<Props> = ({
 
     const cargarDatos = async () => {
       try {
-        const cursosData = await fetchAllCursos();
-        setCursos(cursosData);
-      } catch {
-        setCursos([]);
-      }
-
-      try {
-        const modulosData = await fetchAllModulos();
-        setModulos(modulosData);
-      } catch {
-        setModulos([]);
+        const [c, m] = await Promise.all([fetchAllCursos(), fetchAllModulos()]);
+        setCursos(c);
+        setModulos(m);
+      } catch (err) {
+        console.error(err);
       }
     };
-
     cargarDatos();
   }, [isOpen, modulo]);
 
   const handleSave = async () => {
     setErrorOrden("");
-
     if (!cursoId) return setErrorOrden("Selecciona un curso.");
     if (!titulo.trim()) return setErrorOrden("El título es obligatorio.");
-    if (!orden || Number(orden) < 1)
-      return setErrorOrden("El orden debe ser ≥ 1.");
+    if (!orden || Number(orden) < 1) return setErrorOrden("El orden debe ser ≥ 1.");
 
     const ordenExiste = modulos.some(
       (m) =>
@@ -186,10 +100,7 @@ export const EditModuloModal: React.FC<Props> = ({
         m.orden === Number(orden) &&
         m.id_modulo !== modulo.id_modulo
     );
-    if (ordenExiste)
-      return setErrorOrden(
-        `El orden ${orden} ya está asignado a otro módulo en este curso.`
-      );
+    if (ordenExiste) return setErrorOrden(`El orden ${orden} ya está en uso.`);
 
     const editado: Modulo = {
       ...modulo,
@@ -208,94 +119,111 @@ export const EditModuloModal: React.FC<Props> = ({
     else setErrorOrden("Error al actualizar módulo.");
   };
 
-  if (!isOpen) return null;
-
   const opciones = cursos.map((c) => ({ value: c.id_curso, label: c.nombre }));
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center min-h-screen">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg max-h-screen overflow-y-auto animate-fade-in">
-        <h2 className="text-2xl font-semibold text-center text-gray-800 mb-4">
-          Editar Módulo
-        </h2>
+    <AdminModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Actualizar Módulo Académico"
+      footer={
+        <div className="flex gap-4">
+          <button 
+            onClick={onClose} 
+            className="px-8 py-3 rounded-[1.25rem] font-black uppercase tracking-widest text-[10px] text-slate-400 hover:bg-slate-50 transition-all"
+          >
+            Descartar
+          </button>
+          <button 
+            onClick={handleSave} 
+            disabled={saving}
+            className={`px-10 py-3 bg-gradient-to-br from-amber-500 to-amber-600 text-white rounded-[1.25rem] font-black uppercase tracking-widest text-[10px] hover:shadow-2xl hover:shadow-amber-500/20 transition-all active:scale-95 border border-white/10 shadow-lg shadow-amber-900/10 ${saving ? "opacity-50 cursor-not-allowed" : ""}`}
+          >
+            {saving ? "Guardando..." : "Actualizar Módulo"}
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-6">
+        {/* Sección: Identidad del Módulo (Modo Edición) */}
+        <div className="p-6 bg-slate-50/40 rounded-[2.5rem] border border-slate-100/50 space-y-6">
+          <div className="flex items-center gap-3 mb-2 ml-1">
+            <div className="w-1.5 h-4 bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+            <label className="text-[10px] font-black text-amber-600 uppercase tracking-[0.2em]">Modificando Identidad</label>
+          </div>
 
-        <div className="mb-3">
-          <label className="block text-sm font-semibold text-gray-700">
-            Curso
-          </label>
-          <SearchableSelect
-            value={cursoId}
-            onChange={setCursoId}
-            options={opciones}
-            placeholder="Selecciona un curso…"
-          />
+          <div>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Curso Perteneciente</label>
+            <SearchableSelect
+              value={cursoId}
+              onChange={setCursoId as any}
+              options={opciones}
+              placeholder="Buscar curso..."
+            />
+          </div>
+
+          <div>
+            <InputComponent
+              label="Título del Módulo"
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              placeholder="Título descriptivo del módulo"
+            />
+          </div>
         </div>
 
-        <InputComponent
-          label="Título"
-          value={titulo}
-          onChange={(e) => setTitulo(e.target.value)}
-        />
-
-        <div className="mb-3">
-          <label className="block text-sm font-semibold text-gray-700">
-            Descripción
-          </label>
+        {/* Sección: Contenido */}
+        <div className="p-6 bg-slate-50/40 rounded-[2.5rem] border border-slate-100/50">
+          <div className="flex items-center gap-3 mb-4 ml-1">
+            <div className="w-1.5 h-4 bg-slate-400 rounded-full" />
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Descripción del Contenido</label>
+          </div>
+          
           <textarea
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
-            className="mt-1 p-2 w-full border border-gray-300 rounded-lg h-28 focus:ring-2 focus:ring-sky-600 focus:border-sky-600 outline-none shadow-sm"
-            placeholder="Descripción (opcional)"
+            className="w-full px-6 py-5 bg-white border border-slate-200 rounded-[2rem] focus:outline-none focus:ring-4 focus:ring-amber-500/5 focus:border-amber-500 transition-all text-[13px] font-medium h-32 text-slate-700 placeholder:text-slate-300 resize-none shadow-sm"
+            placeholder="Describe los objetivos de este módulo..."
           />
         </div>
 
-        <InputComponent
-          label="Orden"
-          type="number"
-          value={String(orden)}
-          onChange={(e) => setOrden(Number(e.target.value))}
-        />
+        {/* Sección: Configuración Técnica */}
+        <div className="p-6 bg-slate-50/40 rounded-[2.5rem] border border-slate-100/50">
+          <div className="flex items-center gap-3 mb-4 ml-1">
+            <div className="w-1.5 h-4 bg-slate-400 rounded-full" />
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Configuración Técnica</label>
+          </div>
 
-        <div className="mb-1">
-          <label className="block text-sm font-semibold text-gray-700">
-            Estado
-          </label>
-          <select
-            value={estado}
-            onChange={(e) => setEstado(e.target.value as EstadoUI)}
-            className="mt-1 p-2 w-full border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-sky-600 focus:border-sky-600"
-          >
-            <option value="Activo">Activo</option>
-            <option value="Inactivo">Inactivo</option>
-          </select>
+          <div className="grid grid-cols-2 gap-5">
+            <InputComponent
+              label="Orden de Ejecución"
+              type="number"
+              value={String(orden)}
+              onChange={(e) => setOrden(Number(e.target.value))}
+            />
+            
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Estado del Módulo</label>
+              <select
+                value={estado}
+                onChange={(e) => setEstado(e.target.value as EstadoUI)}
+                className="w-full px-6 py-3.5 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-amber-500/5 focus:border-amber-500 transition-all text-[11px] font-black uppercase tracking-widest text-slate-700 cursor-pointer shadow-sm"
+              >
+                <option value="Publicado">Publicado</option>
+                <option value="Activo">Activo</option>
+                <option value="Inactivo">Inactivo</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         {errorOrden && (
-          <div className="mb-4 text-red-600 font-medium text-center">
-            {errorOrden}
+          <div className="p-4 bg-rose-50 border border-rose-100 rounded-[1.5rem] flex items-center gap-3 animate-shake">
+            <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]" />
+            <p className="text-[10px] font-black text-rose-600 uppercase tracking-[0.15em]">{errorOrden}</p>
           </div>
         )}
-
-        <div className="flex justify-center gap-3 mt-6">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className={`px-4 py-2 rounded text-white text-md transition ${
-              saving
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-sky-600 hover:bg-sky-700"
-            }`}
-          >
-            {saving ? "Guardando" : "Guardar Cambios"}
-          </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-md"
-          >
-            Cancelar
-          </button>
-        </div>
       </div>
-    </div>
+    </AdminModal>
   );
 };

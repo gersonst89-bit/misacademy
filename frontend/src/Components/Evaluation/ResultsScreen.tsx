@@ -1,48 +1,52 @@
 import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { setCurrentScreen } from '../../store/evaluationSlice';
+import { useNavigate } from 'react-router-dom';
 import styles from './ResultsScreen.module.css';
 import { API_URL } from "../../config/api";
 
 const ResultsScreen: React.FC = () => {
   const results = useSelector((state: any) => state.evaluation.results);
   const configuration = useSelector((state: any) => state.evaluation.configuration);
-  console.log('RESULTS:', results);
-  console.log('CONFIGURATION:', configuration);
   const courseId = useSelector((state: any) => state.evaluation.courseId);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   if (!results) return <div>Cargando resultados...</div>;
 
-  // Comparar puntos obtenidos contra el puntaje mínimo requerido
-  const isPassed = results.puntos_obtenidos >= (configuration.passingPercentage || 0);
+  // Comparar porcentaje obtenido contra el puntaje mínimo requerido
+  const isPassed = (results.porcentaje || 0) >= (configuration.passingPercentage || 0);
   const maxAttempts = results.intentos_permitidos ?? 3;
   const attemptsMade = results.intentos_realizados ?? 0;
   const isLastAttempt = attemptsMade >= maxAttempts;
 
   const handleCertificado = async () => {
     try {
-      // Usar solo el courseId de Redux
       const idCurso = courseId;
       if (!idCurso) {
         alert('No se pudo determinar el curso para el certificado.');
         return;
       }
       // Solicita el certificado vía API
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/certificacion/solicitar`, {
+      const res = await fetch(`${API_URL}/certificaciones/solicitar`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
+        credentials: "include",
         body: JSON.stringify({ id_curso: idCurso })
       });
       if (res.ok) {
-        window.location.href = '/certificado';
+        const data = await res.json();
+        if (data.codigo_certificado) {
+          navigate(`/certificado/${data.codigo_certificado}`);
+        } else {
+          navigate('/certificados');
+        }
       } else {
-        alert('No se pudo solicitar el certificado.');
+        const errorData = await res.json();
+        alert('No se pudo solicitar el certificado: ' + (errorData.message || 'Error desconocido'));
       }
     } catch (err) {
       alert('Error al solicitar el certificado.');
@@ -50,77 +54,102 @@ const ResultsScreen: React.FC = () => {
   };
 
   return (
-    <div className={styles['results-dashboard']}>
-      <div className={styles['results-card']}>
-        <div className={styles['results-card-icon']}>
-          {isPassed ? (
-            <svg xmlns="http://www.w3.org/2000/svg" height="56" viewBox="0 0 24 24" width="56" fill="#4caf50"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-          ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" height="56" viewBox="0 0 24 24" width="56" fill="#f44336"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-          )}
-        </div>
-        <div className={styles['results-card-row']}>
-          <div className={styles['results-card-status']}>
-            {isPassed
-              ? '¡Felicidades, has aprobado la evaluación!'
-              : 'No has alcanzado el puntaje necesario'}
+    <div className="min-h-screen w-full bg-[#030303] flex items-center justify-center p-4 relative overflow-hidden font-sans selection:bg-white/30 text-white z-0">
+      
+      {/* Premium Ambient Background Orb */}
+      <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] blur-[120px] rounded-full pointer-events-none transition-colors duration-1000 -z-10 ${isPassed ? 'bg-emerald-500/15' : 'bg-red-500/15'}`} />
+
+      {/* Glassmorphism Card */}
+      <div className="relative w-full max-w-2xl bg-white/[0.02] backdrop-blur-2xl border border-white/10 rounded-[2rem] p-8 md:p-12 text-center shadow-[0_0_50px_rgba(0,0,0,0.5)] z-10">
+        
+        {/* Icon */}
+        <div className="flex justify-center mb-8">
+          <div className={`w-24 h-24 rounded-2xl flex items-center justify-center shadow-2xl relative rotate-3 ${isPassed ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-emerald-500/20' : 'bg-gradient-to-br from-red-400 to-red-600 shadow-red-500/20'}`}>
+            <div className="absolute inset-0 rounded-2xl border border-white/20" />
+            {isPassed ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-white drop-shadow-md -rotate-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-white drop-shadow-md -rotate-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
+            )}
           </div>
-          <div className={styles['results-card-score']}>
+        </div>
+
+        {/* Title & Score */}
+        <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-white/90">
+          {isPassed ? '¡Examen Aprobado!' : 'Examen Reprobado'}
+        </h2>
+        <div className="flex justify-center items-end gap-2 mb-6">
+          <span className={`text-7xl font-black tracking-tighter text-transparent bg-clip-text ${isPassed ? 'bg-gradient-to-br from-emerald-300 to-teal-500' : 'bg-gradient-to-br from-red-300 to-rose-500'}`}>
             {results.calificacion}%
+          </span>
+        </div>
+
+        {/* Message */}
+        <p className="text-white/60 text-sm font-medium max-w-md mx-auto mb-10 leading-relaxed">
+          {isPassed
+            ? '¡Excelente trabajo! Has demostrado dominio en el tema. Ya puedes solicitar tu certificado oficial.'
+            : isLastAttempt
+            ? 'Has agotado tus intentos. Revisa tus respuestas, repasa el material y vuelve a intentarlo cuando estés listo.'
+            : 'No alcanzaste la calificación mínima. Revisa el material e inténtalo de nuevo.'}
+        </p>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-4 mb-10">
+          <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center transition-all hover:bg-white/[0.05]">
+            <span className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-2">Puntos Obtenidos</span>
+            <span className="text-3xl font-bold text-white/90">{results.puntos_obtenidos}</span>
+          </div>
+          <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center transition-all hover:bg-white/[0.05]">
+            <span className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-2">Puntos Máximos</span>
+            <span className="text-3xl font-bold text-white/90">{results.puntos_maximos}</span>
           </div>
         </div>
-        <div style={{ marginBottom: '1.2rem', color: isPassed ? '#388e3c' : '#b71c1c', fontWeight: 500 }}>
-          {isPassed && isLastAttempt
-            ? '¡Excelente trabajo! Puedes descargar tu certificado y seguir aprendiendo.'
-            : !isPassed && isLastAttempt
-            ? 'No te desanimes, revisa tus respuestas y vuelve a intentarlo. Cada intento te acerca más a tu meta.'
-            : null}
-        </div>
-        <div className={styles['results-card-stats']}>
-          <div className={styles['results-stat']}>
-            <span className={styles['stat-icon']}>
-              <span className="material-icons" style={{ fontSize: 22, color: '#555' }}>military_tech</span>
-            </span>
-            <span>Puntos obtenidos: {results.puntos_obtenidos}</span>
-          </div>
-          <div className={styles['results-stat']}>
-            <span className={styles['stat-icon']}>
-              <span className="material-icons" style={{ fontSize: 22, color: '#555' }}>bar_chart</span>
-            </span>
-            <span>Puntos máximos: {results.puntos_maximos}</span>
-          </div>
-        </div>
-        <div className={styles['results-card-actions']}>
+
+        {/* Actions */}
+        <div className="flex flex-col md:flex-row gap-4 justify-center mb-8">
           {isPassed ? (
-            <button onClick={handleCertificado} className={styles['btn-passed']}>
-              <span className={styles['btn-icon']}>
-                <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 0 24 24" width="20" fill="#fff"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 17.27L18.18 21 16.54 13.97 22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-              </span>
-              Solicitar certificado
-            </button>
+            <>
+              <button 
+                onClick={handleCertificado} 
+                className="flex-1 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white text-xs font-bold uppercase tracking-widest rounded-xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] flex items-center justify-center gap-2"
+              >
+                Solicitar Certificado
+              </button>
+
+              {(results.porcentaje || 0) < 100 && !isLastAttempt && (
+                <button 
+                  onClick={() => dispatch(setCurrentScreen('eligibility'))} 
+                  className="flex-1 py-4 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-400 hover:to-sky-500 text-white text-xs font-bold uppercase tracking-widest rounded-xl transition-all shadow-[0_0_20px_rgba(14,165,233,0.2)] flex items-center justify-center gap-2"
+                >
+                  Mejorar Nota
+                </button>
+              )}
+            </>
           ) : (
-            <button onClick={() => dispatch(setCurrentScreen('eligibility'))} className={styles['btn-failed']}>
-              <span className={styles['btn-icon']}>
-                <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 0 24 24" width="20" fill="#fff"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12z"/></svg>
-              </span>
+            <button 
+              onClick={() => dispatch(setCurrentScreen('eligibility'))} 
+              className="flex-1 py-4 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 text-white text-xs font-bold uppercase tracking-widest rounded-xl transition-all shadow-[0_0_20px_rgba(239,68,68,0.2)] flex items-center justify-center gap-2"
+            >
               Volver a Intentar
             </button>
           )}
-          {(isPassed || isLastAttempt) && (
-            <button onClick={() => dispatch(setCurrentScreen('review'))} className={styles['btn-secondary']}>
-              <span className={styles['btn-icon']}>
-                <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 0 24 24" width="20" fill="#fff"><path d="M0 0h24v24H0z" fill="none"/><path d="M3 6v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2zm2 0h14v12H5V6zm7 2v8h2V8h-2zm-4 0v8h2V8H8z"/></svg>
-              </span>
-              Revisar Respuestas
-            </button>
-          )}
-          <button onClick={() => {/* Volver al curso */}} className={styles['btn-secondary']}>
-            <span className={styles['btn-icon']}>
-              <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 0 24 24" width="20" fill="#fff"><path d="M0 0h24v24H0z" fill="none"/><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-            </span>
-            Volver al Curso
+
+          <button 
+            onClick={() => dispatch(setCurrentScreen('review'))} 
+            className="flex-1 py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2"
+          >
+            Revisar Respuestas
           </button>
         </div>
+
+        {/* Return to Course Button */}
+        <button 
+          onClick={() => navigate(`/video-page/${courseId}`)} 
+          className="text-white/40 hover:text-white/80 text-xs font-bold tracking-widest uppercase transition-colors flex items-center justify-center gap-2 w-full"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+          Volver al curso
+        </button>
       </div>
     </div>
   );

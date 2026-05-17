@@ -1,115 +1,138 @@
 import React from "react";
-import {
-  FaBookOpen,
-  FaProjectDiagram,
-  FaUsers,
-  FaTrophy,
-} from "react-icons/fa";
+import { motion } from "framer-motion";
+import { 
+  BookOpen, 
+  Cpu, 
+  Users, 
+  Award,
+  ArrowRight,
+  Zap
+} from "lucide-react";
 
 interface MethodologyStep {
   id: number;
   title: string;
   description: string;
   icon: React.ReactNode;
-  bgColor: string;
-  borderColor: string;
-  hoverColor: string;
+  color: string;
+  glow: string;
 }
 
 const Metodologia: React.FC = () => {
   const steps: MethodologyStep[] = [
     {
       id: 1,
-      title: "Aprende",
-      description:
-        "Accede a contenido teórico, interactivo y práctico para comprender los conceptos clave.",
-      borderColor: "border-green-500",
-      hoverColor: "group-hover:text-green-400",
-      bgColor: "bg-green-500",
-      icon: (
-        <FaBookOpen className="text-[#0D1A28] w-8 h-8 group-hover:text-green-500 transition-colors duration-300" />
-      ),
+      title: "Núcleo Teórico",
+      description: "Domina los fundamentos con contenido curado por expertos y optimizado para la retención cognitiva.",
+      color: "from-sky-400 to-blue-600",
+      glow: "shadow-sky-500/20",
+      icon: <BookOpen className="w-8 h-8" />,
     },
     {
       id: 2,
-      title: "Practica",
-      description:
-        "Trabaja en proyectos reales y ejercicios prácticos con herramientas actuales y tecnologías innovadoras.",
-      hoverColor: "group-hover:text-orange-400",
-      borderColor: "border-orange-500",
-      bgColor: "bg-orange-500",
-      icon: (
-        <FaProjectDiagram className="text-[#0D1A28] w-8 h-8 group-hover:text-orange-500 transition-colors duration-300" />
-      ),
+      title: "Inmersión Práctica",
+      description: "Aprende haciendo. Desarrolla proyectos reales con tecnologías de vanguardia y flujos de trabajo profesionales.",
+      color: "from-purple-400 to-fuchsia-600",
+      glow: "shadow-fuchsia-500/20",
+      icon: <Cpu className="w-8 h-8" />,
     },
     {
       id: 3,
-      title: "Colabora",
-      description:
-        "Trabaja junto a mentores y compañeros en proyectos colaborativos para resolver problemas reales.",
-      hoverColor: "group-hover:text-amber-400",
-      borderColor: "border-amber-500",
-      bgColor: "bg-amber-500",
-      icon: (
-        <FaUsers className="text-[#0D1A28] w-8 h-8 group-hover:text-amber-500 transition-colors duration-300" />
-      ),
+      title: "Red de Expertos",
+      description: "No estás solo. Accede a mentorías personalizadas y colabora con una comunidad de alto rendimiento.",
+      color: "from-emerald-400 to-teal-600",
+      glow: "shadow-emerald-500/20",
+      icon: <Users className="w-8 h-8" />,
     },
     {
       id: 4,
-      title: "Certifícate",
-      description:
-        "Obtén una certificación oficial que avale tus nuevas habilidades y tu experiencia profesional adquirida.",
-      hoverColor: "group-hover:text-rose-400",
-      borderColor: "border-rose-500",
-      bgColor: "bg-rose-500",
-      icon: (
-        <FaTrophy className="text-[#0D1A28] w-8 h-8 group-hover:text-rose-400 transition-colors duration-300" />
-      ),
+      title: "Acreditación Global",
+      description: "Obtén certificaciones con valor internacional que validan tu expertise ante las mejores empresas IT.",
+      color: "from-amber-400 to-orange-600",
+      glow: "shadow-orange-500/20",
+      icon: <Award className="w-8 h-8" />,
     },
   ];
 
   return (
-    <section className="py-10 lg:py-12 px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-10 lg:mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-5 leading-tight">
-            Nuestra Metodología de Aprendizaje
-          </h1>
-          <p className="text-lg sm:text-xl text-gray-400 max-w-4xl mx-auto leading-relaxed">
-            Un enfoque integral que combina teoría, práctica y colaboración para
-            maximizar tu desarrollo profesional.
-          </p>
+    <section id="metodologia" className="relative pt-12 pb-24 lg:pb-32 overflow-hidden bg-transparent px-6">
+      {/* Decorative Background Elements */}
+      <div className="absolute top-1/2 left-0 w-96 h-96 bg-sky-500/5 blur-[120px] rounded-full -translate-y-1/2 -translate-x-1/2" />
+      <div className="absolute top-1/4 right-0 w-80 h-80 bg-purple-500/5 blur-[100px] rounded-full translate-x-1/2" />
+
+      <div className="max-w-7xl mx-auto relative z-10">
+        <div className="text-center mb-20">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 mb-6"
+          >
+            <Zap className="w-3 h-3 text-sky-400" />
+            <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-sky-400">Nuestro Método</span>
+          </motion.div>
+          
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tight"
+          >
+            Metodología de <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-white to-purple-400">
+              Alto Rendimiento
+            </span>
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+            className="text-slate-400 text-lg md:text-xl max-w-3xl mx-auto font-medium"
+          >
+            Combinamos ingeniería educativa avanzada con práctica intensiva para 
+            acelerar tu crecimiento profesional en tiempo récord.
+          </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-6">
-          {steps.map((step) => (
-            <div key={step.id} className="group">
-              <div
-                className={`bg-[#0D1A28] backdrop-blur-sm rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 group border-b-4 ${step.borderColor}`}
-              >
-                <div className="flex justify-center mb-6">
-                  <div
-                    className={`w-16 h-16 bg-white rounded-full flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg group-hover:shadow-2xl group-hover:ring-4 ${step.hoverColor}`}
-                  >
-                    <div className={`transition-colors duration-300`}>
-                      {step.icon}
-                    </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {steps.map((step, index) => (
+            <motion.div
+              key={step.id}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ y: -8 }}
+              className="group relative"
+            >
+              {/* Glass Card */}
+              <div className="h-full p-8 rounded-[2.5rem] bg-white/[0.02] border border-white/5 backdrop-blur-3xl overflow-hidden flex flex-col transition-all duration-500 group-hover:bg-white/[0.05] group-hover:border-white/20">
+                {/* Glow Effect */}
+                <div className={`absolute -top-24 -right-24 w-48 h-48 bg-gradient-to-br ${step.color} opacity-0 group-hover:opacity-10 blur-[60px] transition-opacity duration-500`} />
+                
+                {/* Icon Container */}
+                <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${step.color} p-[1px] mb-8 shadow-lg ${step.glow} group-hover:scale-110 transition-transform duration-500`}>
+                  <div className="w-full h-full rounded-2xl bg-[#050a12] flex items-center justify-center text-white">
+                    {step.icon}
                   </div>
                 </div>
 
-                <h3
-                  className={`text-2xl font-bold text-white mb-6 text-center ${step.hoverColor} transition-colors duration-300`}
-                >
+                <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-sky-400 transition-colors">
                   {step.title}
                 </h3>
-
-                <div className={`w-16 h-1 ${step.bgColor} mx-auto mb-6`}></div>
-
-                <p className="text-gray-300 text-center leading-relaxed text-base">
+                
+                <p className="text-slate-400 leading-relaxed font-medium mb-8 flex-1">
                   {step.description}
                 </p>
+
+                <div className="flex items-center gap-2 text-white/20 group-hover:text-sky-400 transition-all duration-500">
+                  <div className="h-[1px] w-8 bg-current transition-all group-hover:w-12" />
+                  <ArrowRight size={16} />
+                </div>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>

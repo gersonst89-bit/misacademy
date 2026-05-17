@@ -42,11 +42,8 @@ const Comentarios: React.FC<ComentariosProps> = ({
 
     const fetchPerfil = async () => {
       try {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-
         const response = await fetch(`${API_URL}/auth/profile`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { "Accept": "application/json" },
         });
 
         if (!response.ok) return;
@@ -74,19 +71,9 @@ const Comentarios: React.FC<ComentariosProps> = ({
         return;
       }
 
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setCanComment(false);
-        setMustComplete(false);
-        return;
-      }
-
-      setCheckingPermisos(true);
-
       try {
         const resHistorial = await fetch(`${API_URL}/compras/historial`, {
           headers: {
-            Authorization: `Bearer ${token}`,
             Accept: "application/json",
           },
         });
@@ -117,7 +104,6 @@ const Comentarios: React.FC<ComentariosProps> = ({
           `${API_URL}/cursos/${cursoId}/progreso`,
           {
             headers: {
-              Authorization: `Bearer ${token}`,
               Accept: "application/json",
             },
           }
@@ -176,10 +162,9 @@ const Comentarios: React.FC<ComentariosProps> = ({
   const confirmarEliminarResena = async () => {
     if (!resenaAEliminar) return;
     try {
-      const token = localStorage.getItem("token");
       const response = await fetch(
         `${API_URL}/cursos/resenas/${resenaAEliminar.id_resena}`,
-        { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }
+        { method: "DELETE" }
       );
       if (!response.ok) throw new Error("Error al eliminar reseña");
       setReseñas(

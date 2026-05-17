@@ -1,272 +1,372 @@
-import { useState } from "react";
-import { Eye, EyeOff, Info } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { 
+  Eye, 
+  EyeOff, 
+  User, 
+  Mail, 
+  Lock, 
+  ShieldCheck, 
+  ArrowRight, 
+  Github, 
+  Chrome,
+  ChevronRight
+} from "lucide-react";
+import { apiUrl, BASE_URL } from "../config/api";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function RegistroPage() {
-  const [nombre, setNombre] = useState("");
-  const [apellido, setApellido] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [passwordConfirmation, setPasswordConfirmation] = useState("");
+    // ... (nombres, apellido, etc)
+    const [nombre, setNombre] = useState("");
+    const [apellido, setApellido] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [passwordConfirmation, setPasswordConfirmation] = useState("");
 
-  const [showPass, setShowPass] = useState(false);
-  const [showPass2, setShowPass2] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+    const [showPass, setShowPass] = useState(false);
+    const [showPass2, setShowPass2] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-  const API_URL = import.meta.env.VITE_API_URL;
+    const navigate = useNavigate();
 
-  const passLen = password.length;
-  const passOk = passLen >= 8;
-  const canSubmit =
-    nombre.trim() !== "" &&
-    apellido.trim() !== "" &&
-    email.trim() !== "" &&
-    passOk &&
-    password === passwordConfirmation &&
-    !loading;
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            setMousePos({
+                x: (e.clientX / window.innerWidth - 0.5) * 15,
+                y: (e.clientY / window.innerHeight - 0.5) * 15,
+            });
+        };
+        window.addEventListener("mousemove", handleMouseMove);
+        return () => window.removeEventListener("mousemove", handleMouseMove);
+    }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
+    const passLen = password.length;
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    const passOk = passLen >= 8 && hasSpecialChar;
+    
+    const canSubmit =
+        nombre.trim() !== "" &&
+        apellido.trim() !== "" &&
+        email.trim() !== "" &&
+        passLen >= 8 &&
+        hasSpecialChar &&
+        password === passwordConfirmation &&
+        !loading;
 
-    if (!passOk) {
-      setError("La contraseña debe tener mínimo 8 caracteres.");
-      return;
-    }
-    if (password !== passwordConfirmation) {
-      setError("Las contraseñas no coinciden.");
-      return;
-    }
+    const handleGithubLogin = () => {
+        window.location.href = `${BASE_URL}/api/auth/github`;
+    };
 
-    try {
-      setLoading(true);
-      const payload = {
-        id_rol: 2,
-        nombre,
-        apellido,
-        email,
-        password,
-        password_confirmation: passwordConfirmation,
-      };
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError("");
+        setSuccess("");
 
-      const res = await fetch(`${API_URL}/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        if (data?.errors) {
-          const msg = Object.values<string[]>(data.errors).flat().join(" ");
-          throw new Error(msg);
+        if (!passOk) {
+            setError("La contraseña debe tener mínimo 8 caracteres.");
+            return;
         }
-        throw new Error(data?.message || "No se pudo completar el registro.");
-      }
+        if (password !== passwordConfirmation) {
+            setError("Las contraseñas no coinciden.");
+            return;
+        }
 
-      setSuccess(
-        "¡Registro exitoso! Revisa tu correo y confirma tu cuenta para iniciar sesión."
-      );
-      setNombre("");
-      setApellido("");
-      setEmail("");
-      setPassword("");
-      setPasswordConfirmation("");
-    } catch (err: any) {
-      setError(err?.message || "Error inesperado. Intenta nuevamente.");
-    } finally {
-      setLoading(false);
-    }
-  };
+        try {
+            setLoading(true);
+            const payload = { nombre, apellido, email, password };
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <div className="mx-auto max-w-7xl px-4 py-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
-          <div className="bg-[#0b1321] rounded-2xl border border-white/10 p-6 sm:p-10">
-            <div className="h-full w-full max-w-2xl mx-auto flex flex-col items-center justify-center text-center gap-6">
-              <img
-                src="/logomatt.png"
-                alt="MattInnova Solution"
-                className="w-40 md:w-56 lg:w-64"
-              />
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-[1.05] tracking-tight">
-                Aprende hoy,
-                <br /> transforma tu mañana
-              </h1>
-              <p className="text-base md:text-lg lg:text-xl opacity-90 max-w-xl">
-                Ofrecemos cursos online prácticos y accesibles, diseñados para
-                impulsar tu desarrollo personal y profesional.
-              </p>
+            const res = await fetch(apiUrl("/auth/register"), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+                credentials: "include",
+            });
 
-              <div className="grid grid-cols-2 gap-4 w-full">
-                <div className="rounded-2xl bg-white/4 border border-white/10 px-6 py-5">
-                  <div className="text-3xl md:text-4xl font-bold">+50</div>
-                  <div className="opacity-80">Cursos</div>
-                </div>
-                <div className="rounded-2xl bg-white/4 border border-white/10 px-6 py-5">
-                  <div className="text-3xl md:text-4xl font-bold">+1,000</div>
-                  <div className="opacity-80">Estudiantes</div>
-                </div>
-              </div>
-            </div>
-          </div>
+            const data = await res.json();
 
-          <div className="bg-white rounded-2xl p-6 sm:p-10 text-[#0c1521]">
-            <div className="mb-6">
-              <div className="text-2xl sm:text-3xl font-extrabold">
-                COMENCEMOS
-              </div>
-              <div className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-sky-500 to-indigo-500 bg-clip-text text-transparent">
-                Crear una cuenta
-              </div>
-            </div>
+            if (!res.ok) {
+                if (data?.errors) {
+                    const msg = Object.values<string[]>(data.errors).flat().join(" ");
+                    throw new Error(msg);
+                }
+                throw new Error(data?.message || "No se pudo completar el registro.");
+            }
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Nombres
-                  </label>
-                  <input
-                    type="text"
-                    value={nombre}
-                    onChange={(e) => setNombre(e.target.value)}
-                    placeholder="Luis"
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 outline-none focus:ring-2 focus:ring-sky-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Apellidos
-                  </label>
-                  <input
-                    type="text"
-                    value={apellido}
-                    onChange={(e) => setApellido(e.target.value)}
-                    placeholder="Hernandez"
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 outline-none focus:ring-2 focus:ring-sky-500"
-                  />
-                </div>
-              </div>
+            setSuccess("¡Registro exitoso! Revisa tu correo para confirmar tu cuenta.");
+            setTimeout(() => navigate("/login"), 3000);
+        } catch (err: any) {
+            setError(err?.message || "Error inesperado. Intenta nuevamente.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-              <div>
-                <label className="block text-sm font-medium mb-2">Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="luishernandez@gmail.com"
-                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 outline-none focus:ring-2 focus:ring-sky-500"
+    return (
+        <div className="min-h-screen flex items-center justify-start relative overflow-hidden p-6 md:p-12 lg:p-24 font-sans">
+            {/* Background Image */}
+            <div className="absolute inset-0 z-0">
+                <img 
+                    src="/login.png" 
+                    alt="Luffy Background"
+                    className="w-full h-full object-cover opacity-90 scale-105"
                 />
-              </div>
+                <div className="absolute inset-0 bg-black/60" />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent" />
+            </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Contraseña
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPass ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Mínimo 8 caracteres"
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 pr-10 outline-none focus:ring-2 focus:ring-sky-500"
-                      aria-label="Contraseña"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPass((v) => !v)}
-                      className="absolute inset-y-0 right-0 px-3 flex items-center"
-                      aria-label={
-                        showPass ? "Ocultar contraseña" : "Mostrar contraseña"
-                      }
-                    >
-                      {showPass ? (
-                        <EyeOff className="w-5 h-5 text-gray-500" />
-                      ) : (
-                        <Eye className="w-5 h-5 text-gray-500" />
-                      )}
-                    </button>
-                  </div>
+            {/* Falling Snow Effect */}
+            <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+                {[...Array(80)].map((_, i) => {
+                    const left = Math.random() * 100;
+                    const delay = Math.random() * 5;
+                    const duration = Math.random() * 5 + 5; // 5 to 10 seconds
+                    const opacity = Math.random() * 0.6 + 0.4;
+                    const size = Math.random() * 5 + 3; // 3px to 8px diameter
+                    const swing = Math.random() * 60 - 30; // -30px to +30px horizontal movement
+                    
+                    return (
+                        <motion.div
+                            key={`snow-${i}`}
+                            initial={{ y: -100, opacity: 0, x: 0 }}
+                            animate={{ 
+                                y: "100vh", 
+                                opacity: [0, opacity, opacity, 0],
+                                x: [0, swing, swing * 2]
+                            }}
+                            transition={{
+                                duration: duration,
+                                repeat: Infinity,
+                                delay: delay,
+                                ease: "linear",
+                            }}
+                            className="absolute bg-white rounded-full"
+                            style={{
+                                left: `${left}%`,
+                                width: `${size}px`,
+                                height: `${size}px`,
+                                boxShadow: "0 0 10px rgba(255, 255, 255, 0.8)",
+                                filter: "blur(1px)"
+                            }}
+                        />
+                    );
+                })}
+            </div>
 
-                  <div className="mt-1 w-full max-w-full text-[11px] leading-4 text-amber-600 flex items-center gap-1 whitespace-nowrap overflow-hidden">
-                    <Info className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">
-                      Mínimo 8 caracteres ({passLen}/8)
-                    </span>
-                  </div>
+            {/* Dynamic Background Atmosphere (Orbs) */}
+            <div className="absolute inset-0 pointer-events-none z-0 mix-blend-screen">
+                <div className="absolute top-[10%] left-[20%] w-[500px] h-[500px] bg-sky-500/10 blur-[150px] rounded-full animate-pulse" />
+                <div className="absolute bottom-[10%] right-[20%] w-[600px] h-[600px] bg-blue-700/10 blur-[150px] rounded-full animate-pulse animation-delay-1000" />
+            </div>
+
+            {/* Main Register Card */}
+            <motion.div 
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                className="relative w-full max-w-[640px] z-10 md:ml-12 lg:ml-24 xl:ml-40"
+            >
+                <div className="bg-black/50 border border-white/5 shadow-2xl rounded-[2.5rem] p-5 sm:p-6">
+                    
+                    {/* Header */}
+                    <div className="text-center mb-2">
+                        <Link to="/" className="inline-block mb-2 hover:scale-105 transition-transform">
+                            <img src="/logomatt.png" alt="Logo" className="h-10 brightness-0 invert opacity-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]" />
+                        </Link>
+                        <h1 className="text-xl font-black font-['Outfit'] text-white uppercase tracking-tight mb-0.5">
+                            Crear Cuenta
+                        </h1>
+                        <p className="text-xs text-white/50 font-medium">
+                            Únete a la academia IT más avanzada.
+                        </p>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="space-y-2.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-['Outfit'] font-bold uppercase tracking-[0.15em] text-sky-100/70 ml-2">
+                                    Nombres
+                                </label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-sky-400/50 group-focus-within:text-sky-400 group-focus-within:scale-110 transition-all duration-300">
+                                        <User size={16} strokeWidth={2.5} />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={nombre}
+                                        onChange={(e) => setNombre(e.target.value)}
+                                        placeholder="Tu nombre"
+                                        className="w-full pl-12 pr-4 py-2.5 rounded-[1.25rem] bg-black/20 border border-white/10 text-white font-medium text-xs placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500/30 transition-all shadow-inner"
+                                        required
+                                        disabled={loading}
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-['Outfit'] font-bold uppercase tracking-[0.15em] text-sky-100/70 ml-2">
+                                    Apellidos
+                                </label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-sky-400/50 group-focus-within:text-sky-400 group-focus-within:scale-110 transition-all duration-300">
+                                        <User size={16} strokeWidth={2.5} />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={apellido}
+                                        onChange={(e) => setApellido(e.target.value)}
+                                        placeholder="Tu apellido"
+                                        className="w-full pl-12 pr-4 py-2.5 rounded-[1.25rem] bg-black/20 border border-white/10 text-white font-medium text-xs placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500/30 transition-all shadow-inner"
+                                        required
+                                        disabled={loading}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-['Outfit'] font-bold uppercase tracking-[0.15em] text-sky-100/70 ml-2">
+                                Correo Electrónico
+                            </label>
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-sky-400/50 group-focus-within:text-sky-400 group-focus-within:scale-110 transition-all duration-300">
+                                    <Mail size={16} strokeWidth={2.5} />
+                                </div>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="nombre@correo.com"
+                                    className="w-full pl-12 pr-4 py-2.5 rounded-[1.25rem] bg-black/20 border border-white/10 text-white font-medium text-xs placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500/30 transition-all shadow-inner"
+                                    required
+                                    disabled={loading}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-['Outfit'] font-bold uppercase tracking-[0.15em] text-sky-100/70 ml-2">
+                                    Contraseña
+                                </label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-sky-400/50 group-focus-within:text-sky-400 group-focus-within:scale-110 transition-all duration-300">
+                                        <Lock size={16} strokeWidth={2.5} />
+                                    </div>
+                                    <input
+                                        type={showPass ? "text" : "password"}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="••••••••"
+                                        className="w-full pl-12 pr-10 py-2.5 rounded-[1.25rem] bg-black/20 border border-white/10 text-white font-medium text-xs tracking-widest placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500/30 transition-all shadow-inner"
+                                        required
+                                        disabled={loading}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPass(!showPass)}
+                                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-white/40 hover:text-white transition-colors"
+                                    >
+                                        {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-['Outfit'] font-bold uppercase tracking-[0.15em] text-sky-100/70 ml-2">
+                                    Confirmar
+                                </label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-sky-400/50 group-focus-within:text-sky-400 group-focus-within:scale-110 transition-all duration-300">
+                                        <ShieldCheck size={16} strokeWidth={2.5} />
+                                    </div>
+                                    <input
+                                        type={showPass2 ? "text" : "password"}
+                                        value={passwordConfirmation}
+                                        onChange={(e) => setPasswordConfirmation(e.target.value)}
+                                        placeholder="••••••••"
+                                        className="w-full pl-12 pr-10 py-2.5 rounded-[1.25rem] bg-black/20 border border-white/10 text-white font-medium text-xs tracking-widest placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500/30 transition-all shadow-inner"
+                                        required
+                                        disabled={loading}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPass2(!showPass2)}
+                                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-white/40 hover:text-white transition-colors"
+                                    >
+                                        {showPass2 ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-1 pl-2 mt-2">
+                            <div className={`text-[9px] font-bold uppercase tracking-wider ${passLen >= 8 ? 'text-sky-400' : 'text-sky-100/50'}`}>
+                                {passLen >= 8 ? '✓ Mínimo 8 caracteres' : `⚠ Mínimo 8 caracteres (${passLen}/8)`}
+                            </div>
+                            <div className={`text-[9px] font-bold uppercase tracking-wider ${hasSpecialChar ? 'text-sky-400' : 'text-sky-100/50'}`}>
+                                {hasSpecialChar ? '✓ Un carácter especial' : '⚠ Un carácter especial (@, #, !, etc.)'}
+                            </div>
+                        </div>
+
+                        {error && (
+                            <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="bg-rose-500/10 border border-rose-500/20 p-4 rounded-2xl text-rose-400 text-xs font-bold text-center">
+                                {error}
+                            </motion.div>
+                        )}
+                        {success && (
+                            <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl text-emerald-400 text-xs font-bold text-center">
+                                {success}
+                            </motion.div>
+                        )}
+
+                        <button
+                            type="submit"
+                            disabled={!canSubmit || loading}
+                            className="w-full mt-3 py-3 rounded-[1.25rem] bg-gradient-to-r from-sky-500 to-blue-600 text-white font-black text-xs tracking-widest uppercase shadow-[0_0_20px_rgba(14,165,233,0.4)] hover:shadow-[0_0_30px_rgba(14,165,233,0.6)] focus:ring-4 focus:ring-sky-500/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group hover:-translate-y-1"
+                        >
+                            {loading ? (
+                                <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                            ) : (
+                                <>
+                                    Crear Mi Cuenta
+                                    <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                                </>
+                            )}
+                        </button>
+                    </form>
+
+                    <div className="mt-3">
+                        <div className="relative mb-3">
+                            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
+                            <div className="relative flex justify-center text-[8px] uppercase font-black tracking-widest">
+                                <span className="bg-black/20 backdrop-blur-xl px-3 py-1 rounded-full text-white/50 border border-white/5">
+                                    O continuar con
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <button type="button" className="flex items-center justify-center gap-2 px-4 py-2 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-white/[0.05] transition-all text-xs font-bold text-white group">
+                                <Chrome size={14} className="text-white/50 group-hover:text-white transition-colors" /> Google
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={handleGithubLogin}
+                                className="flex items-center justify-center gap-2 px-4 py-2 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-white/[0.05] transition-all text-xs font-bold text-white group"
+                            >
+                                <Github size={14} className="text-white/50 group-hover:text-white transition-colors" /> GitHub
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Confirmar contraseña
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPass2 ? "text" : "password"}
-                      value={passwordConfirmation}
-                      onChange={(e) => setPasswordConfirmation(e.target.value)}
-                      placeholder="Confirma tu contraseña"
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 pr-10 outline-none focus:ring-2 focus:ring-sky-500"
-                      aria-label="Confirmar contraseña"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPass2((v) => !v)}
-                      className="absolute inset-y-0 right-0 px-3 flex items-center"
-                      aria-label={
-                        showPass2
-                          ? "Ocultar confirmación"
-                          : "Mostrar confirmación"
-                      }
-                    >
-                      {showPass2 ? (
-                        <EyeOff className="w-5 h-5 text-gray-500" />
-                      ) : (
-                        <Eye className="w-5 h-5 text-gray-500" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {error && <div className="text-red-600 text-sm">{error}</div>}
-              {success && (
-                <div className="text-green-600 text-sm">{success}</div>
-              )}
-
-              <button
-                type="submit"
-                disabled={!canSubmit}
-                className="w-full rounded-lg bg-sky-600 text-white py-3 font-semibold hover:bg-sky-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {loading ? "Registrando" : "Registrarse"}
-              </button>
-
-              <div className="flex items-center gap-4">
-                <div className="flex-1 h-px bg-gray-200" />
-                <span className="text-gray-400">O</span>
-                <div className="flex-1 h-px bg-gray-200" />
-              </div>
-
-              <p className="text-center text-gray-600">
-                ¿Ya tienes una cuenta?{" "}
-                <a
-                  href="/login"
-                  className="text-sky-600 font-semibold hover:underline"
-                >
-                  INICIAR SESIÓN AQUÍ
-                </a>
-              </p>
-            </form>
-          </div>
+                <p className="text-center mt-2 text-white/40 text-xs font-medium">
+                    ¿Ya tienes una cuenta?{" "}
+                    <Link to="/login" className="text-sky-400 font-bold hover:text-sky-300 transition-colors">
+                        Inicia sesión aquí
+                    </Link>
+                </p>
+            </motion.div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }

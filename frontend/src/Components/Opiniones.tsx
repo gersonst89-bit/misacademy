@@ -86,51 +86,61 @@ const Opiniones: React.FC = () => {
   }, []);
 
   return (
-    <section className="py-16 px-6 lg:px-8 bg-[#0D1A28]">
-      <div className="max-w-6xl mx-auto text-center">
-        <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+    <section className="py-24 px-6 lg:px-8 bg-[#03070C] relative overflow-hidden">
+      {/* Luces de fondo muy sutiles para dar profundidad sin lavar el negro */}
+      <div className="absolute top-0 left-1/4 w-full h-full bg-sky-500/[0.03] rounded-full blur-[120px] -z-10" />
+
+      <div className="max-w-6xl mx-auto text-center relative z-10">
+        <h2 className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tight">
           Lo que dicen nuestros estudiantes
         </h2>
-        <p className="text-lg sm:text-xl text-gray-400 max-w-3xl mx-auto mb-12">
+        <p className="text-lg sm:text-xl text-gray-400 max-w-3xl mx-auto mb-16 font-medium">
           Testimonios de estudiantes que han transformado su carrera con
           nuestros cursos especializados
         </p>
 
         {/* Carrusel */}
-        <div className="relative max-w-3xl mx-auto select-none">
+        <div className="relative max-w-4xl mx-auto select-none">
           {/* Pista */}
-          <div className="overflow-hidden rounded-2xl">
+          <div className="overflow-hidden rounded-[2.5rem]">
             <div
-              className="flex transition-transform duration-500 ease-out"
+              className="flex transition-transform duration-700 cubic-bezier(0.4, 0, 0.2, 1)"
               style={{ transform: `translateX(-${index * 100}%)` }}
             >
               {testimonios.map((t) => (
                 <div
                   key={t.id}
-                  className="w-full flex-shrink-0 px-2 sm:px-4 py-2"
+                  className="w-full flex-shrink-0 px-4 py-6"
                   aria-roledescription="slide"
                 >
-                  <div className="bg-[#132435] p-8 rounded-2xl shadow-lg">
-                    <FaQuoteLeft className="text-sky-500 text-3xl mb-4 mx-auto" />
-                    <p className="text-gray-300 italic mb-6">“{t.opinion}”</p>
+                  <div className="bg-white/[0.05] backdrop-blur-2xl border border-white/10 p-10 md:p-14 rounded-[2.5rem] shadow-2xl relative group">
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 bg-sky-500 rounded-2xl flex items-center justify-center shadow-lg shadow-sky-500/20 group-hover:scale-110 transition-transform">
+                      <FaQuoteLeft className="text-white text-xl" />
+                    </div>
 
-                    <div className="flex items-center justify-center gap-3">
+                    <p className="text-xl md:text-2xl text-gray-200 leading-relaxed italic mb-10 font-medium">
+                      “{t.opinion}”
+                    </p>
+
+                    <div className="flex flex-col items-center gap-4">
                       {t.avatarUrl ? (
-                        <img
-                          src={t.avatarUrl}
-                          alt={t.nombre}
-                          className="h-10 w-10 rounded-full object-cover"
-                        />
+                        <div className="p-1 rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600">
+                          <img
+                            src={t.avatarUrl}
+                            alt={t.nombre}
+                            className="h-16 w-16 rounded-[0.9rem] object-cover bg-[#0E1C2B]"
+                          />
+                        </div>
                       ) : (
-                        <div className="h-10 w-10 rounded-full bg-sky-600/30 border border-sky-500/50 flex items-center justify-center text-sky-300 font-bold">
+                        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-sky-500/20 to-indigo-600/20 border border-sky-500/30 flex items-center justify-center text-sky-400 text-2xl font-black shadow-inner">
                           {t.nombre.charAt(0)}
                         </div>
                       )}
-                      <div className="text-left">
-                        <div className="text-white font-bold leading-tight">
+                      <div className="text-center">
+                        <div className="text-xl text-white font-black tracking-wide mb-1 uppercase">
                           {t.nombre}
                         </div>
-                        <div className="text-sky-400 text-sm">
+                        <div className="text-sky-400 text-xs font-black uppercase tracking-[0.2em]">
                           {t.carrera}
                         </div>
                       </div>
@@ -141,31 +151,35 @@ const Opiniones: React.FC = () => {
             </div>
           </div>
 
-          {/* Flechas */}
-          <button
-            aria-label="Anterior"
-            onClick={prev}
-            className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/5 hover:bg-white/10 text-white p-2 rounded-full border border-white/10 backdrop-blur-sm"
-          >
-            <FiChevronLeft className="text-2xl" />
-          </button>
-          <button
-            aria-label="Siguiente"
-            onClick={next}
-            className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/5 hover:bg-white/10 text-white p-2 rounded-full border border-white/10 backdrop-blur-sm"
-          >
-            <FiChevronRight className="text-2xl" />
-          </button>
+          {/* Flechas Navegación */}
+          <div className="hidden md:block">
+            <button
+              aria-label="Anterior"
+              onClick={prev}
+              className="absolute -left-16 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/5 hover:bg-sky-500 hover:scale-110 text-white rounded-2xl border border-white/10 backdrop-blur-md transition-all duration-300 flex items-center justify-center group shadow-xl"
+            >
+              <FiChevronLeft className="text-2xl group-hover:scale-125 transition-transform" />
+            </button>
+            <button
+              aria-label="Siguiente"
+              onClick={next}
+              className="absolute -right-16 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/5 hover:bg-sky-500 hover:scale-110 text-white rounded-2xl border border-white/10 backdrop-blur-md transition-all duration-300 flex items-center justify-center group shadow-xl"
+            >
+              <FiChevronRight className="text-2xl group-hover:scale-125 transition-transform" />
+            </button>
+          </div>
 
-          {/* Dots */}
-          <div className="mt-6 flex items-center justify-center gap-2">
+          {/* Dots de Navegación */}
+          <div className="mt-10 flex items-center justify-center gap-3">
             {testimonios.map((_, i) => (
               <button
                 key={i}
                 aria-label={`Ir al slide ${i + 1}`}
                 onClick={() => setIndex(i)}
-                className={`h-2.5 rounded-full transition-all ${
-                  i === index ? "w-8 bg-sky-400" : "w-2.5 bg-sky-400/40"
+                className={`h-1.5 rounded-full transition-all duration-500 ${
+                  i === index 
+                    ? "w-10 bg-gradient-to-r from-sky-400 to-indigo-500 shadow-[0_0_15px_rgba(56,189,248,0.5)]" 
+                    : "w-3 bg-white/20 hover:bg-white/40"
                 }`}
               />
             ))}

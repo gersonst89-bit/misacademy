@@ -21,130 +21,90 @@ const WhyChooseUs: React.FC = () => {
                   return 100;
                 }
               });
-            }, 200);
+            }, 100);
             observer.unobserve(sectionRef.current!);
           }
         });
       },
-      {
-        threshold: 0.5,
-      }
+      { threshold: 0.5 }
     );
 
-    if (sectionRef.current) {
-      observer.observe(sectionRef.current);
-    }
-
-    return () => {
-      if (sectionRef.current) {
-        observer.unobserve(sectionRef.current);
-      }
-    };
+    if (sectionRef.current) observer.observe(sectionRef.current);
+    return () => { if (sectionRef.current) observer.unobserve(sectionRef.current); };
   }, []);
 
   return (
-    <section className="py-10 lg:py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-10 lg:mb-16">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-white leading-tight">
-            ¿Por qué elegir <span className="text-white">MIS ACADEMY?</span>
-          </h1>
+    <section className="py-24 px-6 relative">
+      <div className="max-w-7xl mx-auto relative z-10">
+        <div className="text-center mb-20">
+          <h2 className="text-4xl md:text-5xl font-black text-white tracking-tight mb-4">
+            ¿Por qué elegir <span className="text-gradient-sky">MIS ACADEMY?</span>
+          </h2>
+          <div className="w-24 h-1 bg-sky-500 mx-auto rounded-full opacity-50" />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 mb-12 lg:mb-18">
-          <div className="text-center group">
-            <div className="flex items-center justify-center mb-5">
-              <FiActivity className="text-green-500 w-12 h-12 sm:w-14 sm:h-14 group-hover:scale-110 transition-transform duration-300" />
-              <span className="ml-4 text-8xl md:text-7xl font-extrabold text-green-500 group-hover:scale-105 transition-transform duration-300">
-                4
-              </span>
+        {/* Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-12 mb-24" ref={sectionRef}>
+          {[
+            { icon: <FiActivity />, val: "4", label: "Líneas especializadas", color: "text-green-400" },
+            { icon: <FiCheckCircle />, val: `${percentage}%`, label: "Enfoque práctico", color: "text-sky-400" },
+            { icon: <FiClock />, val: "24/7", label: "Acceso ilimitado", color: "text-amber-400" },
+          ].map((stat, i) => (
+            <div key={i} className="text-center group">
+              <div className={`flex items-center justify-center mb-4 ${stat.color}`}>
+                <span className="text-5xl md:text-6xl font-black group-hover:scale-110 transition-transform duration-500">
+                  {stat.val}
+                </span>
+              </div>
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-500 group-hover:text-slate-300 transition-colors">
+                {stat.label}
+              </p>
             </div>
-            <p className="text-lg sm:text-xl text-green-500 font-semibold">
-              Líneas de cursos
-            </p>
-          </div>
-
-          <div className="text-center group" ref={sectionRef}>
-            <div className="flex items-center justify-center mb-5">
-              <FiCheckCircle className="text-orange-400  w-12 h-12 sm:w-14 sm:h-14 group-hover:scale-110 transition-transform duration-300" />
-              <span className="ml-4 text-8xl md:text-7xl font-extrabold text-orange-400  group-hover:scale-105 transition-transform duration-300">
-                {percentage}%
-              </span>
-            </div>
-            <p className="text-lg sm:text-xl text-orange-400  font-semibold">
-              Enfoque práctico
-            </p>
-          </div>
-
-          <div className="text-center group">
-            <div className="flex items-center justify-center mb-5">
-              <FiClock className="text-amber-400 w-12 h-12 sm:w-14 sm:h-14 group-hover:scale-110 transition-transform duration-300" />
-              <span className="ml-4 text-8xl md:text-7xl font-extrabold text-amber-400 group-hover:scale-105 transition-transform duration-300">
-                24/7
-              </span>
-            </div>
-            <p className="text-lg sm:text-xl text-amber-400 font-semibold">
-              Acceso total
-            </p>
-          </div>
+          ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <div className="bg-[#0D1A28] backdrop-blur-sm rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 group border-b-4 border-green-500">
-            <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg group-hover:shadow-2xl group-hover:ring-4 group-hover:ring-green-400">
-                <MdLibraryBooks className="text-[#0D1A28] w-8 h-8 group-hover:text-green-500 transition-colors duration-300" />
+        {/* Feature Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {[
+            {
+              icon: <MdLibraryBooks />,
+              title: "Metodología Práctica",
+              desc: "Aprende con proyectos reales diseñados para que adquieras experiencia práctica. Domina las habilidades clave y crea un portafolio atractivo.",
+              color: "border-green-500/30",
+              glow: "bg-green-500/10"
+            },
+            {
+              icon: <FaLaptopCode />,
+              title: "Tecnología de Vanguardia",
+              desc: "Acceso a las herramientas más actuales y formación de expertos. Te ayudamos a estar al día con las tendencias del mercado digital.",
+              color: "border-sky-500/30",
+              glow: "bg-sky-500/10"
+            },
+            {
+              icon: <FaCertificate />,
+              title: "Certificación Oficial",
+              desc: "Recibe una certificación reconocida al completar cada curso. Impulsa tu perfil profesional y destaca en los procesos de selección.",
+              color: "border-amber-500/30",
+              glow: "bg-amber-500/10"
+            }
+          ].map((card, i) => (
+            <div key={i} className={`glass-card glass-card-hover rounded-[2.5rem] p-10 border-t-4 ${card.color} flex flex-col items-center text-center group`}>
+              <div className="relative mb-8">
+                <div className={`absolute inset-0 blur-2xl opacity-20 group-hover:opacity-40 transition-opacity ${card.glow.replace('10', '40')}`} />
+                <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-2xl text-white relative z-10 group-hover:scale-110 transition-transform duration-500">
+                  {card.icon}
+                </div>
               </div>
+              <h3 className="text-2xl font-black mb-4 group-hover:text-white transition-colors leading-tight">
+                {card.title.split(' ').map((word, idx) => (
+                  <React.Fragment key={idx}>{word}<br/></React.Fragment>
+                ))}
+              </h3>
+              <p className="text-slate-400 text-sm font-light leading-relaxed">
+                {card.desc}
+              </p>
             </div>
-            <h3 className="text-2xl font-bold text-white mb-2 text-center group-hover:text-green-500 transition-colors duration-300">
-              Metodología <br /> Práctica
-            </h3>
-            <div className="w-16 h-1 bg-green-500 mx-auto mb-6"></div>{" "}
-            {/* Línea de color debajo */}
-            <p className="text-gray-300 text-center leading-relaxed text-base">
-              Aprende con proyectos reales diseñados para que adquieras
-              experiencia práctica. Domina las habilidades clave en tu campo y
-              crea un portafolio atractivo que te abra puertas a nuevas
-              oportunidades laborales.
-            </p>
-          </div>
-
-          <div className="bg-[#0D1A28] backdrop-blur-sm rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 group border-b-4 border-orange-500">
-            <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg group-hover:shadow-2xl group-hover:ring-4 group-hover:ring-orange-400">
-                <FaLaptopCode className="text-[#0D1A28] w-8 h-8 group-hover:text-orange-500 transition-colors duration-300" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-bold text-white mb-2 text-center group-hover:text-orange-400 transition-colors duration-300">
-              Tecnología a la <br /> vanguardia
-            </h3>
-            <div className="w-16 h-1 bg-orange-400 mx-auto mb-6"></div>{" "}
-            {/* Línea de color debajo */}
-            <p className="text-gray-300 text-center leading-relaxed text-base">
-              Con acceso a las herramientas más actuales y formación de expertos
-              en el área tecnológica, te ayudamos a estar al día con las
-              tendencias del mercado y mejorar tus habilidades para destacarte
-              en el mundo digital.
-            </p>
-          </div>
-
-          <div className="bg-[#0D1A28] backdrop-blur-sm rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 group border-b-4 border-amber-500">
-            <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg group-hover:shadow-2xl group-hover:ring-4 group-hover:ring-amber-400">
-                <FaCertificate className="text-[#0D1A28] w-8 h-8 group-hover:text-amber-500 transition-colors duration-300" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-bold text-white mb-2 text-center group-hover:text-amber-400 transition-colors duration-300">
-              Certificación <br /> Reconocida
-            </h3>
-            <div className="w-16 h-1 bg-amber-400 mx-auto mb-6"></div>{" "}
-            <p className="text-gray-300 text-center leading-relaxed text-base">
-              Recibe una certificación oficial al completar el curso, reconocida
-              por las principales empresas del sector. Te ayudamos a superar
-              entrevistas y avanzar en tu carrera profesional con la de una
-              formación sólida.
-            </p>
-          </div>
+          ))}
         </div>
       </div>
     </section>

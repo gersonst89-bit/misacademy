@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import InputComponent from "../components/InputComponent";
-import SearchableSelect from "../components/SearchableSelect";
+import InputComponent from "../Components/InputComponent";
+import SearchableSelect from "../Components/SearchableSelect";
 import type { Leccion, Modulo, Curso } from "../../types/models";
-import { apiUrl,API_URL } from "../../config/api";
+import { API_URL } from "../../config/api";
+import AdminModal from "../Components/AdminModal";
 
 function getYoutubeId(url: string): string | null {
   const match = url.match(
@@ -27,13 +28,12 @@ function YoutubeDurationHidden({
   videoId,
   onDuration,
 }: YoutubeDurationHiddenProps) {
+  const playerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!videoId) return;
 
     let player: any = null;
-
-    const playerDiv = document.getElementById("yt-player-hidden");
-    if (playerDiv) playerDiv.innerHTML = "";
 
     function loadYTScript(callback: () => void) {
       if (window.YT && window.YT.Player) {
@@ -42,44 +42,50 @@ function YoutubeDurationHidden({
       }
 
       const existingScript = document.getElementById("yt-iframe-api");
-      if (existingScript) {
-        existingScript.remove();
+      if (!existingScript) {
+        const tag = document.createElement("script");
+        tag.src = "https://www.youtube.com/iframe_api";
+        tag.id = "yt-iframe-api";
+        document.body.appendChild(tag);
       }
 
-      const tag = document.createElement("script");
-      tag.src = "https://www.youtube.com/iframe_api";
-      tag.id = "yt-iframe-api";
-      document.body.appendChild(tag);
-
-      window.onYouTubeIframeAPIReady = callback;
+      const oldCallback = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (oldCallback) oldCallback();
+        callback();
+      };
     }
 
     function createPlayer() {
-      player = new window.YT.Player("yt-player-hidden", {
+      if (!playerRef.current) return;
+
+      player = new window.YT.Player(playerRef.current, {
         videoId,
         height: "0",
         width: "0",
         events: {
           onReady: (event: any) => {
-            let duration = event.target.getDuration();
+            try {
+              let duration = event.target.getDuration();
 
-            if (!duration || duration === 0) {
-              // Reintentar si la duración es 0
-              setTimeout(() => {
-                duration = event.target.getDuration();
-                if (duration && duration > 0) {
-                  onDuration(duration);
-                  event.target.destroy();
-                }
-              }, 1000);
-            } else {
-              onDuration(duration);
-              event.target.destroy();
+              if (!duration || duration === 0) {
+                setTimeout(() => {
+                  if (event.target && typeof event.target.getDuration === 'function') {
+                    duration = event.target.getDuration();
+                    if (duration && duration > 0) {
+                      onDuration(duration);
+                    }
+                  }
+                }, 1500);
+              } else {
+                onDuration(duration);
+              }
+            } catch (e) {
+              console.warn("Error getting YT duration:", e);
             }
           },
           onError: () => {
             onDuration(0);
-            if (player) player.destroy();
           },
         },
       });
@@ -88,11 +94,17 @@ function YoutubeDurationHidden({
     loadYTScript(createPlayer);
 
     return () => {
-      if (player) player.destroy();
+      if (player && typeof player.destroy === 'function') {
+        try {
+          player.destroy();
+        } catch (e) {
+          console.warn("Error destroying YT player:", e);
+        }
+      }
     };
   }, [videoId, onDuration]);
 
-  return <div id="yt-player-hidden" style={{ display: "none" }} />;
+  return <div ref={playerRef} style={{ display: "none" }} />;
 }
 
 interface EditLeccionModalProps {
@@ -140,7 +152,7 @@ export const EditLeccionModal: React.FC<EditLeccionModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    const token = localStorage.getItem("token");
+
 
     const fetchCursos = async () => {
       let allCursos: Curso[] = [];
@@ -148,11 +160,10 @@ export const EditLeccionModal: React.FC<EditLeccionModalProps> = ({
 
       while (true) {
         const res = await fetch(
-          `${API_URL}/mis-cursos?page=${page}`,
+          `${API_URL}/admin/cursos?page=${page}`,
           {
             headers: {
               "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
           }
         );
@@ -160,7 +171,7 @@ export const EditLeccionModal: React.FC<EditLeccionModalProps> = ({
         if (!res.ok) break;
 
         const data = await res.json();
-        const items = data.data || data.cursos?.data || data.cursos || [];
+        const items = data.data || [];
 
         if (items.length === 0) break;
 
@@ -179,18 +190,17 @@ export const EditLeccionModal: React.FC<EditLeccionModalProps> = ({
 
         do {
           const res = await fetch(
-            `${API_URL}/modulos/mis?page=${pagina}`,
+            `${API_URL}/admin/modulos?page=${pagina}`,
             {
               headers: {
                 "Content-Type": "application/json",
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
               },
             }
           );
 
           const data = await res.json();
           todosLosModulos = [...todosLosModulos, ...(data.data || [])];
-          totalPages = data.meta?.last_page || 1;
+          totalPages = data.last_page || data.meta?.last_page || 1;
           pagina++;
         } while (pagina <= totalPages);
 
@@ -203,11 +213,10 @@ export const EditLeccionModal: React.FC<EditLeccionModalProps> = ({
     const fetchLecciones = async () => {
       try {
         const res = await fetch(
-          `${API_URL}/lecciones`,
+          `${API_URL}/admin/lecciones`,
           {
             headers: {
               "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
           }
         );
@@ -279,34 +288,17 @@ export const EditLeccionModal: React.FC<EditLeccionModalProps> = ({
       return;
     }
 
-    const ordenExiste = lecciones.some(
-      (l) =>
-        l.id_modulo === moduloSeleccionado.id_modulo &&
-        l.orden === ordenNum &&
-        l.id_leccion !== leccion.id_leccion
-    );
-
-    if (ordenExiste) {
-      setErrorOrden(
-        "Ya existe una lección con ese orden en el módulo seleccionado."
-      );
-      return;
-    }
-
-    const updatedLeccion: Leccion = {
-      ...leccion,
+    const payload = {
       titulo,
       descripcion: descripcion.trim() || null,
       url_video: urlVideo.trim() || null,
-      duracion: duracion ? parseInt(duracion, 10) : null,
+      duracion: duracion ? parseInt(duracion, 10) : 0,
       orden: ordenNum,
       estado,
       id_modulo: moduloSeleccionado.id_modulo,
-      fecha_creacion: leccion.fecha_creacion,
-      fecha_actualizacion: new Date().toISOString(),
     };
 
-    const ok = await onSave(updatedLeccion);
+    const ok = await onSave({ ...leccion, ...payload });
     if (ok) {
       onClose();
     } else {
@@ -350,143 +342,164 @@ export const EditLeccionModal: React.FC<EditLeccionModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
-  if (loadingData) {
-    return (
-      <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center min-h-screen">
-        <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg max-h-screen flex flex-col items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-sky-600 mb-4" />
-          <div className="text-lg text-gray-700 font-semibold">
-            Cargando datos...
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center min-h-screen">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg max-h-screen overflow-y-auto animate-fade-in">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4 text-center">
-          Editar Lección
-        </h2>
-
-        {/* Curso */}
-        <div className="mb-4">
-          <label className="block text-sm font-semibold text-gray-700">
-            Curso
-          </label>
-          <SearchableSelect
-            value={cursoSeleccionado?.id_curso || ""}
-            onChange={handleCursoChange}
-            options={cursoOptions}
-            placeholder="Selecciona un curso…"
-            noOptionsMessage="No hay cursos"
-          />
-        </div>
-
-        {/* Módulo */}
-        <div className="mb-4">
-          <label className="block text-sm font-semibold text-gray-700">
-            Módulo
-          </label>
-          <SearchableSelect
-            value={moduloSeleccionado?.id_modulo || ""}
-            onChange={handleModuloChange}
-            options={modulosOptions}
-            placeholder="Selecciona un módulo…"
-            noOptionsMessage="No hay módulos"
-          />
-        </div>
-
-        {/* Título */}
-        <InputComponent
-          label="Título"
-          value={titulo}
-          onChange={(e) => setTitulo(e.target.value)}
-          placeholder="Ingresa el título de la lección"
-        />
-
-        {/* Descripción */}
-        <div className="mb-2">
-          <label className="block text-sm font-semibold text-gray-700">
-            Descripción
-          </label>
-          <textarea
-            value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
-            placeholder="Ingresa la descripción de la lección"
-            className="mt-1 p-2 w-full border border-gray-300 focus:ring-2 h-32 resize-none overflow-auto rounded-lg shadow-sm focus:outline-none focus:ring-sky-600 focus:border-sky-600"
-          />
-        </div>
-
-        {/* URL Video */}
-        <InputComponent
-          label="URL del Video"
-          value={urlVideo}
-          onChange={(e) => {
-            setUrlVideo(e.target.value);
-            const id = getYoutubeId(e.target.value);
-            setVideoId(id);
-            if (id) setCalculandoDuracion(true);
-          }}
-          placeholder="Ingresa la URL del video"
-        />
-
-        {videoId && (
-          <YoutubeDurationHidden
-            videoId={videoId}
-            onDuration={(duration) => {
-              setDuracion(Math.round(duration).toString());
-              setCalculandoDuracion(false);
-            }}
-          />
-        )}
-
-        {/* Duración */}
-        <InputComponent
-          label="Duración (min)"
-          type="number"
-          value={duracion}
-          onChange={(e) => setDuracion(e.target.value)}
-          placeholder="Ingresa la duración en minutos"
-          disabled
-        />
-
-        {/* Orden */}
-        <InputComponent
-          label="Orden"
-          type="number"
-          value={orden}
-          onChange={(e) => setOrden(e.target.value)}
-          placeholder="Ingresa el orden de la lección"
-        />
-
-        {errorOrden && (
-          <div className="mb-4 mt-2 text-red-700 bg-red-100 border border-red-300 rounded px-3 py-2 text-center text-sm">
-            {errorOrden}
+    <AdminModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Editar Lección"
+      footer={
+        <>
+          <div className="flex items-center gap-2 text-slate-400 font-extrabold text-[10px] uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100/50 w-full md:w-auto justify-center md:justify-start md:mr-auto">
+            Edición en Tiempo Real
           </div>
-        )}
-
-        <div className="flex justify-center gap-3 mt-4">
           <button
             onClick={handleSave}
-            className={`px-4 py-2 bg-sky-600 rounded hover:bg-sky-700 transition text-white text-md ${
-              calculandoDuracion ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-            disabled={calculandoDuracion}
+            disabled={calculandoDuracion || loadingData}
+            className="w-full md:w-auto bg-gradient-to-br from-[#0E1C2B] to-[#1a3a5a] text-white px-10 py-4 rounded-2xl font-black uppercase tracking-[0.15em] text-[10px] hover:shadow-2xl hover:shadow-slate-900/20 transition-all active:scale-95 shadow-lg border border-white/5 disabled:opacity-50"
           >
-            {calculandoDuracion ? "Calculando duración..." : "Guardar"}
+            {calculandoDuracion ? "Cargando..." : "Guardar Cambios"}
           </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-md"
-          >
+          <button onClick={onClose} className="w-full md:w-auto px-6 py-3 rounded-2xl font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all text-sm">
             Cancelar
           </button>
+        </>
+      }
+    >
+      {loadingData ? (
+        <div className="py-16 md:py-20 flex flex-col items-center justify-center gap-6">
+          <div className="w-12 h-12 md:w-14 md:h-14 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
+          <div className="flex flex-col items-center gap-1">
+             <span className="text-amber-600 font-black uppercase tracking-[0.3em] text-[9px] md:text-[10px] animate-pulse">Sincronizando Datos</span>
+             <p className="text-slate-400 text-[10px] md:text-[11px] font-bold">Obteniendo estructura...</p>
+          </div>
         </div>
-      </div>
-    </div>
+      ) : (
+        <div className="space-y-6 md:space-y-8">
+          <div className="p-6 md:p-8 bg-amber-50/40 rounded-[2rem] md:rounded-[2.5rem] border border-amber-100/50 space-y-5 md:space-y-6 mx-1 md:mx-0">
+             <div className="flex items-center gap-2 mb-2 ml-1">
+                <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
+                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Ubicación Académica</span>
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div>
+                  <label className="block text-[9px] md:text-[10px] font-black text-amber-600 uppercase tracking-[0.2em] mb-2 ml-1">Programa</label>
+                  <SearchableSelect
+                    value={cursoSeleccionado?.id_curso || ""}
+                    onChange={handleCursoChange}
+                    options={cursoOptions}
+                    placeholder="Seleccionar..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[9px] md:text-[10px] font-black text-amber-600 uppercase tracking-[0.2em] mb-2 ml-1">Módulo</label>
+                  <SearchableSelect
+                    value={moduloSeleccionado?.id_modulo || ""}
+                    onChange={handleModuloChange}
+                    options={modulosOptions}
+                    placeholder="Seleccionar..."
+                  />
+                </div>
+             </div>
+          </div>
+
+          <div className="p-6 md:p-8 bg-slate-50/40 rounded-[2rem] md:rounded-[3rem] border border-slate-100/50 space-y-5 md:space-y-6 mx-1 md:mx-0">
+             <div className="flex items-center gap-2 mb-2 ml-1">
+                <div className="w-2 h-2 rounded-full bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)]" />
+                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Atributos Multimedia</span>
+             </div>
+
+             <InputComponent
+               label="Título de la Lección"
+               value={titulo}
+               placeholder="Ej: Introducción a React"
+               onChange={(e) => setTitulo(e.target.value)}
+             />
+
+             <div>
+               <label className="block text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 ml-1">Descripción</label>
+               <textarea
+                 value={descripcion}
+                 onChange={(e) => setDescripcion(e.target.value)}
+                 className="w-full px-5 py-4 bg-white border border-slate-200 rounded-[1.5rem] md:rounded-[2rem] focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all text-sm font-bold h-28 md:h-32 text-slate-900 placeholder:text-slate-300"
+                 placeholder="Objetivos de aprendizaje..."
+               />
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+               <div className="relative group">
+                  <InputComponent
+                    label="URL YouTube"
+                    value={urlVideo}
+                    placeholder="https://youtube.com/..."
+                    onChange={(e) => {
+                      setUrlVideo(e.target.value);
+                      const id = getYoutubeId(e.target.value);
+                      setVideoId(id);
+                      if (id) setCalculandoDuracion(true);
+                    }}
+                  />
+                  {calculandoDuracion && (
+                    <div className="absolute right-4 bottom-4">
+                       <div className="w-4 h-4 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+               </div>
+
+               <div className="relative">
+                  <InputComponent
+                    label="Duración (Min)"
+                    type="number"
+                    value={duracion}
+                    disabled
+                    placeholder="Calculando..."
+                    onChange={() => {}}
+                  />
+                  <div className="absolute right-4 bottom-4 text-[7px] md:text-[8px] font-black uppercase tracking-widest text-sky-600 bg-sky-50 px-2 py-1 rounded-md border border-sky-100">Auto</div>
+               </div>
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <InputComponent
+                  label="Orden"
+                  type="number"
+                  value={orden}
+                  placeholder="Ej: 1"
+                  onChange={(e) => setOrden(e.target.value)}
+                />
+                <div>
+                  <label className="block text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 ml-1">Estado</label>
+                  <select
+                    value={estado}
+                    onChange={(e) => setEstado(e.target.value as any)}
+                    className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-900 cursor-pointer"
+                  >
+                    <option value="Publicado">Publicado</option>
+                    <option value="Activo">Borrador</option>
+                    <option value="Inactivo">Inactivo</option>
+                  </select>
+                </div>
+             </div>
+          </div>
+
+          {videoId && (
+            <YoutubeDurationHidden
+              videoId={videoId}
+              onDuration={(duration) => {
+                setDuracion(Math.round(duration / 60).toString());
+                setCalculandoDuracion(false);
+              }}
+            />
+          )}
+
+          {errorOrden && (
+            <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 animate-shake mx-1">
+              <div className="w-2 h-2 rounded-full bg-rose-500" />
+              <p className="text-[10px] md:text-xs font-bold text-rose-600 uppercase tracking-wider">{errorOrden}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </AdminModal>
   );
 };

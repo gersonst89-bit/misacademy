@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FaSearch, FaBroom } from "react-icons/fa";
+import { FaSearch, FaBroom, FaExternalLinkAlt } from "react-icons/fa";
 import { API_URL } from "../config/api";
 
 type Status = "idle" | "loading" | "success" | "error";
@@ -133,6 +133,7 @@ export default function ConsultarCertificado() {
         {
           headers: { Accept: "application/json" },
           cache: "no-store",
+          credentials: "include",
         }
       );
 
@@ -202,92 +203,137 @@ export default function ConsultarCertificado() {
      Render
   ======================= */
   return (
-    <div className="min-h-[85vh] w-full px-6 py-14 text-white bg-gradient-to-br from-[#0E1C2B] via-[#0B1623] to-[#060D18]">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-3xl font-extrabold text-center mb-3">
-          Consulta de Certificados
-        </h1>
-        <p className="text-center text-gray-300 mb-10">
-          Ingresa el código o nombre completo para validar certificados.
-        </p>
+    <div className="min-h-screen w-full px-6 py-24 text-white bg-[#03070C] relative overflow-hidden">
+      {/* Elementos decorativos de fondo */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-sky-500/5 rounded-full blur-[120px] -z-0" />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] -z-0" />
 
-        {/* Buscar */}
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-4 mb-6">
-          <input
-            className="w-full rounded-xl px-4 py-3 bg-[#0B1523] border border-sky-500/30 outline-none focus:ring-2 focus:ring-sky-500"
-            placeholder="Buscar por código o nombre completo"
-            value={codigo}
-            onChange={(e) => setCodigo(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && void buscar()}
-          />
+      <div className="max-w-5xl mx-auto relative z-10">
+        <div className="text-center mb-16">
+          <h1 className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tight">
+            Consulta de <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">Certificados</span>
+          </h1>
+          <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto font-medium">
+            Valida la autenticidad de tus logros académicos ingresando tu código o nombre completo.
+          </p>
+        </div>
 
-          <button
-            onClick={() => void buscar()}
-            disabled={status === "loading"}
-            className="rounded-xl px-6 py-3 bg-sky-400 hover:bg-sky-500 font-semibold transition flex items-center gap-2 disabled:opacity-50"
-          >
-            <FaSearch />
-            {status === "loading" ? "Buscando..." : "Buscar"}
-          </button>
+        {/* Buscador Premium */}
+        <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 p-2 md:p-3 rounded-[2rem] shadow-2xl flex flex-col md:flex-row items-center gap-2 mb-12">
+          <div className="relative flex-1 w-full group">
+            <FaSearch className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-sky-400 transition-colors" />
+            <input
+              className="w-full bg-transparent border-none rounded-2xl pl-14 pr-6 py-4 text-lg font-medium outline-none focus:ring-0 placeholder:text-gray-600 transition-all"
+              placeholder="Código o nombre completo..."
+              value={codigo}
+              onChange={(e) => setCodigo(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && void buscar()}
+            />
+          </div>
 
-          <button
-            onClick={limpiar}
-            className="rounded-xl px-6 py-3 bg-gray-400 hover:bg-gray-500 font-semibold transition flex items-center gap-2"
-          >
-            <FaBroom />
-            Limpiar
-          </button>
+          <div className="flex items-center gap-2 w-full md:w-auto p-2 md:p-0">
+            <button
+              onClick={() => void buscar()}
+              disabled={status === "loading"}
+              className="flex-1 md:flex-none rounded-2xl px-8 py-4 bg-sky-500 hover:bg-sky-600 font-black uppercase text-xs tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-sky-500/20 active:scale-95"
+            >
+              {status === "loading" ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : <FaSearch />}
+              {status === "loading" ? "Buscando" : "Validar"}
+            </button>
+
+            <button
+              onClick={limpiar}
+              className="rounded-2xl p-4 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10 transition-all flex items-center justify-center shadow-lg active:scale-95"
+              title="Limpiar búsqueda"
+            >
+              <FaBroom size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Toast */}
         {status !== "idle" && message && (
           <div
-            className={`fixed bottom-4 right-4 px-4 py-2 rounded-lg border-l-4 z-50 transition-opacity duration-500
+            className={`fixed bottom-8 right-8 px-6 py-4 rounded-2xl border backdrop-blur-xl z-50 transition-all duration-500 shadow-2xl flex items-center gap-3
               ${
                 status === "error"
-                  ? "border-red-500 text-red-300 bg-[#1A0E12]"
+                  ? "border-rose-500/50 text-rose-200 bg-rose-500/10"
                   : status === "success"
-                  ? "border-emerald-500 text-emerald-300 bg-[#0E1A16]"
-                  : "border-sky-500 text-sky-300 bg-[#0D1A28]"
+                  ? "border-emerald-500/50 text-emerald-200 bg-emerald-500/10"
+                  : "border-sky-500/50 text-sky-200 bg-sky-500/10"
               }
-              ${isMessageVisible ? "opacity-100" : "opacity-0"}
+              ${isMessageVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0 pointer-events-none"}
             `}
           >
-            {message}
+            <div className={`w-2 h-2 rounded-full animate-pulse ${
+              status === "error" ? "bg-rose-500" : status === "success" ? "bg-emerald-500" : "bg-sky-500"
+            }`} />
+            <span className="text-sm font-bold tracking-tight">{message}</span>
           </div>
         )}
 
-        {/* Resultados */}
         {Object.keys(certificadosPorPersona).length > 0 && (
-          <div className="space-y-10 mt-8">
+          <div className="space-y-24 mt-32 animate-fadeIn pb-32">
             {Object.entries(certificadosPorPersona).map(
               ([persona, certs]) => (
-                <div key={persona} className="space-y-4">
-                  <h2 className="text-xl font-bold text-sky-400">
-                    {persona}
-                  </h2>
-
-                  {certs.map((cert, i) => (
-                    <div
-                      key={i}
-                      className="overflow-x-auto border border-sky-500/20 rounded-xl"
+                <div key={persona} className="space-y-16">
+                  <div className="flex items-center gap-6">
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-sky-500/30 to-transparent" />
+                    <h2 
+                      className="text-xl md:text-3xl font-black text-white uppercase px-8 text-center drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+                      style={{ letterSpacing: '0.4em' }}
                     >
-                      <table className="min-w-full text-sm">
-                        <tbody>
-                          {fields.map((f, idx) => (
-                            <tr key={idx} className="border-t border-sky-500/10">
-                              <td className="px-4 py-3 font-semibold text-sky-300 bg-[#0B1523] whitespace-nowrap">
-                                {f.label}
-                              </td>
-                              <td className="px-4 py-3 text-white">
-                                {f.getValue(cert)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ))}
+                      {persona}
+                    </h2>
+                    <div className="h-px flex-1 bg-gradient-to-l from-transparent via-sky-500/30 to-transparent" />
+                  </div>
+ 
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {certs.map((cert, i) => (
+                      <div
+                        key={i}
+                        className="bg-white/[0.02] backdrop-blur-3xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl hover:border-sky-500/40 transition-all duration-500 group relative"
+                      >
+                        <button 
+                          onClick={() => window.open(`/certificado/${cert.codigo_certificado}`, '_blank')}
+                          className="absolute top-0 right-0 p-8 z-20 group/btn"
+                        >
+                           <div className="w-12 h-12 bg-sky-500/10 rounded-2xl flex items-center justify-center text-sky-400 group-hover/btn:scale-110 group-hover/btn:bg-sky-500 group-hover/btn:text-black transition-all">
+                              <FaExternalLinkAlt size={18} />
+                           </div>
+                        </button>
+
+                        <div className="p-10 space-y-6">
+                          <div className="grid grid-cols-1 gap-6">
+                            {fields.map((f, idx) => (
+                              <div key={idx} className="flex flex-col gap-1.5">
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-sky-500/60">
+                                  {f.label}
+                                </span>
+                                <span className="text-sm md:text-base font-bold text-gray-200 group-hover:text-white transition-colors">
+                                  {f.getValue(cert)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          <button
+                            onClick={() => window.open(`/certificado/${cert.codigo_certificado}`, '_blank')}
+                            className="w-full mt-4 py-4 bg-sky-500/10 hover:bg-sky-500 text-sky-400 hover:text-black border border-sky-500/20 hover:border-sky-500 font-black uppercase text-xs tracking-widest rounded-2xl transition-all flex items-center justify-center gap-2 active:scale-95 group/btn2"
+                          >
+                            <FaExternalLinkAlt size={14} className="group-hover/btn2:rotate-12 transition-transform" />
+                            Ver Diploma Oficial
+                          </button>
+                        </div>
+                        <div className="px-8 py-4 bg-white/5 border-t border-white/5 flex items-center justify-between">
+                           <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Documento Verificado</span>
+                           <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )
             )}
@@ -296,11 +342,16 @@ export default function ConsultarCertificado() {
 
         {/* Sin resultados */}
         {status === "error" && data.length === 0 && (
-          <div className="mt-20 text-center text-gray-300">
-            <p className="text-lg font-semibold text-white">
-              No se encontró información
+          <div className="mt-32 text-center animate-fadeIn">
+            <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/10">
+               <FaSearch size={32} className="text-gray-600" />
+            </div>
+            <h3 className="text-2xl font-black text-white mb-2">
+              Sin resultados
+            </h3>
+            <p className="text-gray-500 font-medium">
+              Verifica los datos e inténtalo nuevamente.
             </p>
-            <p>Verifica los datos e inténtalo nuevamente.</p>
           </div>
         )}
       </div>

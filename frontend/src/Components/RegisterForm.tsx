@@ -52,16 +52,12 @@ export default function RegisterForm() {
     setLoading(true);
 
     try {
-      const form = new FormData();
-      form.append("nombre", formData.nombre);
-      form.append("apellido", formData.apellido);
-      form.append("email", formData.email);
-      form.append("asunto", formData.asunto);
-      form.append("mensaje", formData.mensaje);
-
       const res = await fetch(API_CONTACTO, {
         method: "POST",
-        body: form,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
       });
 
       const data: ContactoResponse = await res.json();

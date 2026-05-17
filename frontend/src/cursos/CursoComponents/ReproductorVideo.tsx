@@ -78,7 +78,7 @@ const ReproductorVideo: React.FC<Props> = (props) => {
     localStorage.setItem("heartbeats_pendientes", JSON.stringify(pendientes));
   }
 
-  function enviarHeartbeatsPendientes(token: string) {
+  function enviarHeartbeatsPendientes() {
     const pendientes = JSON.parse(localStorage.getItem("heartbeats_pendientes") || "[]");
     if (!pendientes.length) return;
     const promises = pendientes.map((hb: any) =>
@@ -88,8 +88,7 @@ const ReproductorVideo: React.FC<Props> = (props) => {
           id_progreso: hb.id_progreso,
           current_time: hb.current_time,
           previous_time: hb.previous_time,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
+        }
       )
     );
     Promise.allSettled(promises).then((results) => {
@@ -219,7 +218,6 @@ const ReproductorVideo: React.FC<Props> = (props) => {
 
   useEffect(() => {
     if (!initialProgresoIdRef.current) return;
-    const token = localStorage.getItem("token") || "";
 
     // Cargar YouTube API si no está presente
     if (!(window as any).YT) {
@@ -242,9 +240,7 @@ const ReproductorVideo: React.FC<Props> = (props) => {
         previous_time: Math.max(0, previousTimeRef.current),
       };
       previousTimeRef.current = currentTime;
-      axios.post(`${API_URL}/lecciones/${leccion.id_leccion}/heartbeat`, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      axios.post(`${API_URL}/lecciones/${leccion.id_leccion}/heartbeat`, payload)
       .then((res) => {
         if (typeof onLeccionCompletada === "function") {
           onLeccionCompletada(res.data);
@@ -358,7 +354,7 @@ const ReproductorVideo: React.FC<Props> = (props) => {
 
     // Enviar heartbeats pendientes al recuperar conexión
     function handleOnline() {
-      enviarHeartbeatsPendientes(token);
+      enviarHeartbeatsPendientes();
     }
     window.addEventListener("online", handleOnline);
 

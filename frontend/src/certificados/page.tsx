@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { FaCalendarAlt, FaDownload } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
 import { API_URL } from "../config/api";
 
 const LoadingSpinner = () => (
@@ -28,6 +29,106 @@ interface Certificacion {
   curso: Curso;
 }
 
+interface CertificadoCardProps {
+  c: Certificacion;
+  ajustarFechaPeru: (f: string) => string;
+  solicitarCertificado: (id: number) => Promise<void>;
+}
+
+const CertificadoCard: React.FC<CertificadoCardProps> = ({ c, ajustarFechaPeru, solicitarCertificado }) => {
+  const aprobado = c.calificacion_final !== null;
+          
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  const mouseXSpring = useSpring(x);
+  const mouseYSpring = useSpring(y);
+
+  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["10deg", "-10deg"]);
+  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-10deg", "10deg"]);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const xPct = mouseX / width - 0.5;
+    const yPct = mouseY / height - 0.5;
+    x.set(xPct);
+    y.set(yPct);
+  };
+
+  const handleMouseLeave = () => {
+    x.set(0);
+    y.set(0);
+  };
+
+  return (
+    <motion.div
+      style={{
+        rotateX,
+        rotateY,
+        transformStyle: "preserve-3d",
+      }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className="relative flex flex-col sm:flex-row bg-gradient-to-br from-[#0E1C2B] to-[#0a1120] rounded-2xl shadow-2xl overflow-hidden border border-white/10 group cursor-default"
+    >
+      <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+      
+      <div className="sm:w-56 w-full h-56 sm:h-auto relative overflow-hidden" style={{ transform: "translateZ(20px)" }}>
+        <img
+          src={c.curso.imagen || "/sinCurso.jpg"}
+          alt={c.curso.nombre}
+          onError={(e) => (e.currentTarget.src = "/sinCurso.jpg")}
+          className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-700"
+        />
+        <div className="absolute inset-0 bg-sky-950/20" />
+      </div>
+
+      <div className="flex-1 p-8 flex flex-col justify-between relative" style={{ transform: "translateZ(30px)" }}>
+        <div className="relative z-10">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-sky-400 font-bold">Certificado Oficial</span>
+            <div className="h-2 w-2 rounded-full bg-sky-500 shadow-[0_0_10px_rgba(56,189,248,0.8)]" />
+          </div>
+          
+          <h2 className="text-2xl font-black text-white mb-3 group-hover:text-sky-300 transition-colors">
+            {c.curso.nombre}
+          </h2>
+
+          <div className="space-y-2">
+            <p className="flex items-center gap-2 text-gray-400 text-sm">
+              <FaCalendarAlt className="text-sky-500" />
+              Emitido el {ajustarFechaPeru(c.fecha_emision)}
+            </p>
+
+            <p className="text-gray-400 text-sm font-mono">
+              <span className="text-gray-500">ID:</span> {c.codigo_certificado}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-8 flex gap-4 relative z-10">
+          <button
+            disabled={!aprobado}
+            onClick={() => solicitarCertificado(c.curso.id_curso)}
+            className={`flex-1 sm:flex-none px-8 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg
+            ${
+              aprobado
+                ? "bg-sky-600 hover:bg-sky-500 text-white hover:shadow-sky-500/20 active:scale-95"
+                : "bg-white/5 text-gray-600 cursor-not-allowed border border-white/5"
+            }`}
+          >
+            {aprobado ? "Ver Certificado" : "Pendiente"}
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 export default function MisCertificados() {
   const [certificados, setCertificados] = useState<Certificacion[]>([]);
   const [orden, setOrden] = useState<"reciente" | "antiguo">("reciente");
@@ -50,29 +151,24 @@ export default function MisCertificados() {
   };
 
   const solicitarCertificado = async (certificadoId: number) => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      alert("Debes iniciar sesión para solicitar el certificado.");
-      return;
-    }
+    // Eliminamos la comprobación manual de cookies por ser HttpOnly.
 
     try {
-      const response = await fetch(`${API_URL}/certificacion/solicitar`, {
+      const response = await fetch(`${API_URL}/certificaciones/solicitar`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ id_certificado: certificadoId }), // Enviamos el ID del certificado
+        body: JSON.stringify({ id_curso: certificadoId }), // Aquí 'certificadoId' es en realidad el ID del curso
       });
 
       const data = await response.json();
 
-      if (response.ok) {
-        alert(data.message || "Certificado solicitado con éxito");
+      if (response.ok && data.codigo_certificado) {
+        // Redirigir a la página de visualización del certificado
+        navigate(`/certificado/${data.codigo_certificado}`);
       } else {
-        alert(data.message || "No se pudo solicitar el certificado");
+        alert(data.message || "No se pudo cargar el certificado");
       }
     } catch (error) {
       alert("Hubo un error al solicitar el certificado.");
@@ -81,42 +177,27 @@ export default function MisCertificados() {
 
   useEffect(() => {
     const fetchCertificados = async () => {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        setError("Debes iniciar sesión para ver tus certificados.");
-        setLoading(false);
-        return;
-      }
+      // Eliminamos la comprobación manual de cookies ya que son HttpOnly y no son visibles para JS.
+      // El servidor se encargará de validar la sesión y el interceptor global manejará el 401 si es necesario.
 
       try {
-        let page = 1;
-        let all: Certificacion[] = [];
-        let hasMore = true;
+        // Llamamos al endpoint específico para los certificados del usuario logueado
+        const res = await fetch(`${API_URL}/certificaciones/mis-certificados`, {
+          headers: {
+            Accept: "application/json",
+          },
+        });
 
-        while (hasMore) {
-          const res = await fetch(`${API_URL}/certificaciones?page=${page}`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: "application/json",
-            },
-          });
+        const data = await res.json();
 
-          const data = await res.json();
-          console.log("Certificaciones:", data);
-
-          if (res.ok && data && Array.isArray(data.data)) {
-            all = [...all, ...data.data];
-            hasMore = data.next_page_url !== null;
-            page++;
-          } else {
-            setError(data.message || "No se pudieron cargar tus certificados.");
-            break;
-          }
+        if (res.ok) {
+          // El endpoint mis-certificados devuelve un array directamente
+          const allCerts = Array.isArray(data) ? data : (data.data || []);
+          setCertificados(allCerts);
+        } else {
+          setError(data.message || "No se pudieron cargar tus certificados.");
         }
-
-        setCertificados(all);
-      } catch {
+      } catch (err) {
         setError("Error de conexión con el servidor.");
       } finally {
         setLoading(false);
@@ -176,59 +257,15 @@ export default function MisCertificados() {
         </select>
       </div>
 
-      <div className="space-y-6">
-        {certificadosOrdenados.map((c) => {
-          const aprobado = c.calificacion_final !== null;
-
-          return (
-            <div
-              key={c.id_certificacion}
-              className="flex flex-col sm:flex-row bg-[#0E1C2B] rounded-2xl shadow-lg overflow-hidden border border-gray-700"
-            >
-              <div className="sm:w-48 w-full h-48 sm:h-auto">
-                <img
-                  src={c.curso.imagen || "/sinCurso.jpg"}
-                  alt={c.curso.nombre}
-                  onError={(e) => (e.currentTarget.src = "/sinCurso.jpg")}
-                  className="object-cover w-full h-full"
-                />
-              </div>
-
-              <div className="flex-1 p-6 flex flex-col justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-white mb-2">
-                    {c.curso.nombre}
-                  </h2>
-
-                  <p className="flex items-center gap-2 text-gray-400 mb-2">
-                    <FaCalendarAlt className="text-white" />
-                    Emitido: {ajustarFechaPeru(c.fecha_emision)}
-                  </p>
-
-                  <p className="text-gray-300 mb-2">
-                    <span className="font-semibold">Código:</span>{" "}
-                    {c.codigo_certificado}
-                  </p>
-                </div>
-
-                <div className="flex gap-3 mt-2">
-                  <button
-                    disabled={!aprobado}
-                    onClick={() => solicitarCertificado(c.id_certificacion)} // Llamada a la función
-                    className={`px-5 py-2 rounded-lg font-semibold transition
-    ${
-      aprobado
-        ? "bg-sky-600 hover:bg-sky-700 text-white"
-        : "bg-gray-700 text-gray-400 cursor-not-allowed"
-    }`}
-                  >
-                    Solicitar Certificado
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      <div className="space-y-8 max-w-4xl mx-auto">
+        {certificadosOrdenados.map((c) => (
+          <CertificadoCard 
+            key={c.id_certificacion} 
+            c={c} 
+            ajustarFechaPeru={ajustarFechaPeru} 
+            solicitarCertificado={solicitarCertificado} 
+          />
+        ))}
       </div>
     </div>
   );

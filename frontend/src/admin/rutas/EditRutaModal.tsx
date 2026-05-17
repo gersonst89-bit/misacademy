@@ -2,8 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import type { RutaAcademica } from "../../types/models";
-import InputComponent from "../components/InputComponent";
-import { apiUrl,API_URL } from "../../config/api";
+import InputComponent from "../Components/InputComponent";
+import AdminModal from "../Components/AdminModal";
+import SearchableSelect from "../Components/SearchableSelect";
+import { apiUrl } from "../../config/api";
+import { IoMapOutline, IoTimeOutline, IoCashOutline, IoLayersOutline, IoSaveOutline } from "react-icons/io5";
 
 interface LineaAcademica {
   id_linea: number;
@@ -25,37 +28,22 @@ export function EditRutaModal({
 }: EditRutaModalProps) {
   const [formData, setFormData] = useState<RutaAcademica>(ruta);
   const [lineas, setLineas] = useState<LineaAcademica[]>([]);
-  const [busquedaLinea, setBusquedaLinea] = useState("");
-  const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const fetchLineas = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(
-          `${API_URL}/lineas`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-          }
-        );
-
-        if (!res.ok) {
-          console.error("❌ Error al obtener líneas:", res.status);
-          return;
-        }
-
+        const res = await fetch(apiUrl("/lineas-academicas"), {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
         const data = await res.json();
-        setLineas(data.data || []);
-
-        const lineaActual = (data.data || []).find(
-          (l: LineaAcademica) => l.id_linea === ruta.id_linea_academica
-        );
-        if (lineaActual) {
-          setBusquedaLinea(lineaActual.nombre);
-        }
+        const mapped = (data.data || []).map((l: any) => ({
+          ...l,
+          id_linea: l.id_linea || l.id_linea_academica
+        }));
+        setLineas(mapped);
       } catch (error) {
         console.error("Error cargando líneas académicas:", error);
       }
@@ -72,146 +60,124 @@ export function EditRutaModal({
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleLineaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setBusquedaLinea(e.target.value);
-    setMostrarSugerencias(true);
-  };
-
-  const seleccionarLinea = (linea: LineaAcademica) => {
-    setBusquedaLinea(linea.nombre);
-    setFormData({ ...formData, id_linea_academica: linea.id_linea });
-    setMostrarSugerencias(false);
-  };
-
   const handleSubmit = async () => {
     if (formData.id_linea_academica === 0) {
       alert("Selecciona una línea académica antes de guardar.");
       return;
     }
-
-    const success = await onSave(formData);
+    setIsSaving(true);
+    const success = await onSave({
+      ...formData,
+      horas_totales: Number(formData.horas_totales),
+      precio: Number(formData.precio),
+    });
+    setIsSaving(false);
     if (success) onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-lg">
-        <h2 className="text-xl font-bold mb-4 text-slate-800">
-          Editar Ruta Académica
-        </h2>
-
-        <div className="space-y-3">
-           <InputComponent
-            label="Nombre de la ruta"
-            name="nombre"
-            placeholder="Ingresa nombre de la ruta"
-            value={formData.nombre}
-            onChange={handleChange}
-          />
-
-          <div className="mb-3">
-          <label className="block text-sm font-semibold text-gray-700">
-            Descripción
-          </label>
-          <textarea
-            name="descripcion"
-            placeholder="Ingresa breve descripción"
-            value={formData.descripcion || ""}
-            onChange={handleChange}
-            className="mt-1 p-2 w-full border border-gray-300 rounded-md h-24 resize-none focus:ring-2 focus:ring-sky-600"
-          />
+    <AdminModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Editar Ruta Académica"
+      maxWidth="max-w-3xl"
+      footer={
+        <>
+          <div className="flex items-center gap-2 text-slate-400 font-extrabold text-[10px] uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100/50 w-full md:w-auto justify-center md:justify-start md:mr-auto">
+            Editando Ruta Académica
           </div>
-
-             <InputComponent
-            label="Horas Totales"
-            type="number"
-            name="horas_totales"
-            placeholder="Ingresa horas totales de la ruta"
-            value={formData.horas_totales}
-            onChange={handleChange}
-          />
-
-         <InputComponent
-                    label="Precio"
-                      placeholder="Ingresa precio de la ruta"
-            name="precio"
-            value={formData.precio}
-            onChange={handleChange}
-          />
-
-          <label className="block text-sm font-semibold text-gray-700">Nivel</label>
-          <select
-            name="nivel"
-            value={formData.nivel || ""}
-            onChange={handleChange}
-            className="mt-1 p-2 w-full border border-gray-300 rounded-md resize-none focus:ring-2 focus:ring-sky-600"
+          <button 
+            onClick={handleSubmit} 
+            disabled={isSaving}
+            className="w-full md:w-auto bg-gradient-to-br from-[#0E1C2B] to-[#1a3a5a] text-white px-10 py-4 rounded-2xl font-black tracking-tight hover:shadow-2xl hover:shadow-slate-900/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 border border-white/5 text-sm"
           >
-            <option value="Principiante">Principiante</option>
-            <option value="Intermedio">Intermedio</option>
-            <option value="Avanzado">Avanzado</option>
-          </select>
-
-          <InputComponent
-                      label="Imagen (URL)"
-                      placeholder="Ingresa imagen"
-            name="imagen"
-            value={formData.imagen || ""}
-            onChange={handleChange}
-            className="w-full border p-2 rounded"
-          />
-
-          <label className="block text-sm font-semibold text-gray-700">Línea Académica</label>
-          <div className="relative">
-            <input
-              type="text"
-              value={busquedaLinea}
-              onChange={handleLineaChange}
-              onFocus={() => setMostrarSugerencias(true)}
-              placeholder="Escribe para buscar..."
-            className="mt-1 p-2 w-full border border-gray-300 rounded-md resize-none focus:ring-2 focus:ring-sky-600"
-            />
-            {mostrarSugerencias && busquedaLinea.length > 0 && (
-              <ul className="absolute z-10 bg-white border w-full rounded shadow max-h-40 overflow-y-auto">
-                {lineas
-                  .filter((l) =>
-                    l.nombre.toLowerCase().includes(busquedaLinea.toLowerCase())
-                  )
-                  .map((linea) => (
-                    <li
-                      key={linea.id_linea}
-                      className="p-2 hover:bg-sky-100 cursor-pointer"
-                      onClick={() => seleccionarLinea(linea)}
-                    >
-                      {linea.nombre}
-                    </li>
-                  ))}
-                {lineas.filter((l) =>
-                  l.nombre.toLowerCase().includes(busquedaLinea.toLowerCase())
-                ).length === 0 && (
-                  <li className="p-2 text-gray-500">No hay resultados</li>
-                )}
-              </ul>
-            )}
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-3 mt-5">
-          <button
-            onClick={onClose}
-            className="bg-gray-400 text-white px-4 py-2 rounded"
-          >
+            <IoSaveOutline size={18} /> {isSaving ? "Cargando..." : "Guardar Cambios"}
+          </button>
+          <button onClick={onClose} className="w-full md:w-auto px-6 py-3 rounded-2xl font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all text-sm">
             Cancelar
           </button>
-          <button
-            onClick={handleSubmit}
-            className="bg-sky-600 text-white px-4 py-2 rounded hover:bg-sky-700"
-          >
-            Guardar
-          </button>
+        </>
+      }
+    >
+      <div className="space-y-4 md:space-y-6">
+        {/* Module 1: Structure */}
+        <div className="bg-slate-50/40 p-4 rounded-[1.5rem] border border-slate-100/50 space-y-4">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-9 h-9 rounded-xl bg-white text-sky-600 flex items-center justify-center shadow-sm border border-sky-100/50">
+              <IoMapOutline size={18} />
+            </div>
+            <div className="flex flex-col">
+              <h3 className="text-[9px] font-black uppercase tracking-[0.25em] text-sky-600/70">Módulo 01</h3>
+              <span className="text-[13px] font-black text-slate-900 tracking-tight">Estructura de la Ruta</span>
+            </div>
+          </div>
+ 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <InputComponent label="Nombre de la Ruta" name="nombre" value={formData.nombre} onChange={handleChange} placeholder="Ej: Especialista en Excel" />
+            
+            <SearchableSelect 
+              label="Línea Académica"
+              value={formData.id_linea_academica || ""}
+              onChange={(v) => setFormData({ ...formData, id_linea_academica: Number(v) })}
+              options={lineas.map(l => ({ value: l.id_linea, label: l.nombre }))}
+              placeholder="Selecciona línea..."
+            />
+ 
+            <div className="md:col-span-2">
+              <div className="flex flex-col gap-2 w-full group">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 group-focus-within:text-sky-500 transition-colors">
+                  Nivel de Dificultad
+                </label>
+                <select name="nivel" value={formData.nivel} onChange={handleChange} className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all text-slate-900 font-medium">
+                  <option value="Principiante">Principiante</option>
+                  <option value="Intermedio">Intermedio</option>
+                  <option value="Avanzado">Avanzado</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Module 2: Media */}
+        <div className="bg-slate-50/40 p-4 rounded-[1.5rem] border border-slate-100/50 space-y-4">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-9 h-9 rounded-xl bg-white text-emerald-600 flex items-center justify-center shadow-sm border border-emerald-100/50">
+              <IoLayersOutline size={18} />
+            </div>
+            <div className="flex flex-col">
+              <h3 className="text-[9px] font-black uppercase tracking-[0.25em] text-emerald-600/70">Módulo 02</h3>
+              <span className="text-[13px] font-black text-slate-900 tracking-tight">Contenido y Medios</span>
+            </div>
+          </div>
+ 
+          <div className="space-y-4">
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Descripción de la Ruta</label>
+              <textarea name="descripcion" value={formData.descripcion || ""} onChange={handleChange} className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all text-slate-900 font-medium h-24 resize-none" placeholder="Describe el objetivo de esta ruta..." />
+            </div>
+ 
+            <InputComponent label="Imagen de Portada (URL)" name="imagen" value={formData.imagen || ""} onChange={handleChange} placeholder="URL de la imagen" />
+          </div>
+        </div>
+
+        {/* Module 3: Specs */}
+        <div className="bg-slate-50/40 p-4 rounded-[1.5rem] border border-slate-100/50 space-y-4">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-9 h-9 rounded-xl bg-white text-amber-600 flex items-center justify-center shadow-sm border border-amber-100/50">
+              <IoTimeOutline size={18} />
+            </div>
+            <div className="flex flex-col">
+              <h3 className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600/70">Módulo 03</h3>
+              <span className="text-[13px] font-black text-slate-900 tracking-tight">Especificaciones</span>
+            </div>
+          </div>
+ 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <InputComponent label="Horas Totales" name="horas_totales" type="number" value={formData.horas_totales} onChange={handleChange} placeholder="Ej: 120" />
+            <InputComponent label="Precio de la Ruta (S/)" name="precio" type="number" value={formData.precio} onChange={handleChange} placeholder="Ej: 450.00" />
+          </div>
         </div>
       </div>
-    </div>
+    </AdminModal>
   );
 }

@@ -96,7 +96,7 @@ const evaluationSlice = createSlice({
       state.sessionId = action.payload.intento?.id_intento || '';
       state.attemptId = action.payload.intento?.id_intento || '';
       state.startedAt = action.payload.intento?.fecha_inicio || '';
-      state.questions = action.payload.evaluacion?.preguntas || [];
+      state.questions = action.payload.preguntas || action.payload.evaluacion?.preguntas || [];
       // Limpiar respuestas y contadores al iniciar nuevo intento
       state.answers = {};
       state.answeredCount = 0;
@@ -105,12 +105,13 @@ const evaluationSlice = createSlice({
       state.status = 'active';
       state.timeRemainingSeconds = state.configuration.timeLimitSeconds;
       state.timerStatus = 'running';
+      state.currentQuestionIndex = 0;
     },
     resumeSession(state: EvaluationState, action: PayloadAction<any>) {
       state.sessionId = action.payload.session?.id_intento || '';
       state.attemptId = action.payload.session?.id_intento || '';
       state.startedAt = action.payload.session?.fecha_inicio || '';
-      state.questions = action.payload.session?.evaluacion?.preguntas || [];
+      state.questions = action.payload.session?.preguntas || action.payload.session?.evaluacion?.preguntas || [];
       // Poblar answers con las respuestas guardadas, soportando arrays y valores únicos
       const savedAnswers = action.payload.session?.respuestas || [];
       const answersObj: Record<string, Answer> = {};
@@ -145,6 +146,7 @@ const evaluationSlice = createSlice({
         ? tiempoRestante
         : state.configuration.timeLimitSeconds;
       state.timerStatus = 'running';
+      state.currentQuestionIndex = 0;
     },
     setAnswer(state: EvaluationState, action: PayloadAction<{ questionId: string; answer: Answer }>) {
       state.answers[action.payload.questionId] = action.payload.answer;

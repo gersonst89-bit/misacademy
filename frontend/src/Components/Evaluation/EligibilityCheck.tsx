@@ -52,6 +52,7 @@ const EligibilityCheck: React.FC = () => {
         intento_numero={eligibilityData.lastAttempt.intento_numero}
         reason={eligibilityData.reason}
         calificacion={eligibilityData.lastAttempt.calificacion}
+        id_curso={eligibilityData.configuration?.id_curso || eligibilityData.lastAttempt?.id_curso || courseId}
       />
     );
   }

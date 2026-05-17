@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from "react";
-import InputComponent from "../components/InputComponent";
+import InputComponent from "../Components/InputComponent";
 import type { Modulo, Curso, Material } from "../../types/models";
-import SearchableSelect from "../components/SearchableSelect";
-import { apiUrl,API_URL } from "../../config/api";
+import SearchableSelect from "../Components/SearchableSelect";
+import { apiUrl } from "../../config/api";
+import AdminModal from "../Components/AdminModal";
+import { IoCloudUploadOutline } from "react-icons/io5";
 
 interface AddMaterialModalProps {
   isOpen: boolean;
@@ -23,75 +25,51 @@ export const AddMaterialModal: React.FC<AddMaterialModalProps> = ({
   const [idCurso, setIdCurso] = useState<number | "">("");
   const [modulos, setModulos] = useState<Modulo[]>([]);
   const [cursos, setCursos] = useState<Curso[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
+    setNombre("");
+    setDescripcion("");
+    setArchivo(null);
+    setUrlArchivo("");
+    setIdModulo("");
+    setIdCurso("");
+    setError(null);
 
-    const token = localStorage.getItem("token");
-
-    // Fetch cursos
-    const fetchCursos = async () => {
-      let allCursos: Curso[] = [];
-      let page = 1;
-
-      while (true) {
-        const res = await fetch(
-          `${API_URL}/mis-cursos?page=${page}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-          }
-        );
-
-        if (!res.ok) break;
-
-        const data = await res.json();
-        const items = data.data || [];
-
-        if (items.length === 0) break;
-
-        allCursos = [...allCursos, ...items];
-
-        page++;
-      }
-
-      setCursos(allCursos);
-    };
-
-    // Fetch módulos
-    const fetchModulos = async () => {
+    const fetchData = async () => {
       try {
-        let pagina = 1;
-        let todosLosModulos: Modulo[] = [];
-        let totalPages = 1;
-
+        // Cursos - usar ruta admin
+        let pageC = 1, lastC = 1, listC: Curso[] = [];
         do {
-          const res = await fetch(
-            `${API_URL}/modulos/mis?page=${pagina}`,
-            {
-              headers: {
-                "Content-Type": "application/json",
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
-              },
-            }
-          );
+          const r = await fetch(apiUrl(`/admin/cursos?page=${pageC}`), {
+            headers: { Accept: "application/json" },
+            credentials: "include",
+          });
+          const d = await r.json();
+          listC = [...listC, ...(d.data || d || [])];
+          lastC = d.last_page || d.meta?.last_page || 1;
+          pageC++;
+        } while (pageC <= lastC);
+        setCursos(listC);
 
-          const data = await res.json();
-          todosLosModulos = [...todosLosModulos, ...(data.data || [])];
-          totalPages = data.meta?.last_page || 1;
-          pagina++;
-        } while (pagina <= totalPages);
-
-        setModulos(todosLosModulos);
-      } catch (error) {
-        console.error("Error cargando módulos:", error);
-      }
+        // Modulos
+        let pageM = 1, lastM = 1, listM: Modulo[] = [];
+        do {
+          const r = await fetch(apiUrl(`/admin/modulos?page=${pageM}`), {
+            headers: { Accept: "application/json" },
+            credentials: "include",
+          });
+          const d = await r.json();
+          listM = [...listM, ...(d.data || d || [])];
+          lastM = d.last_page || d.meta?.last_page || 1;
+          pageM++;
+        } while (pageM <= lastM);
+        setModulos(listM);
+      } catch (err) { console.error(err); }
     };
-
-    fetchCursos();
-    fetchModulos();
+    fetchData();
   }, [isOpen]);
 
   const modulosFiltrados = useMemo(() => {
@@ -100,187 +78,177 @@ export const AddMaterialModal: React.FC<AddMaterialModalProps> = ({
   }, [idCurso, modulos]);
 
   const handleSave = async () => {
-    if (!nombre.trim()) {
-      alert("El nombre es obligatorio.");
-      return;
-    }
-
-    if (!archivo) {
-      alert("El archivo es obligatorio.");
-      return;
-    }
-
-    const tamanioKB = archivo.size / 1024;
-    if (tamanioKB > 20480) {
-      alert("El tamaño del archivo no puede ser mayor a 20 MB.");
-      return;
-    }
-
-    if (idModulo === "") {
-      alert("Debes seleccionar un módulo.");
-      return;
-    }
+    setError(null);
+    if (!nombre.trim()) return setError("El nombre es obligatorio.");
+    if (!archivo) return setError("Debes subir un archivo.");
+    if (!idCurso) return setError("Selecciona un curso.");
 
     const formData = new FormData();
-    formData.append("nombre", nombre);
-    formData.append("descripcion", descripcion || "");
-    formData.append("url_archivo", urlArchivo || "");
-    formData.append("tamanio", tamanioKB.toString());
-    formData.append("id_modulo", String(idModulo));
+    formData.append("titulo", nombre.trim()); // El backend espera 'titulo' según el DTO
+    formData.append("descripcion", descripcion.trim() || "");
+    // El campo se llama 'id_modulo' y 'id_curso' en el backend
+    if (idModulo) formData.append("id_modulo", String(idModulo));
     formData.append("id_curso", String(idCurso));
-    formData.append("fecha_creacion", new Date().toISOString());
     formData.append("estado", "Publicado");
-
     formData.append("archivo", archivo, archivo.name);
 
+    setSaving(true);
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(
-        `${API_URL}/admin/materiales`,
-        {
-          method: "POST",
-          body: formData,
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const res = await fetch(apiUrl("/admin/materiales"), {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+        // No enviamos Content-Type manual para que el navegador ponga el boundary de FormData
+        // pero sí necesitamos las credenciales para la sesión/cookie
+      });
 
       if (!res.ok) {
-        const errorData = await res.json();
-        console.error("Error al crear material:", errorData);
-        return;
+        const errData = await res.json();
+        throw new Error(errData.message || "Error al crear material");
       }
-
       const data = await res.json();
-      console.log("Material creado exitosamente:", data);
       onSave(data);
-
       onClose();
-    } catch (error) {
-      console.error("Error en la solicitud:", error);
+    } catch (err: any) {
+      setError(err.message || "No se pudo subir el material.");
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center min-h-screen">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg max-h-screen overflow-y-auto animate-fade-in">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4 text-center">
-          Agregar Nuevo Material
-        </h2>
-
-        <label className="block text-sm font-semibold text-gray-700 mb-1">
-          Curso
-        </label>
-        <SearchableSelect
-          value={idCurso}
-          onChange={(v) => {
-            const cursoId = v === "" ? "" : Number(v);
-            setIdCurso(cursoId);
-            setIdModulo("");
-          }}
-          options={cursos.map((c) => ({
-            value: c.id_curso,
-            label: c.nombre,
-          }))}
-          placeholder="Selecciona un curso"
-        />
-
-        <label className="block text-sm font-semibold text-gray-700 mb-1 mt-4">
-          Módulo
-        </label>
-        {!idCurso ? (
-          <div className="px-3 py-2 border border-gray-300 rounded-md text-gray-500 mb-4">
-            Selecciona un curso primero
-          </div>
-        ) : (
-          <SearchableSelect
-            value={idModulo}
-            onChange={(v) => setIdModulo(v === "" ? "" : Number(v))}
-            options={modulosFiltrados.map((m) => ({
-              value: m.id_modulo,
-              label: m.titulo,
-            }))}
-            placeholder="Selecciona un módulo"
-          />
-        )}
-
-        <label className="block text-sm font-semibold text-gray-700 mt-4">
-          Nombre
-        </label>
-        <input
-          type="text"
-          value={nombre}
-          placeholder="Nombre del material"
-          onChange={(e) => setNombre(e.target.value)}
-          className="mt-1 p-2 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-600 focus:border-sky-600 mb-4"
-        />
-
-        <div className="mb-2">
-          <label className="block text-sm font-semibold text-gray-700">
-            Descripción
-          </label>
-          <textarea
-            value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
-            className="mt-1 p-2 w-full border border-gray-300 focus:ring-2 h-32 resize-none overflow-auto rounded-lg shadow-sm focus:outline-none focus:ring-sky-600 focus:border-sky-600"
-            placeholder="Ingresa la descripción del material"
-          />
-        </div>
-
-        <div className="mb-2">
-          <label className="block text-sm font-semibold text-gray-700">
-            Subir Archivo
-          </label>
-          <input
-            type="file"
-            onChange={(e) => {
-              const file = e.target.files ? e.target.files[0] : null;
-              if (file) {
-                const validTypes = [
-                  "image/jpeg",
-                  "image/png",
-                  "application/pdf",
-                ];
-                if (!validTypes.includes(file.type)) {
-                  alert("El archivo debe ser de tipo JPEG, PNG o PDF.");
-                  return;
-                }
-                setArchivo(file);
-                const fileUrl = URL.createObjectURL(file);
-                setUrlArchivo(fileUrl);
-              } else {
-                alert("Debes seleccionar un archivo.");
-              }
-            }}
-            className="mt-1 p-2 w-full border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-sky-600 focus:border-sky-600 focus:outline-none active:border-sky-600 active:ring-sky-600"
-          />
-        </div>
-
-        {urlArchivo && (
-          <div className="mt-2 mb-2 text-sm text-gray-300">
-            <strong>Archivo seleccionado: </strong>
-            <a href={urlArchivo} target="_blank" rel="noopener noreferrer">
-              Ver archivo
-            </a>
-          </div>
-        )}
-
-        <div className="flex justify-center gap-3 mt-6">
-          <button
-            onClick={handleSave}
-            className="px-4 py-2 bg-sky-600 rounded text-white hover:bg-sky-700"
-          >
-            Agregar
-          </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+    <AdminModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Registrar Nuevo Recurso Académico"
+      maxWidth="max-w-3xl"
+      footer={
+        <div className="flex gap-4">
+          <button 
+            onClick={onClose} 
+            className="px-8 py-3 rounded-[1.25rem] font-black uppercase tracking-widest text-[10px] text-slate-400 hover:bg-slate-50 transition-all"
           >
             Cancelar
           </button>
+          <button 
+            onClick={handleSave} 
+            disabled={saving}
+            className={`px-10 py-3 bg-gradient-to-br from-[#0E1C2B] to-[#1a3a5a] text-white rounded-[1.25rem] font-black uppercase tracking-widest text-[10px] hover:shadow-2xl hover:shadow-slate-900/20 transition-all active:scale-95 border border-white/10 shadow-lg shadow-slate-900/10 ${saving ? "opacity-50 cursor-not-allowed" : ""}`}
+          >
+            {saving ? "Procesando..." : "Cargar Material"}
+          </button>
         </div>
+      }
+    >
+      <div className="space-y-6 p-1">
+        {/* Sección: Ubicación Académica */}
+        <div className="p-6 bg-slate-50/40 rounded-[2.5rem] border border-slate-100/50 space-y-6">
+          <div className="flex items-center gap-3 mb-2 ml-1">
+            <div className="w-1.5 h-4 bg-sky-500 rounded-full" />
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Destino del Recurso</label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Curso Principal</label>
+              <SearchableSelect
+                value={idCurso}
+                onChange={(v) => { setIdCurso(v); setIdModulo(""); }}
+                options={cursos.map(c => ({ value: c.id_curso, label: c.nombre }))}
+                placeholder="Selecciona curso..."
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Módulo Específico</label>
+              {!idCurso ? (
+                <div className="px-6 py-3.5 bg-white border border-slate-100 rounded-2xl text-[11px] font-bold text-slate-300 italic">Selecciona un curso primero</div>
+              ) : (
+                <SearchableSelect
+                  value={idModulo}
+                  onChange={setIdModulo}
+                  options={modulosFiltrados.map(m => ({ value: m.id_modulo, label: m.titulo }))}
+                  placeholder="Selecciona módulo..."
+                />
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Sección: Identidad del Recurso */}
+        <div className="p-6 bg-slate-50/40 rounded-[2.5rem] border border-slate-100/50 space-y-6">
+          <div className="flex items-center gap-3 mb-2 ml-1">
+            <div className="w-1.5 h-4 bg-slate-400 rounded-full" />
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Identidad y Contexto</label>
+          </div>
+
+          <InputComponent
+            label="Título Descriptivo"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            placeholder="Ej: Guía de Cálculo Diferencial v1.2"
+          />
+
+          <div>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Breve Descripción</label>
+            <textarea
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              className="w-full px-6 py-5 bg-white border border-slate-200 rounded-[2rem] focus:outline-none focus:ring-4 focus:ring-sky-500/5 focus:border-sky-500 transition-all text-[13px] font-medium h-32 text-slate-700 placeholder:text-slate-300 resize-none shadow-sm"
+              placeholder="Indica a los estudiantes para qué sirve este archivo..."
+            />
+          </div>
+        </div>
+
+        {/* Sección: Carga de Archivo */}
+        <div className="relative group">
+          <div className={`relative border-2 border-dashed rounded-[3rem] p-12 transition-all duration-500 flex flex-col items-center justify-center gap-6 overflow-hidden
+            ${archivo 
+              ? "bg-emerald-50/50 border-emerald-300 shadow-2xl shadow-emerald-500/5" 
+              : "bg-slate-50/50 border-slate-200 hover:border-sky-400 hover:bg-sky-50/30 hover:shadow-2xl hover:shadow-sky-500/5"}
+          `}>
+             <input
+              type="file"
+              onChange={(e) => setArchivo(e.target.files ? e.target.files[0] : null)}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+            />
+            
+            {/* Fondo decorativo al cargar */}
+            {archivo && (
+              <div className="absolute inset-0 bg-emerald-500/5 animate-pulse pointer-events-none" />
+            )}
+
+            <div className={`w-20 h-20 rounded-[2rem] flex items-center justify-center transition-all duration-500 relative z-10
+              ${archivo 
+                ? "bg-white text-emerald-500 shadow-xl shadow-emerald-500/10 rotate-12 scale-110" 
+                : "bg-white text-slate-400 shadow-lg shadow-slate-900/5 group-hover:scale-110 group-hover:text-sky-500 group-hover:-rotate-6"}
+            `}>
+              <IoCloudUploadOutline size={40} className="drop-shadow-sm" />
+            </div>
+
+            <div className="text-center relative z-10 space-y-2">
+              <p className={`text-sm font-black transition-colors ${archivo ? "text-emerald-700" : "text-slate-800"}`}>
+                {archivo ? archivo.name : "Seleccionar Archivo Local"}
+              </p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                {archivo ? `${(archivo.size / 1024).toFixed(1)} KB • Listo para subir` : "Soporta PDF, PNG, JPG hasta 20MB"}
+              </p>
+            </div>
+            
+            {!archivo && (
+              <div className="px-6 py-2 bg-white rounded-full text-[9px] font-black text-sky-600 uppercase tracking-widest border border-sky-100 shadow-sm relative z-10">
+                Arrastra tu archivo aquí
+              </div>
+            )}
+          </div>
+        </div>
+
+        {error && (
+          <div className="p-4 bg-rose-50 border border-rose-100 rounded-[1.5rem] flex items-center gap-3 animate-shake">
+            <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]" />
+            <p className="text-[10px] font-black text-rose-600 uppercase tracking-[0.15em]">{error}</p>
+          </div>
+        )}
       </div>
-    </div>
+    </AdminModal>
   );
 };

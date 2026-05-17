@@ -1,5 +1,6 @@
 import React from 'react';
-import styles from './ResultsScreen.module.css';
+import { useNavigate } from 'react-router-dom';
+import { API_URL } from '../../config/api';
 
 interface NoAttemptsLeftProps {
   puntos_obtenidos?: number;
@@ -9,8 +10,8 @@ interface NoAttemptsLeftProps {
   fecha_finalizacion?: string;
   intento_numero?: number;
   reason?: string;
-  // Mantener compatibilidad con calificacion legacy
   calificacion?: number | string;
+  id_curso?: number | string;
 }
 
 const NoAttemptsLeft: React.FC<NoAttemptsLeftProps> = ({ 
@@ -18,99 +19,108 @@ const NoAttemptsLeft: React.FC<NoAttemptsLeftProps> = ({
   puntaje_maximo,
   porcentaje,
   puntaje_requerido,
-  fecha_finalizacion, 
   intento_numero,
   reason,
-  calificacion
+  calificacion,
+  id_curso
 }) => {
-  // Calcular valores - usar los nuevos campos o fallback a calificacion legacy
+  const navigate = useNavigate();
+
+  const handleVerCertificado = async () => {
+    const finalCourseId = id_curso || window.location.pathname.split('/').pop();
+    if (!finalCourseId) {
+      navigate('/certificados');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/certificaciones/solicitar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id_curso: finalCourseId }),
+      });
+      const data = await response.json();
+      if (response.ok && data.codigo_certificado) {
+        navigate(`/certificado/${data.codigo_certificado}`);
+      } else {
+        navigate('/certificados');
+      }
+    } catch (e) {
+      navigate('/certificados');
+    }
+  };
+
   const puntosObtenidos = Number(puntos_obtenidos ?? (typeof calificacion === 'string' ? parseFloat(calificacion) : calificacion ?? 0)) || 0;
   const puntajeMaximo = Number(puntaje_maximo ?? 100) || 100;
   const puntajeRequerido = Number(puntaje_requerido ?? 60) || 60;
   const porcentajeCalculado = Number(porcentaje ?? (puntajeMaximo > 0 ? (puntosObtenidos / puntajeMaximo) * 100 : 0)) || 0;
-  const isPassed = puntosObtenidos >= puntajeRequerido;
-
-  const handleGoHome = () => {
-    window.location.href = '/';
-  };
+  const isPassed = porcentajeCalculado >= puntajeRequerido;
 
   return (
-    <div className={styles['results-dashboard']}>
-      <div className={styles['results-card']}>
+    <div className="min-h-screen bg-black flex items-center justify-center p-4 font-sans relative overflow-hidden">
+      
+      {/* Background Glow */}
+      <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[120px] opacity-10 pointer-events-none ${isPassed ? 'bg-emerald-500' : 'bg-red-500'}`} />
+
+      <div className="relative w-full max-w-lg bg-[#0f0f0f]/80 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-10 sm:p-12 shadow-2xl flex flex-col items-center">
+        
+        {/* Status Icon */}
+        <div className={`w-20 h-20 rounded-2xl rotate-3 flex items-center justify-center mb-8 ${isPassed ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-500' : 'bg-red-500/10 border border-red-500/30 text-red-500'}`}>
+          <div className="-rotate-3">
+            {isPassed ? (
+              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+            ) : (
+              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+            )}
+          </div>
+        </div>
+
+        <h2 className="text-2xl font-bold text-white mb-2 text-center tracking-tight">
+          Evaluación Finalizada
+        </h2>
+
         {reason && (
-          <div style={{ 
-            padding: '1rem', 
-            marginBottom: '1rem', 
-            backgroundColor: '#fff3cd', 
-            border: '1px solid #ffc107', 
-            borderRadius: '8px',
-            color: '#856404'
-          }}>
-            <p style={{ margin: 0, fontSize: '0.95rem' }}>{reason}</p>
+          <div className="bg-amber-500/10 border border-amber-500/20 text-amber-500 text-sm font-medium px-4 py-3 rounded-xl mb-6 text-center w-full">
+            {reason}
           </div>
         )}
-        <div className={styles['results-card-icon']}>
-          {isPassed ? (
-            <svg xmlns="http://www.w3.org/2000/svg" height="56" viewBox="0 0 24 24" width="56" fill="#4caf50">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-            </svg>
-          ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" height="56" viewBox="0 0 24 24" width="56" fill="#f44336">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-            </svg>
-          )}
+
+        <div className="text-5xl font-black text-white tracking-tighter mb-2">
+          {porcentajeCalculado.toFixed(0)}%
         </div>
-        <div className={styles['results-card-row']}>
-          <div className={styles['results-card-status']}>
-            Resultado de tu último intento
-          </div>
-          <div className={styles['results-card-score']}>
-            {(porcentajeCalculado || 0).toFixed(0)}%
-          </div>
-        </div>
-        <div style={{ marginBottom: '1.2rem', color: isPassed ? '#388e3c' : '#b71c1c', fontWeight: 500 }}>
-          {isPassed
-            ? '¡Felicidades! Has aprobado la evaluación.'
-            : `No alcanzaste el puntaje requerido (${puntajeRequerido.toFixed(2)} puntos).`}
-        </div>
-        <div className={styles['results-card-stats']}>
-          <div className={styles['results-stat']}>
-            <span className={styles['stat-icon']}>
-              <span className="material-icons" style={{ fontSize: 22, color: '#555' }}>grade</span>
-            </span>
-            <span>Puntaje: {(puntosObtenidos || 0).toFixed(2)} / {(puntajeMaximo || 100).toFixed(2)} puntos</span>
-          </div>
-          <div className={styles['results-stat']}>
-            <span className={styles['stat-icon']}>
-              <span className="material-icons" style={{ fontSize: 22, color: '#555' }}>percent</span>
-            </span>
-            <span>Porcentaje: {(porcentajeCalculado || 0).toFixed(2)}%</span>
-          </div>
-          <div className={styles['results-stat']}>
-            <span className={styles['stat-icon']}>
-              <span className="material-icons" style={{ fontSize: 22, color: '#555' }}>check_circle</span>
-            </span>
-            <span>Puntaje requerido: {puntajeRequerido.toFixed(2)} puntos</span>
+        
+        <p className={`text-sm font-medium mb-8 text-center ${isPassed ? 'text-emerald-400' : 'text-red-400'}`}>
+          {isPassed ? '¡Felicidades! Has aprobado.' : `No alcanzaste el puntaje de ${puntajeRequerido.toFixed(0)} pts.`}
+        </p>
+
+        <div className="w-full space-y-3 mb-8">
+          <div className="bg-white/5 border border-white/5 rounded-xl p-4 flex justify-between items-center">
+            <span className="text-white/50 text-xs font-bold uppercase tracking-widest">Puntaje</span>
+            <span className="text-white font-medium">{puntosObtenidos.toFixed(0)} / {puntajeMaximo.toFixed(0)}</span>
           </div>
           {intento_numero && (
-            <div className={styles['results-stat']}>
-              <span className={styles['stat-icon']}>
-                <span className="material-icons" style={{ fontSize: 22, color: '#555' }}>format_list_numbered</span>
-              </span>
-              <span>Intento número: {intento_numero}</span>
+            <div className="bg-white/5 border border-white/5 rounded-xl p-4 flex justify-between items-center">
+              <span className="text-white/50 text-xs font-bold uppercase tracking-widest">Intentos usados</span>
+              <span className="text-white font-medium">{intento_numero}</span>
             </div>
           )}
         </div>
-        <div className={styles['results-card-actions']}>
-          <button onClick={handleGoHome} className={isPassed ? styles['btn-passed'] : styles['btn-failed']}>
-            <span className={styles['btn-icon']}>
-              <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 0 24 24" width="20" fill="#fff">
-                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-              </svg>
-            </span>
-            {isPassed ? 'Descargar Certificado' : 'Volver al Inicio'}
-          </button>
-        </div>
+
+        <button 
+          onClick={isPassed ? handleVerCertificado : () => navigate('/cursos')} 
+          className={`w-full py-4 text-xs font-bold uppercase tracking-widest rounded-xl transition-all shadow-lg mb-4 ${isPassed ? 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/20' : 'bg-white hover:bg-white/90 text-black'}`}
+        >
+          {isPassed ? 'Ver Mi Certificado' : 'Ver otros cursos'}
+        </button>
+
+        <button 
+          onClick={() => navigate(-1)} 
+          className="text-white/40 hover:text-white/80 text-xs font-bold tracking-widest uppercase transition-colors"
+        >
+          Regresar
+        </button>
+
       </div>
     </div>
   );

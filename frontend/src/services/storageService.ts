@@ -1,9 +1,9 @@
 export const storageService = {
   set(key: string, value: any) {
-    sessionStorage.setItem(key, JSON.stringify(value));
+    localStorage.setItem(key, JSON.stringify(value));
   },
   get(key: string) {
-    const val = sessionStorage.getItem(key);
+    const val = localStorage.getItem(key);
     try {
       return val ? JSON.parse(val) : null;
     } catch {
@@ -11,9 +11,9 @@ export const storageService = {
     }
   },
   remove(key: string) {
-    sessionStorage.removeItem(key);
+    localStorage.removeItem(key);
   },
   clear() {
-    sessionStorage.clear();
+    localStorage.clear();
   },
 };

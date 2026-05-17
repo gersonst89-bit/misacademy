@@ -1,19 +1,88 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   FaSearch,
   FaInfoCircle,
   FaPlus,
   FaEdit,
   FaArchive,
+  FaChevronDown,
 } from "react-icons/fa";
 import type { Curso } from "../../types/models";
 import { AddCursoModal } from "./agregarCursos";
 import { InfoCursoModal } from "./infoCursos";
 import { EditCursoModal } from "./editCursos";
-import { ArchiveModal } from "../components/ArchiveModal";
-import { apiUrl } from "../../config/api";
+import { ArchiveModal } from "../Components/ArchiveModal";
+import DeleteModal from "../Components/DeleteModal";
+import { apiUrl, BASE_URL, API_URL } from "../../config/api";
+
+function FiltroEstado({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: "" | "Publicado" | "Archivado") => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const estados = [
+    { value: "", label: "Todos los estados", color: "text-sky-600", bg: "bg-sky-50" },
+    { value: "Publicado", label: "Publicado", color: "text-emerald-600", bg: "bg-emerald-50" },
+    { value: "Archivado", label: "Archivado", color: "text-amber-600", bg: "bg-amber-50" },
+  ];
+
+  const current = estados.find(e => e.value === value) || estados[0];
+
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (!ref.current) return;
+      if (!ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-3 px-5 py-2.5 bg-white border border-slate-200 rounded-xl hover:border-sky-500/50 hover:shadow-xl hover:shadow-sky-500/5 transition-all duration-500 group shadow-sm"
+      >
+        <div className={`w-1.5 h-1.5 rounded-full ${value === 'Publicado' ? 'bg-emerald-500 animate-pulse' : value === 'Archivado' ? 'bg-amber-500' : 'bg-sky-500'}`} />
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-700 group-hover:text-sky-600 transition-colors whitespace-nowrap">{current.label}</span>
+        <FaChevronDown className={`text-slate-400 transition-transform duration-500 ${open ? "rotate-180 text-sky-500" : ""}`} size={10} />
+      </button>
+
+      {open && (
+        <div className="absolute top-full right-0 mt-3 w-56 bg-white rounded-[2rem] shadow-[0_30px_60px_rgba(15,23,42,0.15)] border border-slate-100 p-2 z-50 animate-fadeIn overflow-hidden backdrop-blur-xl bg-white/95">
+          {estados.map((e) => (
+            <button
+              key={e.value}
+              onClick={() => {
+                onChange(e.value as any);
+                setOpen(false);
+              }}
+              className={`w-full text-left px-4 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all mb-1 flex items-center gap-3
+                ${value === e.value 
+                  ? `${e.bg} ${e.color} shadow-sm` 
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}
+              `}
+            >
+              <div className={`w-1.5 h-1.5 rounded-full ${
+                e.value === 'Publicado' ? 'bg-emerald-500' : 
+                e.value === 'Archivado' ? 'bg-amber-500' : 'bg-sky-500'
+              }`} />
+              {e.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function Cursos() {
   const [cursos, setCursos] = useState<Curso[]>([]);
@@ -34,59 +103,49 @@ export function Cursos() {
   const [isEstadoModalOpen, setIsEstadoModalOpen] = useState(false);
   const [cursoEstadoSeleccionado, setCursoEstadoSeleccionado] =
     useState<Curso | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [cursoAEliminar, setCursoAEliminar] = useState<Curso | null>(null);
+
+  const [pagina, setPagina] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+
+  // Debounce para la búsqueda
+  const [busquedaDebounced, setBusquedaDebounced] = useState(busqueda);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setBusquedaDebounced(busqueda);
+      setPagina(1);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [busqueda]);
 
   const fetchCursos = async () => {
     setIsLoading(true);
 
     try {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        alert("Debes iniciar sesión para ver tus cursos.");
-        setIsLoading(false);
-        return;
-      }
-
-      let todosLosCursos: Curso[] = [];
-      let pagina = 1;
-      let ultimaPagina = 15;
-
-      do {
-        const response = await fetch(
-          apiUrl(`/mis-cursos?page=${pagina}`),
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (!response.ok) throw new Error("Error al obtener cursos");
-
-        const data = await response.json();
-        const cursosPagina = data.data || [];
-
-        todosLosCursos = [...todosLosCursos, ...cursosPagina];
-
-        ultimaPagina = data.last_page || 1;
-        pagina++;
-      } while (pagina <= ultimaPagina);
-
-      todosLosCursos.sort((a, b) => {
-        const fechaA = new Date(a.fecha_creacion).getTime();
-        const fechaB = new Date(b.fecha_creacion).getTime();
-        return fechaB - fechaA;
+      const queryParams = new URLSearchParams({
+        page: pagina.toString(),
+        per_page: "12",
+        nombre: busquedaDebounced, // El backend de cursos usa 'nombre' para filtrar
+        estado: filtroEstado
       });
 
-      setCursos(todosLosCursos);
-      setCursosFiltrados(todosLosCursos);
+      const response = await fetch(
+        apiUrl(`/admin/cursos?${queryParams.toString()}`),
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-      console.log(`Cursos cargados:`, todosLosCursos.length);
+      if (!response.ok) throw new Error("Error al obtener cursos");
+
+      const data = await response.json();
+      setCursos(data.data || []);
+      setTotalPaginas(data.last_page || 1);
     } catch (error) {
       console.error("Error cargando cursos:", error);
-      setCursos([]);
-      setCursosFiltrados([]);
     } finally {
       setIsLoading(false);
     }
@@ -94,7 +153,7 @@ export function Cursos() {
 
   const fetchRutas = async () => {
     try {
-      const res = await fetch(apiUrl("/rutas"));
+      const res = await fetch(apiUrl("/rutas-academicas"));
       if (!res.ok) throw new Error("Error al obtener rutas");
       const data = await res.json();
       setRutas(data.data || []);
@@ -104,55 +163,49 @@ export function Cursos() {
   };
 
   useEffect(() => {
-    fetchCursos();
     fetchRutas();
   }, []);
 
-  const buscarCursos = () => {
-    let filtrados = cursos;
-    if (busqueda.trim()) {
-      const term = busqueda.toLowerCase();
-      filtrados = filtrados.filter((curso) =>
-        curso.nombre.toLowerCase().includes(term)
-      );
-    }
-    if (filtroEstado) {
-      filtrados = filtrados.filter((curso) => curso.estado === filtroEstado);
-    }
-
-    setCursosFiltrados(filtrados);
-  };
-
   useEffect(() => {
-    buscarCursos();
-  }, [busqueda, filtroEstado, cursos]);
+    fetchCursos();
+  }, [pagina, busquedaDebounced, filtroEstado]);
 
   const crearCurso = async (
     newCurso: Omit<Curso, "id_curso" | "fecha_creacion" | "fecha_actualizacion">
   ) => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("No se encontró token. Inicia sesión como administrador.");
-        return false;
-      }
-
       console.log("Enviando curso al backend:", newCurso);
 
+      const { id_curso, fecha_creacion, fecha_actualizacion, ...rest } = newCurso as any;
+      const cleanData = {
+        nombre: (newCurso as any).nombre,
+        descripcion: (newCurso as any).descripcion,
+        descripcion_corta: (newCurso as any).descripcion_corta,
+        descripcion_larga: (newCurso as any).descripcion_larga,
+        lo_que_aprenderas: (newCurso as any).lo_que_aprenderas,
+        requisitos: (newCurso as any).requisitos,
+        nivel: (newCurso as any).nivel,
+        precio: Number((newCurso as any).precio),
+        duracion_horas: Number((newCurso as any).duracion_horas),
+        tiempo: (newCurso as any).tiempo ? Number((newCurso as any).tiempo) : undefined,
+        imagen: (newCurso as any).imagen,
+        video_previsualizacion: (newCurso as any).video_previsualizacion,
+        estado: (newCurso as any).estado,
+        destacado: Boolean((newCurso as any).destacado),
+        id_docente: Number((newCurso as any).id_docente),
+        rutas: newCurso.rutas.map((r) =>
+          typeof r === "number" ? r : (r as any).id_ruta
+        ),
+      };
+
       const response = await fetch(
-        apiUrl("/cursos"),
+        apiUrl("/admin/cursos"),
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            ...newCurso,
-            rutas: newCurso.rutas.map((r) =>
-              typeof r === "number" ? r : (r as any).id_ruta
-            ),
-          }),
+          body: JSON.stringify(cleanData),
         }
       );
 
@@ -178,21 +231,46 @@ export function Cursos() {
 
   const guardarEdicion = async (cursoActualizado: Curso): Promise<boolean> => {
     try {
-      const token = localStorage.getItem("token");
+      const { 
+        id_curso, 
+        fecha_creacion, 
+        fecha_actualizacion, 
+        docente, 
+        slug, 
+        modulos, 
+        ...rest 
+      } = cursoActualizado as any;
+      
+      // Solo enviar los campos que el backend espera (evitar error 400 por campos extra)
+      const cleanData = {
+        nombre: cursoActualizado.nombre,
+        descripcion: cursoActualizado.descripcion,
+        descripcion_corta: cursoActualizado.descripcion_corta,
+        descripcion_larga: cursoActualizado.descripcion_larga,
+        lo_que_aprenderas: cursoActualizado.lo_que_aprenderas,
+        requisitos: cursoActualizado.requisitos,
+        nivel: cursoActualizado.nivel,
+        precio: Number(cursoActualizado.precio),
+        duracion_horas: cursoActualizado.duracion_horas ? Number(cursoActualizado.duracion_horas) : (cursoActualizado.duracion ? Number(cursoActualizado.duracion) : undefined),
+        tiempo: cursoActualizado.tiempo ? Number(cursoActualizado.tiempo) : undefined,
+        imagen: cursoActualizado.imagen,
+        video_previsualizacion: cursoActualizado.video_previsualizacion,
+        estado: cursoActualizado.estado,
+        destacado: Boolean(cursoActualizado.destacado),
+        id_docente: cursoActualizado.id_docente ? Number(cursoActualizado.id_docente) : undefined,
+        rutas: cursoActualizado.rutas?.map((r) =>
+          typeof r === "number" ? r : (r as any).id_ruta
+        ) || [],
+      };
+
       const response = await fetch(
-        apiUrl(`/cursos/${cursoActualizado.id_curso}`),
+        apiUrl(`/admin/cursos/${cursoActualizado.id_curso}`),
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            ...cursoActualizado,
-            rutas: cursoActualizado.rutas.map((r) =>
-              typeof r === "number" ? r : (r as any).id_ruta
-            ),
-          }),
+          body: JSON.stringify(cleanData),
         }
       );
 
@@ -203,34 +281,35 @@ export function Cursos() {
         return false;
       }
 
-      if (data.curso) {
+      const cursoActualizadoRes = data;
+      if (cursoActualizadoRes && cursoActualizadoRes.id_curso) {
         if (
-          data.curso.rutas &&
-          data.curso.rutas.length > 0 &&
-          typeof data.curso.rutas[0] === "number"
+          cursoActualizadoRes.rutas &&
+          cursoActualizadoRes.rutas.length > 0 &&
+          typeof cursoActualizadoRes.rutas[0] === "number"
         ) {
           const rutaEncontrada = rutas.find(
-            (r) => r.id_ruta === data.curso.rutas[0]
+            (r) => r.id_ruta === cursoActualizadoRes.rutas[0]
           );
           if (rutaEncontrada) {
-            data.curso.rutas = [rutaEncontrada];
+            cursoActualizadoRes.rutas = [rutaEncontrada];
           }
         }
 
-        if (cursoAEditar && cursoAEditar.id_curso === data.curso.id_curso) {
-          setCursoAEditar(data.curso);
+        if (cursoAEditar && cursoAEditar.id_curso === cursoActualizadoRes.id_curso) {
+          setCursoAEditar(cursoActualizadoRes);
         }
 
         setCursos((prev) =>
-          prev.map((c) => (c.id_curso === data.curso.id_curso ? data.curso : c))
+          prev.map((c) => (c.id_curso === cursoActualizadoRes.id_curso ? cursoActualizadoRes : c))
         );
 
         setCursosFiltrados((prev) =>
-          prev.map((c) => (c.id_curso === data.curso.id_curso ? data.curso : c))
+          prev.map((c) => (c.id_curso === cursoActualizadoRes.id_curso ? cursoActualizadoRes : c))
         );
       }
 
-      console.log("Curso actualizado con ruta:", data.curso);
+      console.log("Curso actualizado con éxito:", cursoActualizadoRes);
       return true;
     } catch (error) {
       console.error("Error en guardar edición:", error);
@@ -248,17 +327,13 @@ export function Cursos() {
         : "Publicado";
 
     try {
-      const token = localStorage.getItem("token");
-
       const response = await fetch(
         apiUrl(`/cursos/${cursoEstadoSeleccionado.id_curso}/estado`),
         {
           method: "PATCH",
           headers: {
             Accept: "application/json",
-
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ estado: nuevoEstado }),
         }
@@ -281,6 +356,37 @@ export function Cursos() {
     }
   };
 
+  const handleEliminar = async () => {
+    if (!cursoAEliminar) return;
+
+    try {
+      const response = await fetch(
+        apiUrl(`/cursos/${cursoAEliminar.id_curso}`),
+        {
+          method: "DELETE",
+          headers: {
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error("No se pudo eliminar el curso");
+
+      setCursos((prev) =>
+        prev.filter((c) => c.id_curso !== cursoAEliminar.id_curso)
+      );
+      setCursosFiltrados((prev) =>
+        prev.filter((c) => c.id_curso !== cursoAEliminar.id_curso)
+      );
+
+      setCursoAEliminar(null);
+      setIsDeleteModalOpen(false);
+      alert("Curso eliminado correctamente");
+    } catch (error) {
+      console.error("Error al eliminar curso:", error);
+      alert("Hubo un error al eliminar el curso.");
+    }
+  };
+
   const abrirModalInfo = (curso: Curso) => {
     setCursoSeleccionado(curso);
     setModalAbierto(true);
@@ -297,131 +403,266 @@ export function Cursos() {
   };
 
   return (
-    <div className="px-8 py-6 text-black flex flex-col gap-6">
-      <div className="flex flex-col items-center gap-3 w-full">
-        <div className="flex items-center gap-4 w-full">
-          <div className="relative flex-grow">
-            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <input
-              type="text"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar curso..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-          </div>
-
-          <button
-            className="flex items-center gap-2 px-6 py-2 rounded-lg bg-sky-600 text-white font-semibold shadow hover:bg-sky-700 transition"
-            onClick={() => setIsCreateModalOpen(true)}
-          >
-            <FaPlus /> Agregar curso
-          </button>
+    <div className="space-y-6 animate-fadeIn">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="relative flex-1 max-w-md group">
+          <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-sky-500 transition-colors" />
+          <input
+            type="text"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar cursos por título o descripción..."
+            className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all shadow-sm text-slate-900 font-medium"
+          />
         </div>
 
-        <div className="w-full flex justify-center">
-          <select
+        <div className="flex items-center gap-3">
+          <FiltroEstado
             value={filtroEstado}
-            onChange={(e) =>
-              setFiltroEstado(e.target.value as "" | "Publicado" | "Archivado")
-            }
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
+            onChange={setFiltroEstado}
+          />
+
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="bg-gradient-to-br from-[#0E1C2B] to-[#1a3a5a] text-white px-6 py-3 rounded-2xl font-black uppercase tracking-[0.15em] text-[10px] hover:shadow-xl hover:shadow-slate-900/20 transition-all active:scale-95 border border-white/5 shadow-md flex items-center gap-2 group whitespace-nowrap"
           >
-            <option value="">Todas</option>
-            <option value="Publicado">Publicado</option>
-            <option value="Archivado">Archivado</option>
-          </select>
+            <FaPlus size={14} className="group-hover:rotate-90 transition-transform duration-300" /> Nuevo Curso
+          </button>
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg shadow-lg">
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="bg-slate-800 text-white">
-              <th className="px-4 py-3 text-left">Imagen</th>
-              <th className="px-4 py-3 text-left">Nombre</th>
-              <th className="px-4 py-3 text-left">Descripción</th>
-              <th className="px-4 py-3 text-left">Estado</th>
-              <th className="px-4 py-3 text-center">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr>
-                <td colSpan={6} className="text-center py-6 text-gray-500">
-                  Cargando cursos...
-                </td>
+      <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden relative">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-50/50 border-b border-slate-100">
+                <th className="px-8 py-5 text-[11px] font-black uppercase tracking-[0.25em] text-slate-600">Curso Académico</th>
+                <th className="px-8 py-5 text-[11px] font-black uppercase tracking-[0.25em] text-slate-600">Nivel</th>
+                <th className="px-8 py-5 text-[11px] font-black uppercase tracking-[0.25em] text-slate-600">Inversión</th>
+                <th className="px-8 py-5 text-[11px] font-black uppercase tracking-[0.25em] text-slate-600 text-center">Estado</th>
+                <th className="px-8 py-5 text-[11px] font-black uppercase tracking-[0.25em] text-slate-600 text-right">Acciones</th>
               </tr>
-            ) : (
-              [...cursosFiltrados]
-                .sort((a, b) => {
-                  const orden = ["Publicado", "Archivado"];
-                  const ordenA = orden.indexOf(a.estado);
-                  const ordenB = orden.indexOf(b.estado);
-
-                  if (ordenA !== ordenB) return ordenA - ordenB;
-
-                  const fechaA = new Date(a.fecha_creacion).getTime();
-                  const fechaB = new Date(b.fecha_creacion).getTime();
-                  return fechaB - fechaA;
-                })
-                .map((curso) => (
-                  <tr
-                    key={curso.id_curso}
-                    className="border-b bg-white hover:bg-gray-100 transition"
-                  >
-                    <td className="px-4 py-3">
-                      {curso.imagen ? (
-                        <img
-                          src={curso.imagen}
-                          alt={curso.nombre}
-                          className="w-20 h-14 object-cover rounded-md"
-                        />
-                      ) : (
-                        <span className="text-gray-400 text-xs">
-                          Sin imagen
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={5} className="px-8 py-20 text-center">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-12 h-12 border-4 border-sky-500 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-gray-500 font-medium tracking-tight uppercase text-[10px] font-black tracking-widest">Cargando catálogo...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : cursos.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-8 py-20 text-center text-gray-400 uppercase text-[10px] font-black tracking-widest">No se encontraron cursos</td>
+                </tr>
+              ) : (
+                cursos.map((curso) => (
+                    <tr key={curso.id_curso} className="group hover:bg-slate-50/50 transition-all duration-500 border-b border-slate-50 last:border-0">
+                      <td className="px-8 py-7">
+                        <div className="flex items-center gap-6">
+                          <div className="relative w-32 h-20 flex-shrink-0 rounded-[1.25rem] overflow-hidden shadow-sm group-hover:shadow-xl group-hover:-translate-y-1 transition-all duration-500 bg-slate-100">
+                            {curso.imagen ? (
+                              <img
+                                src={
+                                  typeof curso.imagen === 'string' && curso.imagen.startsWith("http")
+                                    ? curso.imagen
+                                    : typeof curso.imagen === 'string'
+                                      ? `${API_URL}/${curso.imagen.startsWith("/") ? curso.imagen.slice(1) : curso.imagen}`
+                                      : curso.imagen || "/placeholder.jpg"
+                                }
+                                alt={curso.nombre}
+                                className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = "/placeholder.jpg";
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-slate-100 flex items-center justify-center text-[10px] text-slate-400 uppercase font-black">No img</div>
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                          <div className="flex flex-col gap-1 min-w-0 flex-1">
+                            <span className="text-[16px] font-extrabold text-slate-900 group-hover:text-sky-600 transition-colors tracking-tight leading-none">{curso.nombre}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">ID: #{curso.id_curso}</span>
+                              <span className="w-1 h-1 rounded-full bg-slate-300" />
+                              <span className="text-[10px] text-sky-500 font-bold uppercase tracking-widest">Master Class</span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-8 py-7">
+                        <span className={`inline-flex px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border backdrop-blur-md transition-all duration-300 ${
+                            curso.nivel?.toLowerCase() === 'avanzado' ? 'border-amber-200/50 bg-amber-500/10 text-amber-600 shadow-[0_0_15px_rgba(245,158,11,0.1)]' :
+                            curso.nivel?.toLowerCase() === 'intermedio' ? 'border-sky-200/50 bg-sky-500/10 text-sky-600 shadow-[0_0_15px_rgba(14,165,233,0.1)]' :
+                            'border-emerald-200/50 bg-emerald-500/10 text-emerald-600 shadow-[0_0_15px_rgba(16,185,129,0.1)]'
+                          }`}>
+                          {curso.nivel || "General"}
                         </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">{curso.nombre}</td>
-                    <td className="px-4 py-3">{curso.descripcion || "-"}</td>
+                      </td>
+                      <td className="px-8 py-7">
+                        <div className="flex flex-col">
+                          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Inversión</span>
+                          <span className="text-[14px] font-black text-slate-900 tracking-tight">
+                            {curso.precio != null && !isNaN(Number(curso.precio))
+                              ? `S/. ${Number(curso.precio).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`
+                              : "—"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-8 py-7">
+                        <div className="flex justify-center">
+                          <div className={`inline-flex items-center gap-2.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.12em] border transition-all duration-500 shadow-sm
+                            ${curso.estado === "Publicado" 
+                              ? "bg-white text-emerald-600 border-emerald-100 group-hover:border-emerald-500/30 group-hover:bg-emerald-50/30" 
+                              : "bg-white text-amber-600 border-amber-100 group-hover:border-amber-500/30 group-hover:bg-amber-50/30"}
+                          `}>
+                            <div className={`w-2 h-2 rounded-full animate-pulse ${curso.estado === "Publicado" ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" : "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]"}`} />
+                            {curso.estado}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-8 py-7 text-right">
+                          <div className="inline-flex items-center bg-white p-1 rounded-2xl border border-slate-100 shadow-sm transition-all duration-500">
+                            <button
+                              onClick={() => abrirModalEditar(curso)}
+                              className="p-2.5 rounded-xl text-amber-500 hover:bg-amber-50 transition-all duration-300 group/btn"
+                              title="Editar"
+                            >
+                              <FaEdit size={16} className="hover:scale-110 transition-transform" />
+                            </button>
+                            <button
+                              onClick={() => abrirModalEstado(curso)}
+                              className="p-2.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all duration-300 group/btn"
+                              title="Archivar"
+                            >
+                              <FaArchive size={16} className="hover:scale-110 transition-transform" />
+                            </button>
+                            <button
+                              onClick={() => abrirModalInfo(curso)}
+                              className="p-2.5 rounded-xl text-sky-500 hover:bg-sky-50 transition-all duration-300 group/btn"
+                              title="Ver detalles"
+                            >
+                              <FaInfoCircle size={16} className="hover:scale-110 transition-transform" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setCursoAEliminar(curso);
+                                setIsDeleteModalOpen(true);
+                              }}
+                              className="p-2.5 rounded-xl text-rose-500 hover:bg-rose-50 transition-all duration-300 group/btn"
+                              title="Eliminar"
+                            >
+                              <svg stroke="currentColor" fill="none" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="16" width="16" xmlns="http://www.w3.org/2000/svg" className="hover:scale-110 transition-transform"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            </button>
+                          </div>
+                      </td>
+                    </tr>
+                  ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-                    <td className="px-4 py-3">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          curso.estado === "Publicado"
-                            ? "bg-green-200 text-green-800"
-                            : "bg-red-200 text-red-800"
-                        }`}
-                      >
-                        {curso.estado}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 flex justify-center gap-3">
-                      <button
-                        onClick={() => abrirModalEditar(curso)}
-                        className="text-sky-600 hover:text-sky-800"
-                      >
-                        <FaEdit size={18} />
-                      </button>
-                      <button
-                        onClick={() => abrirModalEstado(curso)}
-                        className="text-yellow-600 hover:text-yellow-800"
-                      >
-                        <FaArchive size={18} />
-                      </button>
-                      <button
-                        onClick={() => abrirModalInfo(curso)}
-                        className="text-gray-700 hover:text-gray-900"
-                      >
-                        <FaInfoCircle size={18} />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-            )}
-          </tbody>
-        </table>
+        {/* Mobile Card View */}
+        <div className="md:hidden divide-y divide-gray-100">
+          {isLoading ? (
+            <div className="px-8 py-20 text-center flex flex-col items-center gap-4">
+              <div className="w-12 h-12 border-4 border-sky-500 border-t-transparent rounded-full animate-spin" />
+              <span className="text-gray-400 uppercase text-[10px] font-black tracking-widest">Cargando...</span>
+            </div>
+          ) : cursos.length === 0 ? (
+            <div className="px-8 py-20 text-center text-gray-400 uppercase text-[10px] font-black tracking-widest">No hay cursos</div>
+          ) : (
+            cursos.map((curso) => (
+              <div key={curso.id_curso} className="p-6 space-y-4 hover:bg-slate-50 transition-colors">
+                <div className="flex gap-4">
+                  <div className="w-24 h-16 rounded-xl overflow-hidden shadow-sm flex-shrink-0">
+                    <img
+                      src={
+                        typeof curso.imagen === 'string' && curso.imagen.startsWith("http")
+                          ? curso.imagen
+                          : typeof curso.imagen === 'string'
+                            ? `${API_URL}/${curso.imagen.startsWith("/") ? curso.imagen.slice(1) : curso.imagen}`
+                            : curso.imagen || "/placeholder.jpg"
+                      }
+                      alt={curso.nombre}
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.jpg"; }}
+                    />
+                  </div>
+                  <div className="flex flex-col justify-center">
+                    <h3 className="text-sm font-bold text-slate-900 leading-tight">{curso.nombre}</h3>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase mt-1">ID: #{curso.id_curso}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-black uppercase text-slate-400 mb-1">Nivel</span>
+                    <span className={`inline-flex px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border w-fit ${
+                      curso.nivel?.toLowerCase() === 'avanzado' ? 'border-amber-100 bg-amber-50 text-amber-600' :
+                      curso.nivel?.toLowerCase() === 'intermedio' ? 'border-sky-100 bg-sky-50 text-sky-600' :
+                      'border-emerald-100 bg-emerald-50 text-emerald-600'
+                    }`}>
+                      {curso.nivel || "General"}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-black uppercase text-slate-400 mb-1">Inversión</span>
+                    <span className="text-xs font-black text-slate-900">
+                      {curso.precio != null ? `S/. ${Number(curso.precio).toFixed(2)}` : "—"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border ${
+                    curso.estado === "Publicado" ? "text-emerald-600 border-emerald-100" : "text-amber-600 border-amber-100"
+                  }`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${curso.estado === "Publicado" ? "bg-emerald-500" : "bg-amber-500"}`} />
+                    {curso.estado}
+                  </div>
+                  
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => abrirModalEditar(curso)} className="p-2 text-amber-500 bg-amber-50 rounded-lg"><FaEdit size={14} /></button>
+                    <button onClick={() => abrirModalEstado(curso)} className="p-2 text-slate-400 bg-slate-50 rounded-lg"><FaArchive size={14} /></button>
+                    <button onClick={() => abrirModalInfo(curso)} className="p-2 text-sky-500 bg-sky-50 rounded-lg"><FaInfoCircle size={14} /></button>
+                    <button onClick={() => { setCursoAEliminar(curso); setIsDeleteModalOpen(true); }} className="p-2 text-rose-500 bg-rose-50 rounded-lg">
+                      <svg stroke="currentColor" fill="none" strokeWidth="2.5" viewBox="0 0 24 24" height="14" width="14"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        
+        {/* Paginación Profesional */}
+        <div className="px-8 py-4 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between">
+          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+            Página <span className="text-sky-600">{pagina}</span> de {totalPaginas}
+          </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setPagina((p) => Math.max(1, p - 1))}
+              disabled={pagina === 1 || isLoading}
+              className="px-5 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-20 disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-2"
+            >
+              <span>Anterior</span>
+            </button>
+            <button
+              onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+              disabled={pagina === totalPaginas || isLoading}
+              className="px-5 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl bg-[#0E1C2B] text-white hover:bg-sky-600 disabled:opacity-20 disabled:cursor-not-allowed transition-all shadow-md shadow-slate-900/10 flex items-center gap-2"
+            >
+              <span>Siguiente</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <InfoCursoModal
@@ -441,7 +682,7 @@ export function Cursos() {
             setIsEditModalOpen(false);
             setCursoAEditar(null);
           }}
-          curso={cursoAEditar}
+          curso={cursoAEditar!}
           onSave={guardarEdicion}
         />
       )}
@@ -456,6 +697,16 @@ export function Cursos() {
             : "Publicado"
         }
       />
+      <DeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setCursoAEliminar(null);
+        }}
+        onConfirm={handleEliminar}
+        itemName={cursoAEliminar?.nombre || ""}
+      />
     </div>
   );
 }
+

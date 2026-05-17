@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import InputComponent from "../components/InputComponent";
+import InputComponent from "../Components/InputComponent";
 import type { Usuario } from "../../types/models";
 import { API_URL } from "../../config/api";
 
@@ -28,12 +28,10 @@ export default function EditUsuario() {
 
     const fetchUsuario = async () => {
       try {
-        const token = localStorage.getItem("token");
         const res = await fetch(
           `${API_URL}/admin/usuarios/${id}`,
           {
             headers: {
-              Authorization: `Bearer ${token}`,
               Accept: "application/json",
             },
           }
@@ -63,7 +61,6 @@ export default function EditUsuario() {
 
   const handleSave = async () => {
     try {
-      const token = localStorage.getItem("token");
       const url = id
         ? `${API_URL}/admin/usuarios/${id}`
         : `${API_URL}/admin/usuarios`;
@@ -74,7 +71,6 @@ export default function EditUsuario() {
         method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
           Accept: "application/json",
         },
         body: JSON.stringify(usuario),

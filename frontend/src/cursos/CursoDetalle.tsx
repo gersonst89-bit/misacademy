@@ -6,7 +6,8 @@ import ContenidoCursoDetalle from "./CursoComponents/ContenidoCursoDetalle";
 import ObjetivoCursoDetalle from "./CursoComponents/ObjetivoCursoDetalle";
 import Comentarios from "./CursoComponents/ComentariosCursoDetalle";
 import type { Curso, Modulo, Leccion, Material, Resena } from "../types/models";
-import { apiUrl,API_URL } from "../config/api";
+import { apiUrl, API_URL } from "../config/api";
+import { motion } from "framer-motion";
 
 const CursoDetalle: React.FC = () => {
   const { slug } = useParams();
@@ -16,63 +17,81 @@ const CursoDetalle: React.FC = () => {
   const [materiales, setMateriales] = useState<Material[]>([]);
   const [reseñas, setReseñas] = useState<Resena[]>([]);
   const [compras, setCompras] = useState<any[]>([]);
-  const [, setCarrito] = useState<any[]>([]);
+  const [carrito, setCarrito] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      // Si no hay usuario en localStorage, no intentamos pedir el perfil
+      const userStored = localStorage.getItem("user");
+      if (!userStored) return;
+
+      try {
+        const res = await fetch(`${API_URL}/auth/profile`, {
+          headers: { Accept: "application/json" },
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data);
+        }
+      } catch (err) {
+        console.error("Error al obtener perfil:", err);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const slugToTitle = (slug: string) =>
     slug.replace(/-/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
   const LoadingSpinner = () => (
-    <div className="flex justify-center items-center h-screen">
-      <div className="relative w-12 h-12">
-        <div className="absolute border-4 border-sky-500 border-t-transparent rounded-full w-12 h-12 animate-spin"></div>
-        <div className="absolute border-4 border-sky-700 border-t-transparent rounded-full w-8 h-8 top-2 left-2 animate-spin animation-delay-150"></div>
+    <div className="flex flex-col justify-center items-center h-screen bg-[#03070c]">
+      <div className="relative w-20 h-20">
+        <div className="absolute inset-0 border-4 border-sky-500/20 rounded-full"></div>
+        <div className="absolute inset-0 border-4 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
+      <p className="mt-6 text-sky-500 font-black tracking-[0.3em] uppercase text-[10px] animate-pulse">Cargando Experiencia</p>
     </div>
   );
 
   const calificacionPromedio =
     reseñas.length > 0
       ? reseñas.reduce((acc, r) => acc + r.calificacion, 0) / reseñas.length
-      : 0;
+      : 5.0;
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
 
     const fetchCursoCompleto = async () => {
       if (!slug) {
-        setError("No se proporcionó un slug de curso.");
-        setIsLoading(false);
+        // Si no hay slug, simplemente no hacemos nada (evita el error al navegar atrás)
         return;
       }
 
-      const tituloCurso = slugToTitle(slug);
-      const token = localStorage.getItem("token");
-
       try {
         setIsLoading(true);
+        setError(null);
 
-        const resCurso = await fetch(
-          `${API_URL}/cursos?titulo=${encodeURIComponent(
-            tituloCurso
-          )}`
-        );
+        const resCurso = await fetch(`${API_URL}/cursos/slug/${slug}`, {
+          credentials: "include",
+        });
 
-        if (!resCurso.ok) throw new Error("No se pudo cargar el curso.");
+        if (!resCurso.ok) {
+          if (resCurso.status === 404) {
+            setError("El curso solicitado no existe o no está disponible.");
+          } else {
+            setError("Hubo un problema al cargar la información del curso.");
+          }
+          setIsLoading(false);
+          return;
+        }
 
-        const dataCurso = await resCurso.json();
-        
-        // Normalizar ambos strings para comparación más flexible
-        const normalizarTexto = (texto: string) => 
-          texto.toLowerCase().trim().replace(/\s+/g, ' ');
-        
-        const cursoData = dataCurso.data.find(
-          (c: any) => normalizarTexto(c.nombre) === normalizarTexto(tituloCurso)
-        );
+        const cursoData = await resCurso.json();
 
         if (!cursoData) {
-          setError("Curso no encontrado.");
           setIsLoading(false);
           return;
         }
@@ -82,39 +101,42 @@ const CursoDetalle: React.FC = () => {
         const [resModulos, resLecciones, resMateriales, resResenas] =
           await Promise.all([
             fetch(
-              `${API_URL}/modulos?id_curso=${cursoData.id_curso}`,
-              {
-                headers: { Accept: "application/json" }
+              `${API_URL}/modulos/curso/${cursoData.id_curso}`,
+              { 
+                headers: { Accept: "application/json" },
+                credentials: "include"
               }
             ),
             fetch(
-              `${API_URL}/lecciones?id_curso=${cursoData.id_curso}`,
-              {
-                headers: { Accept: "application/json" }
+              `${API_URL}/lecciones/curso/${cursoData.id_curso}`,
+              { 
+                headers: { Accept: "application/json" },
+                credentials: "include"
               }
             ),
             fetch(
               `${API_URL}/materiales?id_curso=${cursoData.id_curso}`,
-              {
-                headers: { Accept: "application/json" }
+              { 
+                headers: { Accept: "application/json" },
+                credentials: "include"
               }
             ),
-            fetch(
-              `${API_URL}/cursos/${cursoData.id_curso}/resenas`
-            ),
+            fetch(`${API_URL}/resenas/curso/${cursoData.id_curso}`, {
+              credentials: "include"
+            }),
           ]);
 
         if (resModulos.ok) {
           const dataModulos = await resModulos.json();
           setModulos(
-            dataModulos.data.filter((mod: any) => mod.estado === "Publicado")
+            (dataModulos.data || []).filter((mod: any) => mod.estado === "Publicado")
           );
         }
 
         if (resLecciones.ok) {
           const dataLecciones = await resLecciones.json();
           setLecciones(
-            dataLecciones.lecciones.data.filter(
+            (dataLecciones.lecciones?.data || []).filter(
               (l: any) => l.estado === "Publicado"
             )
           );
@@ -123,31 +145,36 @@ const CursoDetalle: React.FC = () => {
         if (resMateriales.ok) {
           const dataMateriales = await resMateriales.json();
           setMateriales(
-            dataMateriales.data.filter((m: any) => m.estado === "Publicado")
+            (dataMateriales.data || []).filter((m: any) => m.estado === "Publicado")
           );
         }
 
         if (resResenas.ok) {
           const dataResenas = await resResenas.json();
-          setReseñas(dataResenas.resenas || dataResenas.data || []);
+          if (Array.isArray(dataResenas)) {
+            setReseñas(dataResenas);
+          } else {
+            setReseñas(dataResenas.resenas || dataResenas.data || []);
+          }
         }
 
-        if (token) {
+        if (user) {
           const [resCompras, resCarrito] = await Promise.all([
-            fetch(
-              `${API_URL}/compras/historial`,
-              {
-                headers: { Authorization: `Bearer ${token}` },
-              }
-            ),
+            fetch(`${API_URL}/compras/historial`, {
+              headers: { Accept: "application/json" },
+              credentials: "include",
+            }),
             fetch(`${API_URL}/carrito`, {
-              headers: { Authorization: `Bearer ${token}` },
+              headers: { Accept: "application/json" },
+              credentials: "include",
             }),
           ]);
 
           if (resCompras.ok) {
             const dataCompras = await resCompras.json();
-            setCompras(dataCompras.data || []);
+            // La estructura puede variar, intentamos detectar el array de compras
+            const historial = dataCompras.compras || dataCompras.data || [];
+            setCompras(historial);
           }
 
           if (resCarrito.ok) {
@@ -165,27 +192,40 @@ const CursoDetalle: React.FC = () => {
     };
 
     fetchCursoCompleto();
-  }, [slug]);
+  }, [slug, user?.id_usuario]); // Añadimos el ID del usuario como dependencia
 
-  if (isLoading) return <div className="text-white">{LoadingSpinner()}</div>;
-  if (error) return <div className="text-center text-red-500">{error}</div>;
-  if (!curso)
-    return <div className="text-center text-white">Curso no encontrado</div>;
+  if (isLoading) return <LoadingSpinner />;
+  if (error) return <div className="text-center py-20 text-rose-500 font-bold">{error}</div>;
+  if (!curso) return <div className="text-center py-20 text-white font-bold">Curso no encontrado</div>;
+
+  const isAdmin = 
+    user?.id_rol === 1 || 
+    user?.id_rol === 2 || 
+    (typeof user?.rol === 'string' && user.rol.toLowerCase().includes("admin")) ||
+    (user?.rol?.nombre === 'Admin');
+
+  // Lógica de compra más robusta: revisamos el historial de compras Y también posibles inscripciones directas
+  const isPurchased = isAdmin || compras.some((c: any) => {
+    const cid = c.curso?.id_curso || c.id_curso || c.idCurso;
+    return Number(cid) === Number(curso.id_curso);
+  });
 
   return (
-    <div className="text-white pt-8 pb-9 mx-auto">
+    <div className="bg-[#03070c] min-h-screen">
       <BannerCursoDetalle
         titulo={curso.nombre}
         descripcionCorta={curso.descripcion_corta || ""}
         videoUrl={curso.video_previsualizacion || ""}
-        duracion_total={`${curso.duracion} horas`}
+        imagen={curso.imagen || ""}
+        duracion_total={curso.duracion}
         nivel={curso.nivel}
         calificacion={calificacionPromedio}
         totalResenas={reseñas.length}
+        isPurchased={isPurchased}
       />
 
-      <div className="text-white mx-auto grid grid-cols-1 md:grid-cols-6 gap-8 px-6 md:px-10 pt-8">
-        <div className="col-span-1 md:col-span-4 flex flex-col gap-8 md:w-[92%]">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 px-6 lg:px-12 py-12 relative z-10">
+        <div className="lg:col-span-8 flex flex-col gap-12">
           <ObjetivoCursoDetalle
             aprendizajes={
               curso.lo_que_aprenderas ? curso.lo_que_aprenderas.split(",") : []
@@ -195,16 +235,18 @@ const CursoDetalle: React.FC = () => {
             modulos={modulos}
             lecciones={lecciones}
             materiales={materiales}
+            isPurchased={isPurchased}
+            cursoIdSlug={slug || ""}
           />
           <Comentarios
             cursoId={curso.id_curso}
             reseñasIniciales={reseñas}
-            isAuthenticated={!!localStorage.getItem("token")}
+            isAuthenticated={!!user}
           />
         </div>
-        <div className="col-span-1 md:col-span-2">
-          <div className="md:w-[115%] md:ml-[-15%] sticky top-8">
-            <CursoSidebar curso={curso} />
+        <div className="lg:col-span-4 relative">
+          <div className="sticky top-32">
+            <CursoSidebar curso={curso} isPurchased={isPurchased} />
           </div>
         </div>
       </div>

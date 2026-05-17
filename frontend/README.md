@@ -1,69 +1,47 @@
-# React + TypeScript + Vite
+# MIS Academy Platform — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend moderno construido con **React**, **Vite** y **TailwindCSS**. Diseñado para ofrecer una experiencia premium "Urban SaaS".
 
-Currently, two official plugins are available:
+## 🚀 Inicio Rápido
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+1. **Instalar dependencias:**
+   ```bash
+   npm install
+   ```
 
-## Expanding the ESLint configuration
+2. **Configurar variables de entorno:**
+   Copia el archivo `.env.example` a `.env` y configura la URL de la API.
+   ```bash
+   cp .env.example .env
+   ```
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+3. **Ejecutar en desarrollo:**
+   ```bash
+   npm run dev
+   ```
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 🔐 Seguridad y Sesión
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+Este frontend utiliza un enfoque de seguridad avanzado:
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- **HttpOnly Cookies:** El token JWT ya no se almacena en `localStorage`. El servidor lo gestiona mediante cookies seguras, lo que elimina el riesgo de robo de tokens vía scripts maliciosos (XSS).
+- **CSRF Protection:** Todas las peticiones mutables (POST, PUT, DELETE) incluyen automáticamente un header `X-CSRF-Token` gestionado por nuestros interceptores globales.
+- **Persistent Progress:** El progreso de las evaluaciones se sincroniza automáticamente con el servidor y se respalda en `localStorage` (sin datos sensibles).
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 📁 Estructura del Proyecto
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- `src/admin`: Módulos de gestión administrativa.
+- `src/Components`: Componentes UI reutilizables y secciones del sitio.
+- `src/config`: Interceptores de red y configuración global.
+- `src/store`: Gestión de estado global con Redux.
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 🎨 Diseño
+
+El diseño sigue una estética "Urban SaaS" con:
+- Glassmorphism y fondos dinámicos.
+- Tipografía moderna (Outfit/Inter).
+- Micro-animaciones fluidas con Framer Motion.
+
+## 📜 Licencia
+
+MIS Academy — Todos los derechos reservados.

@@ -42,6 +42,7 @@ export default function Reclamaciones() {
             Accept: "application/json",
           },
           body: JSON.stringify(form),
+          credentials: "include",
         }
       );
 

@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { FaCartPlus } from "react-icons/fa";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import { ShoppingCart } from "lucide-react";
 import { API_URL } from "../../config/api";
+import { useToast } from "../../hooks/useToast";
 
 const createSlug = (title: string): string => {
+  if (!title) return "";
   return title
     .toLowerCase()
     .normalize("NFD")
@@ -13,6 +16,21 @@ const createSlug = (title: string): string => {
     .replace(/-+/g, "-");
 };
 
+const nivelColor = (nivel: string) => {
+  switch (nivel?.toLowerCase()) {
+    case "básico":
+    case "basico":
+      return "from-emerald-500 to-teal-600";
+    case "intermedio":
+      return "from-amber-400 to-orange-600";
+    case "avanzado":
+    case "experto":
+      return "from-rose-500 to-red-700";
+    default:
+      return "from-sky-500 to-blue-600";
+  }
+};
+
 interface CursoCardProps {
   title: string;
   description: string;
@@ -20,6 +38,7 @@ interface CursoCardProps {
   image: string;
   slug: string;
   cursoId: number;
+  nivel?: string;
 }
 
 const CursoCard: React.FC<CursoCardProps> = ({
@@ -27,105 +46,122 @@ const CursoCard: React.FC<CursoCardProps> = ({
   description,
   precio,
   image,
+  slug,
   cursoId,
+  nivel,
 }) => {
-  const [cartMessage, setCartMessage] = useState<string | null>(null);
-  const [isMessageVisible, setIsMessageVisible] = useState<boolean>(true);
+  const { showToast } = useToast();
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const token = localStorage.getItem("token");
+  const isAuthenticated = !!(typeof window !== "undefined" && document.cookie.includes("is_logged_in"));
 
-  // Función para añadir el curso al carrito en el backend
   const addToCart = async (cursoId: number) => {
-    // Verifica si el usuario está autenticado (token presente)
-    if (!token) {
-      setCartMessage(
-        "Por favor, ingresa sesión para agregar el curso al carrito."
-      );
+    if (!isAuthenticated) {
+      showToast("Inicia sesión para agregar al carrito", "error");
       return;
     }
 
     setIsLoading(true);
-
     try {
       const response = await fetch(`${API_URL}/carrito/agregar`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          id_curso: cursoId,
-        }),
+        credentials: "include",
+        body: JSON.stringify({ id_curso: cursoId }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error("Detalles del error:", errorData);
-        throw new Error(errorData.message || "Error al añadir al carrito.");
+        throw new Error(errorData.message || "Error al añadir");
       }
 
-      setCartMessage("Curso añadido al carrito.");
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error("Error al añadir al carrito:", error.message);
-        setCartMessage(error.message || "Error inesperado.");
-      }
+      showToast("Curso añadido al carrito con éxito", "success");
+    } catch (error: any) {
+      showToast(error.message || "Error inesperado", "error");
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (cartMessage) {
-      const timer = setTimeout(() => {
-        setIsMessageVisible(false);
-        setTimeout(() => {
-          setCartMessage(null);
-        }, 500);
-      }, 3000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [cartMessage]);
-
   return (
-    <div className="flex flex-col text-white">
-      <Link to={`/curso/${createSlug(title)}`}>
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5 }}
+      className="flex flex-col text-white glass-card glass-card-hover rounded-[2rem] overflow-hidden group h-full border border-white/5"
+    >
+      <Link to={`/curso/${slug || createSlug(title)}`} className="block overflow-hidden relative aspect-[16/10]">
         <img
-          src={image}
-          alt={title}
-          className="w-full h-60 md:h-40 xl:h-50 object-cover rounded-xl cursor-pointer transition-transform duration-300 hover:scale-105"
+          src={
+            typeof image === 'string' && image.startsWith("http")
+              ? image
+              : typeof image === 'string'
+              ? `${API_URL}/${image.startsWith("/") ? image.slice(1) : image}`
+              : image || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800"
+          }
+          alt={title || "Curso"}
+          onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800"; }}
+          className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
         />
+        {/* Overlay premium */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#03070c] via-transparent to-transparent opacity-80" />
+        <div className="absolute inset-0 bg-sky-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        
+        {/* Badge de nivel - Modernizado */}
+        {nivel && (
+          <div className="absolute top-5 left-5 z-10">
+            <span
+              className={`text-[9px] uppercase tracking-[0.2em] font-black px-3 py-1.5 rounded-lg text-white shadow-xl backdrop-blur-xl bg-gradient-to-br ${nivelColor(
+                nivel
+              )} border border-white/20`}
+            >
+              {nivel}
+            </span>
+          </div>
+        )}
       </Link>
 
-      <div className="py-2 flex flex-col flex-1">
-        <h3 className="text-lg font-semibold mb-1 text-left">{title}</h3>
-        <p className="text-sm text-gray-300 mb-3 text-justify flex-1">
+      <div className="p-6 flex flex-col flex-1 relative">
+        <Link to={`/curso/${slug || createSlug(title)}`}>
+          <h3 className="text-xl font-bold mb-4 text-left leading-[1.2] group-hover:text-sky-400 transition-colors duration-300 line-clamp-2 min-h-[3.5rem] flex items-center tracking-tight">
+            {title}
+          </h3>
+        </Link>
+        <p className="text-sm text-slate-400/80 mb-6 text-left line-clamp-2 font-medium leading-relaxed min-h-[3rem]">
           {description}
         </p>
 
-        <button
-          onClick={() => addToCart(cursoId)}
-          disabled={isLoading}
-          className={`${
-            isLoading ? "bg-gray-500" : "bg-sky-400 hover:bg-sky-500"
-          } text-white font-semibold px-4 py-2 rounded-lg flex items-center gap-2 w-fit transition-colors duration-300`}
-        >
-          <FaCartPlus className="text-white text-lg" />
-          {isLoading ? "Añadiendo" : precio}{" "}
-        </button>
-
-        {cartMessage && (
-          <div
-            className={`fixed bottom-4 right-4 bg-[#0D1A28] border-l-4 border-sky-500 text-white px-4 py-2 rounded-lg z-50 transition-opacity duration-500 ${
-              isMessageVisible ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            {cartMessage}
+        <div className="flex items-center justify-between mt-auto pt-6 border-t border-white/5">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-slate-500 uppercase font-black tracking-[0.1em] mb-1">Inversión</span>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-black text-white tracking-tighter">{precio}</span>
+            </div>
           </div>
-        )}
+          
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => addToCart(cursoId)}
+            disabled={isLoading}
+            className={`flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-300 shadow-xl ${
+              isLoading
+                ? "bg-slate-800"
+                : "bg-white text-black hover:bg-sky-400 hover:text-white"
+            }`}
+            title="Añadir al carrito"
+          >
+            {isLoading ? (
+              <div className="w-5 h-5 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <ShoppingCart size={20} />
+            )}
+          </motion.button>
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

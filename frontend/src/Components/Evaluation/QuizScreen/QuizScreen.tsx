@@ -98,22 +98,33 @@ const QuizScreen: React.FC = () => {
   const currentAnswer = answers[currentQuestion?.id_pregunta] || {};
 
   return (
-    <div className={styles['quiz-screen']}>
-      <QuizHeader />
-      <ProgressBar />
-      <AutoSaveStatus />
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          duration={toast.type === 'error' ? 5000 : 3000}
-          onClose={() => setToast(null)}
-        />
-      )}
-      <div className={styles['content']}>
-        <QuestionCard question={currentQuestion} currentAnswer={currentAnswer} />
+    <div className="min-h-screen bg-black text-white flex flex-col font-sans selection:bg-white/30 overflow-hidden relative">
+      <div className="relative z-10 flex flex-col h-screen">
+        <QuizHeader />
+        <ProgressBar />
+        <AutoSaveStatus />
+        
+        {toast && (
+          <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50">
+            <Toast
+              message={toast.message}
+              type={toast.type}
+              duration={toast.type === 'error' ? 5000 : 3000}
+              onClose={() => setToast(null)}
+            />
+          </div>
+        )}
+        
+        <main className="flex-1 w-full max-w-4xl mx-auto p-4 md:p-8 overflow-y-auto custom-scrollbar">
+          <QuestionCard question={currentQuestion} currentAnswer={currentAnswer} />
+        </main>
+
+        <div className="w-full bg-[#0a0a0a] border-t border-white/10 py-4 px-4 md:px-8 shrink-0">
+          <div className="max-w-4xl mx-auto">
+            <QuestionMiniMap onFinish={handleFinish} />
+          </div>
+        </div>
       </div>
-      <QuestionMiniMap onFinish={handleFinish} />
     </div>
   );
 };

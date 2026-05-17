@@ -25,7 +25,6 @@ const FormularioComentario: React.FC<FormularioComentarioProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [cartMessage, setCartMessage] = useState("");
   const [isMessageVisible, setIsMessageVisible] = useState(false);
-  const token = localStorage.getItem("token");
 
   useEffect(() => {
     if (resena) {
@@ -64,7 +63,6 @@ const FormularioComentario: React.FC<FormularioComentarioProps> = ({
         method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ calificacion, comentario }),
       });

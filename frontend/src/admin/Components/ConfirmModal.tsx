@@ -1,43 +1,63 @@
+import { motion, AnimatePresence } from "framer-motion";
+import { IoAlertCircle, IoClose } from "react-icons/io5";
+
 type ConfirmModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
   message?: string;
+  title?: string;
 };
 
 export default function ConfirmModal({
   isOpen,
   onClose,
   onConfirm,
-  message = "¿Estás seguro de cerrar sesión?",
+  message = "¿Estás seguro de continuar?",
+  title = "Confirmación",
 }: ConfirmModalProps) {
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center min-h-screen">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm animate-fade-in">
-        <h2 className="text-lg font-semibold text-gray-800 mb-2 text-center">
-          Confirmación
-        </h2>
-        <p className="text-gray-600 mb-4.5 text-center text-md">{message}</p>
-        <div className="flex justify-center gap-3">
-          <button
-            onClick={() => {
-              onConfirm();
-              onClose();
-            }}
-            className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white text-md"
-          >
-            Cerrar Sesión
-          </button>
-          <button
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             onClick={onClose}
-            className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-md"
+            className="absolute inset-0 bg-[#0E1C2B]/60 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="relative w-full max-w-sm bg-white rounded-[2rem] shadow-2xl overflow-hidden p-8 flex flex-col items-center text-center"
           >
-            Cancelar
-          </button>
+            <div className="w-16 h-16 rounded-2xl bg-sky-50 text-sky-500 flex items-center justify-center mb-4">
+              <IoAlertCircle size={32} />
+            </div>
+            <h2 className="text-xl font-black text-[#0E1C2B] mb-2">{title}</h2>
+            <p className="text-gray-500 text-sm mb-8 leading-relaxed">{message}</p>
+            <div className="flex w-full gap-3">
+              <button
+                onClick={onClose}
+                className="flex-1 px-6 py-3 rounded-xl font-bold text-gray-400 hover:bg-gray-50 transition-all"
+              >
+                No, cancelar
+              </button>
+              <button
+                onClick={() => {
+                  onConfirm();
+                  onClose();
+                }}
+                className="flex-1 px-6 py-3 rounded-xl font-bold bg-[#0E1C2B] text-white hover:bg-sky-600 transition-all shadow-lg active:scale-95"
+              >
+                Sí, continuar
+              </button>
+            </div>
+          </motion.div>
         </div>
-      </div>
-    </div>
+      )}
+    </AnimatePresence>
   );
 }

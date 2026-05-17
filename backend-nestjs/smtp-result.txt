@@ -1,0 +1,26 @@
+EXITO: {
+  "accepted": [
+    "gersonst89@gmail.com"
+  ],
+  "rejected": [],
+  "ehlo": [
+    "SIZE 52428800",
+    "LIMITS MAILMAX=1000 RCPTMAX=50000",
+    "8BITMIME",
+    "PIPELINING",
+    "PIPECONNECT",
+    "AUTH PLAIN LOGIN",
+    "HELP"
+  ],
+  "envelopeTime": 699,
+  "messageTime": 523,
+  "messageSize": 396,
+  "response": "250 OK id=1wGgLG-000000070ke-1hbh",
+  "envelope": {
+    "from": "soporte@misacademyonline.com",
+    "to": [
+      "gersonst89@gmail.com"
+    ]
+  },
+  "messageId": "<06a60286-2b60-0ded-df70-5affbb0445c6@misacademyonline.com>"
+}
