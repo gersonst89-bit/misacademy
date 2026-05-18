@@ -13,7 +13,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
-        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        //ExtractJwt.fromAuthHeaderAsBearerToken(),
         (req: any) => {
           let token = null;
           if (req && req.cookies) {
@@ -25,7 +25,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       ignoreExpiration: false,
       secretOrKey: process.env.JWT_SECRET || 'MIS_ACADEMY_JWT_SECRET_KEY_2025_VERY_SECURE',
     });
-  }
+  } 
 
   async validate(payload: any) {
     const user = await this.usuarioRepo.findOne({

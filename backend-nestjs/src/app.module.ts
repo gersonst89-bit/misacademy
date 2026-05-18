@@ -6,7 +6,6 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor';
-import { CsrfMiddleware } from './common/middleware/csrf.middleware';
 import { join } from 'path';
 
 // All entities
@@ -124,8 +123,8 @@ import { StorageController } from './storage.controller';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(CsrfMiddleware)
-      .forRoutes('*');
+    //consumer
+      //.apply(CsrfMiddleware)
+      //.forRoutes('*');
   }
 }

@@ -9,18 +9,26 @@ export class CertificacionesRepository {
   constructor(@InjectRepository(Certificacion) public readonly repo: Repository<Certificacion>) {
     // Forma segura de añadir la columna en MySQL (compatible con todas las versiones)
     const dbName = process.env.DB_DATABASE || 'mis_academy';
-    this.repo.query(`
-      SELECT COLUMN_NAME 
-      FROM information_schema.columns 
-      WHERE table_name = 'certificaciones' 
-        AND column_name = 'calificacion_final' 
-        AND table_schema = '${dbName}'
-    `).then(rows => {
-      if (!rows || rows.length === 0) {
-        this.repo.query(`ALTER TABLE certificaciones ADD calificacion_final DECIMAL(5,2) DEFAULT 0`)
-          .catch(err => console.log('Error al crear columna:', err.message));
-      }
-    }).catch(err => console.log('Error verificando esquema:', err.message));
+    
+    const checkAndAddColumn = (columnName: string, alterQuery: string) => {
+      this.repo.query(`
+        SELECT COLUMN_NAME 
+        FROM information_schema.columns 
+        WHERE table_name = 'certificaciones' 
+          AND column_name = '${columnName}' 
+          AND table_schema = '${dbName}'
+      `).then(rows => {
+        if (!rows || rows.length === 0) {
+          this.repo.query(alterQuery)
+            .catch(err => console.log(`Error al crear columna ${columnName}:`, err.message));
+        }
+      }).catch(err => console.log(`Error verificando columna ${columnName}:`, err.message));
+    };
+
+    checkAndAddColumn('calificacion_final', `ALTER TABLE certificaciones ADD calificacion_final DECIMAL(5,2) DEFAULT 0`);
+    checkAndAddColumn('fecha_inicio', `ALTER TABLE certificaciones ADD fecha_inicio TIMESTAMP NULL`);
+    checkAndAddColumn('fecha_fin', `ALTER TABLE certificaciones ADD fecha_fin TIMESTAMP NULL`);
+    checkAndAddColumn('email_destinatario', `ALTER TABLE certificaciones ADD email_destinatario VARCHAR(255) NULL`);
 
     // Actualizar registros antiguos de 'empresa' a 'Certificado de Aprobación'
     this.repo.query(`UPDATE certificaciones SET tipo_certificado = 'Certificado de Aprobación' WHERE tipo_certificado = 'empresa'`)
@@ -44,16 +52,43 @@ export class CertificacionesRepository {
     });
   }
   async create(data: any) {
-    const codigo = 'CERT-' + crypto.randomBytes(6).toString('hex').toUpperCase();
+    const generatedCodigo = 'CERT-' + crypto.randomBytes(6).toString('hex').toUpperCase();
+    
+    // Map total_horas to horas if provided
+    const horasValue = data.total_horas !== undefined ? data.total_horas : data.horas;
+    
+    // Convert string dates to Date objects if needed
+    const fInicio = data.fecha_inicio ? new Date(data.fecha_inicio) : null;
+    const fFin = data.fecha_fin ? new Date(data.fecha_fin) : null;
+    const fEmision = data.fecha_emision ? new Date(data.fecha_emision) : new Date();
+
     return this.repo.save(this.repo.create({ 
       ...data, 
-      codigo_certificado: codigo, 
+      horas: horasValue,
+      fecha_inicio: fInicio,
+      fecha_fin: fFin,
+      fecha_emision: fEmision,
+      codigo_certificado: data.codigo_certificado || generatedCodigo, 
       tipo_certificado: data.tipo_certificado || 'Certificado de Aprobación',
-      fecha_emision: new Date(), 
       estado: 'Activo', 
       created_at: new Date() 
     }));
   }
-  async update(id: number, data: any) { await this.repo.update({ id_certificacion: id }, data); return this.findById(id); }
+  async update(id: number, data: any) {
+    const updateData = { ...data };
+    
+    // Map total_horas to horas
+    if (data.total_horas !== undefined) {
+      updateData.horas = data.total_horas;
+    }
+    
+    // Convert string dates to Date objects
+    if (data.fecha_inicio) updateData.fecha_inicio = new Date(data.fecha_inicio);
+    if (data.fecha_fin) updateData.fecha_fin = new Date(data.fecha_fin);
+    if (data.fecha_emision) updateData.fecha_emision = new Date(data.fecha_emision);
+    
+    await this.repo.update({ id_certificacion: id }, updateData);
+    return this.findById(id);
+  }
   async delete(id: number) { await this.repo.delete({ id_certificacion: id }); }
 }

@@ -35,6 +35,15 @@ export class Certificacion {
   horas!: number;
 
   @Column({ type: 'timestamp', nullable: true })
+  fecha_inicio!: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  fecha_fin!: Date;
+
+  @Column({ length: 255, nullable: true })
+  email_destinatario!: string;
+
+  @Column({ type: 'timestamp', nullable: true })
   fecha_emision!: Date;
 
   @Column({ type: 'timestamp', nullable: true })

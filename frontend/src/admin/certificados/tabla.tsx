@@ -140,18 +140,19 @@ export function Certificados() {
             const usuarioNombre = ce.usuario ? `${ce.usuario.nombre} ${ce.usuario.apellido || ""}`.trim() : null;
             const cursoNombre = ce.curso ? ce.curso.nombre : null;
 
-            if (c.tipo_certificado === "empresa") {
+            if (c.tipo_certificado !== "adicional") {
                 return {
                     ...c,
                     curso_nombre: cursoNombre || (ce.id_curso ? cursoById.get(ce.id_curso) : "—"),
                     usuario_nombre: usuarioNombre || (ce.id_usuario ? usuarioById.get(ce.id_usuario) : "—"),
                 };
             } else {
-                const ca = c as CertificacionAdicional;
+                const ca = c as any;
                 return {
                     ...ca,
                     curso_nombre: ca.nombre_curso || "—",
                     usuario_nombre: ca.nombre_estudiante || "—",
+                    total_horas: ca.horas !== undefined && ca.horas !== null ? Number(ca.horas) : ca.total_horas,
                 };
             }
         });
@@ -192,7 +193,7 @@ export function Certificados() {
             );
         }
         if (cursoFiltro !== "" && cursoFiltro !== 0) {
-            list = list.filter(c => c.tipo_certificado === "empresa" && (c as CertificacionEmpresa).id_curso === Number(cursoFiltro));
+            list = list.filter(c => c.tipo_certificado !== "adicional" && (c as CertificacionEmpresa).id_curso === Number(cursoFiltro));
         }
         return list.sort((a, b) => (a.codigo_certificado || "").localeCompare(b.codigo_certificado || "", "es"));
     }, [busqueda, items, cursoFiltro]);
@@ -306,12 +307,12 @@ export function Certificados() {
                                             <div className="flex flex-col">
                                                 <span className="text-[15px] font-black text-slate-900 group-hover:text-sky-600 transition-colors tracking-tight leading-tight uppercase">{c.codigo_certificado || "—"}</span>
                                                 <div className={`mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-[0.15em] border w-fit transition-all duration-500
-                                                    ${c.tipo_certificado === "empresa" 
+                                                    ${c.tipo_certificado !== "adicional" 
                                                         ? "bg-sky-500/10 text-sky-600 border-sky-500/20 shadow-[0_0_15px_rgba(14,165,233,0.1)]" 
                                                         : "bg-amber-500/10 text-amber-600 border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.1)]"}
                                                 `}>
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${c.tipo_certificado === "empresa" ? "bg-sky-500 animate-pulse" : "bg-amber-500 animate-pulse"}`} />
-                                                    {c.tipo_certificado === "empresa" ? "ACADÉMICO" : "ADICIONAL"}
+                                                    <div className={`w-1.5 h-1.5 rounded-full ${c.tipo_certificado !== "adicional" ? "bg-sky-500 animate-pulse" : "bg-amber-500 animate-pulse"}`} />
+                                                    {c.tipo_certificado !== "adicional" ? "ACADÉMICO" : "ADICIONAL"}
                                                 </div>
                                             </div>
                                         </td>
@@ -395,9 +396,9 @@ export function Certificados() {
                                     <div className="flex flex-col">
                                         <span className="text-[14px] font-black text-slate-900 leading-tight tracking-tight uppercase">{c.codigo_certificado || "—"}</span>
                                         <div className={`mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border
-                                            ${c.tipo_certificado === "empresa" ? "bg-sky-500/10 text-sky-600 border-sky-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"}
+                                            ${c.tipo_certificado !== "adicional" ? "bg-sky-500/10 text-sky-600 border-sky-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"}
                                         `}>
-                                            {c.tipo_certificado === "empresa" ? "ACADÉMICO" : "ADICIONAL"}
+                                            {c.tipo_certificado !== "adicional" ? "ACADÉMICO" : "ADICIONAL"}
                                         </div>
                                     </div>
                                     <div className="text-right">

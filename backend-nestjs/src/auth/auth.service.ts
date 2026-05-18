@@ -1,5 +1,4 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { Injectable, HttpException, HttpStatus, UnauthorizedException } from '@nestjs/common'; import { JwtService } from '@nestjs/jwt';
 import { MailerService } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
@@ -23,7 +22,7 @@ export class AuthService {
     private get apiBaseUrl(): string {
         const publicApiUrl = this.configService.get<string>('API_URL_PUBLIC');
         if (publicApiUrl) return publicApiUrl;
-        
+
         const port = this.configService.get<string>('APP_PORT', '8000');
         return `http://127.0.0.1:${port}/api`;
     }
@@ -73,7 +72,7 @@ export class AuthService {
                 `,
             });
             console.log(`📧 Email de verificación enviado a: ${user.email}`);
-        } catch (err) {
+        } catch (err: any) {
             console.error('❌ Error enviando email de verificación:', err);
             require('fs').writeFileSync('email-error.log', JSON.stringify(err, null, 2) + '\\n' + err.message);
             // No lanzamos error para no bloquear el registro
@@ -113,20 +112,22 @@ export class AuthService {
 
         // Generate JWT
         const payload = { sub: user.id_usuario, email: user.email };
-        const token = this.jwtService.sign(payload);
 
-        // Log successful login
-        await this.authRepo.createAuthLog({
-            authenticatable_type: 'App\\Models\\Usuario',
-            authenticatable_id: user.id_usuario,
-            ip_address: ip,
-            user_agent: userAgent,
-            login_successful: true,
-            login_at: new Date(),
+        // 🔹 Access Token (corto)
+        const accessToken = this.jwtService.sign(payload, {
+            expiresIn: '15m',
         });
 
+        // 🔹 Refresh Token (largo)
+        const refreshToken = this.jwtService.sign(payload, {
+            expiresIn: '7d',
+        });
+
+        await this.authRepo.saveRefreshToken(user.id_usuario, refreshToken);
+
         return {
-            token,
+            accessToken,
+            refreshToken,
             user: {
                 id_usuario: user.id_usuario,
                 nombre: user.nombre,
@@ -198,7 +199,7 @@ export class AuthService {
                     `,
                 });
                 console.log(`📧 Email de reset enviado a: ${user.email}`);
-            } catch (err) {
+            } catch (err: any) {
                 console.error('❌ Error enviando email de reset:', err);
             }
         }
@@ -271,36 +272,92 @@ export class AuthService {
 
         return { success: true, message: 'Se ha enviado un correo con instrucciones para cambiar tu contraseña.' };
     }
-
     async githubLogin(req: any) {
         if (!req.user) {
             throw new HttpException('No user from github', HttpStatus.BAD_REQUEST);
         }
 
         const { email, nombre, imagen_perfil } = req.user;
-        
+
         let user = await this.authRepo.findByEmail(email);
 
         if (!user) {
-            // Crear usuario si no existe
             user = await this.authRepo.register({
                 email,
                 nombre,
                 apellido: '',
-                password: Math.random().toString(36).slice(-10), // Password aleatorio por seguridad
+                password: Math.random().toString(36).slice(-10),
             });
-            // Marcar como verificado automáticamente
+
             await this.authRepo.markEmailVerified(user.id_usuario);
-            // Actualizar imagen de perfil si viene de github
+
             if (imagen_perfil) {
                 await this.authRepo.updateAvatar(user.id_usuario, imagen_perfil);
             }
         }
 
-        // Generar JWT
+        // 🔥 PAYLOAD
         const payload = { sub: user.id_usuario, email: user.email };
-        const token = this.jwtService.sign(payload);
 
-        return { token, user: { id_usuario: user.id_usuario, nombre: user.nombre, email: user.email } };
+        // 🔹 Access Token
+        const accessToken = this.jwtService.sign(payload, {
+            expiresIn: '15m',
+        });
+
+        // 🔹 Refresh Token
+        const refreshToken = this.jwtService.sign(payload, {
+            expiresIn: '7d',
+        });
+
+        // 🔥 GUARDAR EN BD (CLAVE)
+        await this.authRepo.saveRefreshToken(user.id_usuario, refreshToken);
+
+        return {
+            accessToken,
+            refreshToken,
+            user: {
+                id_usuario: user.id_usuario,
+                nombre: user.nombre,
+                email: user.email,
+            },
+        };
+    }
+    async refresh(refreshToken: string) {
+        const tokenInDb = await this.authRepo.findRefreshToken(refreshToken);
+
+        if (
+            !tokenInDb ||
+            tokenInDb.usado ||
+            (tokenInDb.fecha_expiracion && new Date() > tokenInDb.fecha_expiracion)
+        ) {
+            throw new UnauthorizedException('Invalid or expired refresh token');
+        }
+
+        const user = await this.authRepo.findById(tokenInDb.id_usuario);
+
+        if (!user) {
+            throw new UnauthorizedException('User not found');
+        }
+
+        const payload = {
+            sub: user.id_usuario,
+            email: user.email,
+        };
+
+        const newAccessToken = this.jwtService.sign(payload, {
+            expiresIn: '15m',
+        });
+
+        // 🔥 SOLO ACCESS TOKEN (SIN ROTACIÓN)
+        return {
+            accessToken: newAccessToken,
+        };
+    }
+    async invalidateRefreshToken(refreshToken: string) {
+        const token = await this.authRepo.findRefreshToken(refreshToken);
+        if (token) {
+            token.usado = true;
+            await this.authRepo.updateToken(token);
+        }
     }
 }

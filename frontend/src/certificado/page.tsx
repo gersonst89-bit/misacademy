@@ -92,8 +92,8 @@ const Certificado: React.FC = () => {
           <div style={{ position: 'absolute', top: '270px', left: '100px', width: '642px', height: '110px', backgroundColor: 'white', zIndex: 2 }}></div>
           <div style={{ position: 'absolute', top: '380px', left: '100px', width: '642px', height: '140px', backgroundColor: 'white', zIndex: 2 }}></div>
 
-          {/* Firma */}
-          <div style={{ position: 'absolute', bottom: '115px', left: '346px', width: '150px', height: '20px', backgroundColor: 'white', zIndex: 2 }}></div>
+          {/* Capa de Borrado para Firma y Docente */}
+          <div style={{ position: 'absolute', bottom: '40px', left: '221px', width: '400px', height: '100px', backgroundColor: 'white', zIndex: 2 }}></div>
 
           {/* Tapa Fecha y Código */}
           <div style={{ position: 'absolute', bottom: '70px', left: '70px', width: '150px', height: '40px', backgroundColor: 'white', zIndex: 2 }}></div>
@@ -103,33 +103,46 @@ const Certificado: React.FC = () => {
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-12" style={{ zIndex: 3 }}>
             
             {/* Nombre del Estudiante */}
-            <div style={{ marginTop: '55px' }}>
-              <h2 className="text-5xl font-serif text-slate-800 italic" style={{ borderBottom: '2px solid #cbd5e1', paddingBottom: '5px', display: 'inline-block', minWidth: '400px' }}>
-                {cert?.nombre_estudiante || `${usuario?.nombre} ${usuario?.apellido}`}
+            <div style={{ marginTop: '45px' }}>
+              <h2 className="text-5xl font-serif text-slate-700" style={{ borderBottom: '2px solid #94a3b8', paddingBottom: '10px', display: 'inline-block', minWidth: '450px' }}>
+                {cert?.nombre_estudiante || (usuario?.nombre ? `${usuario.nombre} ${usuario.apellido}` : 'Nombres y Apellidos')}
               </h2>
             </div>
 
-            {/* Texto Intermedio */}
-            <p className="mt-12 text-lg text-slate-600 font-sans tracking-wide">
-              Por haber completado exitosamente el curso de
+            {/* Texto Intermedio y Curso */}
+            <p className="mt-8 text-[20px] text-slate-700 font-serif">
+              por haber completado exitosamente el Curso de <span style={{ borderBottom: '1px solid #64748b', paddingBottom: '2px' }}>{cert?.curso?.nombre || "_________________"}</span>
+            </p>
+            
+            {/* Fecha */}
+            <p className="mt-2 text-[20px] text-slate-700 font-serif">
+              el {cert?.fecha_emision ? new Date(cert.fecha_emision).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
 
-            {/* Nombre del Curso */}
-            <div className="mt-2">
-              <h3 className="text-3xl font-bold text-blue-900 font-sans uppercase tracking-tighter max-w-xl mx-auto">
-                {cert?.curso?.nombre || "Backend con NestJS y TypeORM"}
-              </h3>
-            </div>
+            {/* Firma y Docente */}
+            <div className="absolute bottom-[65px] flex flex-col items-center">
+              {/* Etiqueta de imagen para la firma real */}
+              <img 
+                src="/firma.png" 
+                alt="Firma" 
+                className="h-[60px] object-contain mb-1" 
+                style={{ zIndex: 10, mixBlendMode: 'multiply' }}
+                onError={(e) => {
+                  // Si no encuentra la imagen, mostramos un texto temporal con una fuente más parecida a la imagen
+                  e.currentTarget.style.display = 'none';
+                  const textFallback = document.getElementById('firma-fallback');
+                  if (textFallback) textFallback.style.display = 'block';
+                }}
+              />
+              <div id="firma-fallback" style={{ display: 'none', fontFamily: "'Great Vibes', 'Cedarville Cursive', 'Brush Script MT', cursive", fontSize: '42px', color: '#475569', transform: 'rotate(-5deg)', marginBottom: '-5px', zIndex: 10 }}>
+                Signature
+              </div>
 
-            {/* Datos de Validación */}
-            <div className="absolute bottom-[75px] left-20 text-left font-sans text-[10px] text-slate-500 uppercase tracking-widest">
-              <p className="font-bold text-slate-400">FECHA DE EMISIÓN</p>
-              <p className="text-slate-700">{cert?.fecha_emision ? new Date(cert.fecha_emision).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : new Date().toLocaleDateString()}</p>
-            </div>
-
-            <div className="absolute bottom-[75px] right-20 text-right font-sans text-[10px] text-slate-500 uppercase tracking-widest">
-              <p className="font-bold text-slate-400">CÓDIGO DE VERIFICACIÓN</p>
-              <p className="font-mono text-slate-700">{cert?.codigo_certificado || "CERT-XXXXXX"}</p>
+              <div className="flex flex-col items-center" style={{ width: '260px' }}>
+                <p className="text-[18px] font-sans font-medium text-slate-700 mb-1">Docente Genérico</p>
+                <div style={{ borderTop: '1px solid #475569', width: '100%' }}></div>
+                <p className="text-[13px] font-sans font-medium text-slate-500 mt-1.5">Docente del Curso</p>
+              </div>
             </div>
           </div>
         </div>

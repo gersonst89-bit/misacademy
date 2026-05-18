@@ -23,7 +23,6 @@ import {
   ChevronsRight
 } from "lucide-react";
 import { apiUrl } from "../config/api";
-import { resetCsrfToken } from "../config/interceptor";
 import { motion, AnimatePresence } from "framer-motion";
 
 import ConfirmModal from "./Components/ConfirmModal";
@@ -167,7 +166,7 @@ export default function AdminLayout() {
       console.error("Error during admin logout:", err);
     }
     // Limpiar CSRF token en memoria para que el próximo login genere uno fresco
-    resetCsrfToken();
+    
     window.location.href = "/";
   };
 

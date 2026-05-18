@@ -18,7 +18,7 @@ interface Props {
 export function InfoCertificadoModal({ isOpen, onClose, item }: Props) {
   if (!item) return null;
 
-  const isEmpresa = item.tipo_certificado === "empresa";
+  const isEmpresa = item.tipo_certificado !== "adicional";
 
   const formatDateLocal = (date: string | null) => {
     if (!date) return "—";

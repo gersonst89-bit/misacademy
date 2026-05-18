@@ -435,16 +435,10 @@ async function onAddToCart() {
         ) : pasos.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 px-4">
             {pasos.map((p, i) => (
-              <div
+              <Link
                 key={i}
-                onClick={() => {
-                  if (isOwned) {
-                    navigate(`/video-page/${p.idCurso}`);
-                  } else {
-                    navigate(`/curso/${p.curso?.slug || createSlug(p.titulo)}`);
-                  }
-                }}
-                className="group relative bg-[#0a0a0a] border border-white/5 rounded-[2.5rem] overflow-hidden hover:border-sky-500/30 transition-all duration-500 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.8)]"
+                to={isOwned ? `/video-page/${p.idCurso}` : `/curso/${p.curso?.slug || createSlug(p.titulo)}`}
+                className="group block relative bg-[#0a0a0a] border border-white/5 rounded-[2.5rem] overflow-hidden hover:border-sky-500/30 transition-all duration-500 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.8)]"
               >
                 {/* Image Section */}
                 <div className="aspect-video relative overflow-hidden">
@@ -484,7 +478,7 @@ async function onAddToCart() {
                      </div>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         ) : (
