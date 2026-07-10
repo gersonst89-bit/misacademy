@@ -7,7 +7,7 @@ import EditarPagoModal from "./EditarPagoModal";
 import type { Pago } from "../../types/models";
 import TipoPagoList from "./TipoPagoList";
 import { CustomDatePicker } from "../Components/CustomDatePicker";
-import { API_URL } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 
 function FiltroEstado({
   value,
@@ -105,23 +105,17 @@ export default function PagosAdminPage() {
     try {
       setLoading(true);
 
-      const queryParams = new URLSearchParams({
-        page: pagina.toString(),
-        per_page: "15",
-        estado: estadoFiltro,
-        fecha_inicio: fechaInicio,
-        fecha_fin: fechaFin
-      });
-
-      const response = await fetch(`${API_URL}/pagos?${queryParams.toString()}`, {
-        headers: {
-          Accept: "application/json",
-        },
+      const response = await apiClient.get(`/pagos`, {
+        params: {
+          page: pagina,
+          per_page: 15,
+          estado: estadoFiltro || undefined,
+          fecha_inicio: fechaInicio || undefined,
+          fecha_fin: fechaFin || undefined
+        }
       });
       
-      if (!response.ok) throw new Error("Error al obtener pagos");
-
-      const data = await response.json();
+      const data = response.data;
       setPagos(data.data || []);
       setTotalPaginas(data.last_page || 1);
     } catch (err) {
@@ -136,37 +130,19 @@ export default function PagosAdminPage() {
     if (!window.confirm("¿Estás seguro de que deseas eliminar permanentemente este registro de pago?")) return;
     
     try {
-      const response = await fetch(`${API_URL}/pagos/${id}`, {
-        method: "DELETE",
-        headers: {
-          Accept: "application/json",
-        },
-      });
-
-      if (response.ok) {
-        obtenerPagos();
-      } else {
-        alert("No se pudo eliminar el registro");
-      }
+      await apiClient.delete(`/pagos/${id}`);
+      obtenerPagos();
     } catch (error) {
       console.error(error);
+      alert("No se pudo eliminar el registro");
     }
   };
 
   const actualizarEstado = async (id: number, nuevoEstado: string) => {
     try {
-      const response = await fetch(`${API_URL}/pagos/${id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ estado: nuevoEstado }),
-      });
-
-      if (response.ok) {
-        setPagoSeleccionado(null);
-        obtenerPagos();
-      }
+      await apiClient.patch(`/pagos/${id}`, { estado: nuevoEstado });
+      setPagoSeleccionado(null);
+      obtenerPagos();
     } catch (error) {
       console.error(error);
     }

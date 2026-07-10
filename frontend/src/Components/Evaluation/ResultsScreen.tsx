@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { setCurrentScreen } from '../../store/evaluationSlice';
 import { useNavigate } from 'react-router-dom';
 import styles from './ResultsScreen.module.css';
-import { API_URL } from "../../config/api";
+import { apiClient } from '../../services/apiClient';
 
 const ResultsScreen: React.FC = () => {
   const results = useSelector((state: any) => state.evaluation.results);
@@ -28,28 +28,17 @@ const ResultsScreen: React.FC = () => {
         return;
       }
       // Solicita el certificado vía API
-      const res = await fetch(`${API_URL}/certificaciones/solicitar`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        credentials: "include",
-        body: JSON.stringify({ id_curso: idCurso })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.codigo_certificado) {
-          navigate(`/certificado/${data.codigo_certificado}`);
-        } else {
-          navigate('/certificados');
-        }
+      const res = await apiClient.post('/certificaciones/solicitar', { id_curso: idCurso });
+      const data = res.data;
+      if (data && data.codigo_certificado) {
+        navigate(`/certificado/${data.codigo_certificado}`);
       } else {
-        const errorData = await res.json();
-        alert('No se pudo solicitar el certificado: ' + (errorData.message || 'Error desconocido'));
+        navigate('/certificados');
       }
-    } catch (err) {
-      alert('Error al solicitar el certificado.');
+    } catch (err: any) {
+      console.error(err);
+      const errMsg = err.response?.data?.message || 'Error desconocido';
+      alert('No se pudo solicitar el certificado: ' + errMsg);
     }
   };
 

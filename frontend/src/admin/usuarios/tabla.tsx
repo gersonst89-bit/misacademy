@@ -6,6 +6,7 @@ import InfoUsuarioModal from "./InfoUsuarioModal";
 import DeleteModal from "../Components/DeleteModal";
 import type { Usuario } from "../../types/models";
 import { apiUrl } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 
 function FiltroEstado({
   value,
@@ -165,43 +166,45 @@ export default function UsuariosPage() {
     return () => clearTimeout(handler);
   }, [search]);
 
-  const fetchUsuarios = async () => {
+  const fetchUsuarios = async (signal?: AbortSignal) => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      
-      params.append("page", pagina.toString());
-      params.append("per_page", "15");
-      if (searchDebounced) params.append("search", searchDebounced);
-      if (filtroEstado) params.append("estado", filtroEstado);
-      if (filtroRol) params.append("id_rol", filtroRol);
+      const params: any = {
+        page: pagina,
+        per_page: 15,
+      };
+      if (searchDebounced) params.search = searchDebounced;
+      if (filtroEstado) params.estado = filtroEstado;
+      if (filtroRol) params.id_rol = filtroRol;
 
-      const res = await fetch(
-        apiUrl(`/admin/usuarios?${params.toString()}`),
-        {
-          headers: {
-            Accept: "application/json",
-          },
-        }
-      );
+      const res = await apiClient.get("/admin/usuarios", { params, signal });
 
-      const data = await res.json();
-      if (res.ok && data.data) {
+      const data = res.data;
+      if (data.data) {
         setUsuarios(data.data);
         setTotalPaginas(data.last_page || 1);
       } else {
         setUsuarios([]);
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === "CanceledError" || error?.code === "ERR_CANCELED") {
+        return;
+      }
       console.error("Error al obtener usuarios:", error);
       setUsuarios([]);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchUsuarios();
+    const controller = new AbortController();
+    fetchUsuarios(controller.signal);
+    return () => {
+      controller.abort();
+    };
   }, [pagina, searchDebounced, filtroEstado, filtroRol]);
 
   const openModal = (usuario?: Usuario) => {
@@ -224,12 +227,6 @@ export default function UsuariosPage() {
   const handleSave = async () => {
     if (!selectedUsuario) return;
     try {
-      const url = selectedUsuario.id_usuario
-        ? apiUrl(`/admin/usuarios/${selectedUsuario.id_usuario}`)
-        : apiUrl(`/admin/usuarios`);
-
-      const method = selectedUsuario.id_usuario ? "PUT" : "POST";
-
       const cleanData = {
         nombre: selectedUsuario.nombre,
         apellido: selectedUsuario.apellido,
@@ -245,18 +242,10 @@ export default function UsuariosPage() {
         (cleanData as any).password = selectedUsuario.password;
       }
 
-      const res = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(cleanData),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Error al guardar usuario");
+      if (selectedUsuario.id_usuario) {
+        await apiClient.put(`/admin/usuarios/${selectedUsuario.id_usuario}`, cleanData);
+      } else {
+        await apiClient.post(`/admin/usuarios`, cleanData);
       }
 
       alert(
@@ -268,7 +257,7 @@ export default function UsuariosPage() {
       fetchUsuarios();
     } catch (error: any) {
       console.error(error);
-      alert(error.message || "Error al guardar usuario");
+      alert(error.response?.data?.message || error.message || "Error al guardar usuario");
     }
   };
 
@@ -279,26 +268,7 @@ export default function UsuariosPage() {
         ? `/admin/usuarios/${usuarioAccion.id_usuario}` 
         : `/admin/usuarios/${usuarioAccion.id_usuario}/force`;
 
-      const res = await fetch(apiUrl(endpoint), {
-        method: "DELETE",
-        headers: {
-          Accept: "application/json",
-        },
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        if (err.has_pagos) {
-            setShowAccionModal(false);
-            setErrorCompras({
-                message: err.message,
-                has_pagos: err.has_pagos,
-                pagos: err.pagos
-            });
-            return;
-        }
-        throw new Error(err.message || `Error al ${tipoAccion === "desactivar" ? "desactivar" : "eliminar"} usuario`);
-      }
+      await apiClient.delete(endpoint);
 
       alert(`Usuario ${tipoAccion === "desactivar" ? "desactivado" : "eliminado"} con éxito`);
       setShowAccionModal(false);
@@ -307,7 +277,17 @@ export default function UsuariosPage() {
       fetchUsuarios();
     } catch (error: any) {
       console.error(error);
-      alert(error.message || `Error al ${tipoAccion === "desactivar" ? "desactivar" : "eliminar"} usuario`);
+      const err = error.response?.data || {};
+      if (err.has_pagos) {
+          setShowAccionModal(false);
+          setErrorCompras({
+              message: err.message,
+              has_pagos: err.has_pagos,
+              pagos: err.pagos
+          });
+          return;
+      }
+      alert(err.message || `Error al ${tipoAccion === "desactivar" ? "desactivar" : "eliminar"} usuario`);
     }
   };
 

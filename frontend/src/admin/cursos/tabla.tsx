@@ -15,7 +15,8 @@ import { InfoCursoModal } from "./infoCursos";
 import { EditCursoModal } from "./editCursos";
 import { ArchiveModal } from "../Components/ArchiveModal";
 import DeleteModal from "../Components/DeleteModal";
-import { apiUrl, BASE_URL, API_URL } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
+import { API_URL } from "../../config/api";
 
 function FiltroEstado({
   value,
@@ -123,25 +124,16 @@ export function Cursos() {
     setIsLoading(true);
 
     try {
-      const queryParams = new URLSearchParams({
-        page: pagina.toString(),
-        per_page: "12",
-        nombre: busquedaDebounced, // El backend de cursos usa 'nombre' para filtrar
-        estado: filtroEstado
+      const response = await apiClient.get("/admin/cursos", {
+        params: {
+          page: pagina,
+          per_page: 12,
+          nombre: busquedaDebounced,
+          estado: filtroEstado
+        }
       });
 
-      const response = await fetch(
-        apiUrl(`/admin/cursos?${queryParams.toString()}`),
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (!response.ok) throw new Error("Error al obtener cursos");
-
-      const data = await response.json();
+      const data = response.data;
       setCursos(data.data || []);
       setTotalPaginas(data.last_page || 1);
     } catch (error) {
@@ -153,10 +145,8 @@ export function Cursos() {
 
   const fetchRutas = async () => {
     try {
-      const res = await fetch(apiUrl("/rutas-academicas"));
-      if (!res.ok) throw new Error("Error al obtener rutas");
-      const data = await res.json();
-      setRutas(data.data || []);
+      const res = await apiClient.get("/rutas-academicas");
+      setRutas(res.data.data || []);
     } catch (error) {
       console.error("Error cargando rutas académicas:", error);
     }
@@ -198,24 +188,9 @@ export function Cursos() {
         ),
       };
 
-      const response = await fetch(
-        apiUrl("/admin/cursos"),
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(cleanData),
-        }
-      );
-
-      const data = await response.json();
+      const response = await apiClient.post("/admin/cursos", cleanData);
+      const data = response.data;
       console.log("Respuesta del backend:", data);
-
-      if (!response.ok) {
-        alert(data.mensaje || "Error al crear curso. Revisa consola.");
-        return false;
-      }
 
       if (data.curso) {
         setCursos((prev) => [data.curso, ...prev]);
@@ -223,8 +198,10 @@ export function Cursos() {
       }
 
       return false;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al crear curso:", error);
+      const errMsg = error.response?.data?.mensaje || error.response?.data?.message || "Error al crear curso. Revisa consola.";
+      alert(errMsg);
       return false;
     }
   };
@@ -241,7 +218,6 @@ export function Cursos() {
         ...rest 
       } = cursoActualizado as any;
       
-      // Solo enviar los campos que el backend espera (evitar error 400 por campos extra)
       const cleanData = {
         nombre: cursoActualizado.nombre,
         descripcion: cursoActualizado.descripcion,
@@ -251,8 +227,14 @@ export function Cursos() {
         requisitos: cursoActualizado.requisitos,
         nivel: cursoActualizado.nivel,
         precio: Number(cursoActualizado.precio),
-        duracion_horas: cursoActualizado.duracion_horas ? Number(cursoActualizado.duracion_horas) : (cursoActualizado.duracion ? Number(cursoActualizado.duracion) : undefined),
-        tiempo: cursoActualizado.tiempo ? Number(cursoActualizado.tiempo) : undefined,
+        duracion_horas: (cursoActualizado.duracion_horas !== undefined && cursoActualizado.duracion_horas !== null)
+          ? Number(cursoActualizado.duracion_horas)
+          : ((cursoActualizado.duracion !== undefined && cursoActualizado.duracion !== null)
+            ? Number(cursoActualizado.duracion)
+            : undefined),
+        tiempo: (cursoActualizado.tiempo !== undefined && cursoActualizado.tiempo !== null)
+          ? Number(cursoActualizado.tiempo)
+          : null,
         imagen: cursoActualizado.imagen,
         video_previsualizacion: cursoActualizado.video_previsualizacion,
         estado: cursoActualizado.estado,
@@ -263,23 +245,8 @@ export function Cursos() {
         ) || [],
       };
 
-      const response = await fetch(
-        apiUrl(`/admin/cursos/${cursoActualizado.id_curso}`),
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(cleanData),
-        }
-      );
-
-      const data = await response.json();
-      if (!response.ok) {
-        console.error("Error al actualizar curso:", data);
-        alert(data.message || "Error al actualizar el curso.");
-        return false;
-      }
+      const response = await apiClient.put(`/admin/cursos/${cursoActualizado.id_curso}`, cleanData);
+      const data = response.data;
 
       const cursoActualizadoRes = data;
       if (cursoActualizadoRes && cursoActualizadoRes.id_curso) {
@@ -311,9 +278,10 @@ export function Cursos() {
 
       console.log("Curso actualizado con éxito:", cursoActualizadoRes);
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error en guardar edición:", error);
-      alert("Error al guardar los cambios del curso.");
+      const errMsg = error.response?.data?.message || error.response?.data?.mensaje || "Error al actualizar el curso.";
+      alert(errMsg);
       return false;
     }
   };
@@ -327,19 +295,7 @@ export function Cursos() {
         : "Publicado";
 
     try {
-      const response = await fetch(
-        apiUrl(`/cursos/${cursoEstadoSeleccionado.id_curso}/estado`),
-        {
-          method: "PATCH",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ estado: nuevoEstado }),
-        }
-      );
-
-      if (!response.ok) throw new Error("No se pudo cambiar el estado");
+      await apiClient.patch(`/cursos/${cursoEstadoSeleccionado.id_curso}/estado`, { estado: nuevoEstado });
 
       setCursos((prev) =>
         prev.map((c) =>
@@ -360,16 +316,7 @@ export function Cursos() {
     if (!cursoAEliminar) return;
 
     try {
-      const response = await fetch(
-        apiUrl(`/cursos/${cursoAEliminar.id_curso}`),
-        {
-          method: "DELETE",
-          headers: {
-          },
-        }
-      );
-
-      if (!response.ok) throw new Error("No se pudo eliminar el curso");
+      await apiClient.delete(`/cursos/${cursoAEliminar.id_curso}`);
 
       setCursos((prev) =>
         prev.filter((c) => c.id_curso !== cursoAEliminar.id_curso)

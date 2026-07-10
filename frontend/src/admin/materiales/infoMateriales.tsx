@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import type { Material, Modulo, Curso } from "../../types/models";
-import { apiUrl } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 import AdminModal from "../Components/AdminModal";
 import { IoFileTrayFullOutline, IoDownloadOutline } from "react-icons/io5";
 
@@ -26,10 +26,10 @@ export const InfoMaterialModal: React.FC<InfoMaterialModalProps> = ({
         // Cursos
         let pageC = 1, lastC = 1, listC: Curso[] = [];
         do {
-          const r = await fetch(apiUrl(`/admin/cursos?page=${pageC}`), {
-            headers: { Accept: "application/json" }
+          const res = await apiClient.get(`/admin/cursos`, {
+            params: { page: pageC }
           });
-          const d = await r.json();
+          const d = res.data;
           listC = [...listC, ...(d.data || d || [])];
           lastC = d.last_page || d.meta?.last_page || 1;
           pageC++;
@@ -39,10 +39,10 @@ export const InfoMaterialModal: React.FC<InfoMaterialModalProps> = ({
         // Modulos
         let pageM = 1, lastM = 1, listM: Modulo[] = [];
         do {
-          const r = await fetch(apiUrl(`/admin/modulos?page=${pageM}`), {
-            headers: { Accept: "application/json" }
+          const res = await apiClient.get(`/admin/modulos`, {
+            params: { page: pageM }
           });
-          const d = await r.json();
+          const d = res.data;
           listM = [...listM, ...(d.data || d || [])];
           lastM = d.last_page || d.meta?.last_page || 1;
           pageM++;

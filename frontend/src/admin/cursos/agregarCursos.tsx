@@ -7,7 +7,7 @@ import SelectComponent from "../Components/SelectComponent";
 import AdminModal from "../Components/AdminModal";
 import SearchableSelect from "../Components/SearchableSelect";
 import type { Curso, RutaAcademica } from "../../types/models";
-import { apiUrl, API_URL } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 import { IoBookOutline, IoTimeOutline, IoWalletOutline, IoLayersOutline, IoSparklesOutline } from "react-icons/io5";
 
 interface AddCursoModalProps {
@@ -68,9 +68,8 @@ export const AddCursoModal: React.FC<AddCursoModalProps> = ({
   useEffect(() => {
     const fetchRutas = async () => {
       try {
-        const res = await fetch(apiUrl("/rutas-academicas"));
-        const data = await res.json();
-        setRutas(data.data || []);
+        const res = await apiClient.get("/rutas-academicas");
+        setRutas(res.data.data || []);
       } catch (error) {
         console.error("Error cargando rutas académicas:", error);
       }
@@ -81,14 +80,8 @@ export const AddCursoModal: React.FC<AddCursoModalProps> = ({
   useEffect(() => {
     const fetchDocentes = async () => {
       try {
-
-        const res = await fetch(`${API_URL}/admin/usuarios`, {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        const data = await res.json();
-        const docentesFiltrados = (data.data || []).filter(
+        const res = await apiClient.get("/admin/usuarios");
+        const docentesFiltrados = (res.data.data || []).filter(
           (u: any) => (u.id_rol === 2 || u.id_rol === 1) && u.estado === "Activo"
         );
         setDocentes(

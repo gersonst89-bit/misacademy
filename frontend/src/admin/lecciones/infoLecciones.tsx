@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { IoPlayCircleOutline } from "react-icons/io5";
 import type { Leccion, Modulo, Curso } from "../../types/models";
-import { apiUrl, API_URL } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 import AdminModal from "../Components/AdminModal";
 
 interface InfoLeccionModalProps {
@@ -49,26 +49,20 @@ export const InfoLeccionModal: React.FC<InfoLeccionModalProps> = ({
       try {
         // 🔹 MÓDULOS (admin) - Solo si no vienen por props
         if (!initialModulos || initialModulos.length === 0) {
-          const resModulos = await fetch(apiUrl("/admin/modulos?per_page=500"), {
-            headers: { Accept: "application/json" },
+          const resModulos = await apiClient.get("/admin/modulos", {
+            params: { per_page: 500 }
           });
-          if (resModulos.ok) {
-            const dataModulos = await resModulos.json();
-            setModulos(dataModulos.data || dataModulos || []);
-          }
+          setModulos(resModulos.data.data || resModulos.data || []);
         } else {
           setModulos(initialModulos);
         }
 
         // 🔹 CURSOS (admin) - Solo si no vienen por props
         if (!initialCursos || initialCursos.length === 0) {
-          const resCursos = await fetch(apiUrl("/admin/cursos?per_page=500"), {
-            headers: { Accept: "application/json" },
+          const resCursos = await apiClient.get("/admin/cursos", {
+            params: { per_page: 500 }
           });
-          if (resCursos.ok) {
-            const dataCursos = await resCursos.json();
-            setCursos(dataCursos.data || dataCursos || []);
-          }
+          setCursos(resCursos.data.data || resCursos.data || []);
         } else {
           setCursos(initialCursos);
         }

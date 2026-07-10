@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { IoSearchOutline, IoAddOutline, IoCreateOutline, IoWalletOutline } from "react-icons/io5";
 import AgregarTipoPagoModal from "./AgregarTipoPagoModal";
 import EditarTipoPagoModal from "./EditarTipoPagoModal";
-import { API_URL } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 
 interface TipoPago {
   id_tipo_pago: number;
@@ -30,15 +30,9 @@ export default function TipoPagoList() {
   const obtenerTipos = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/tipos-pagos`, {
-        headers: {
-          Accept: "application/json",
-        },
-      });
+      const response = await apiClient.get(`/tipos-pagos`);
 
-      if (!response.ok) throw new Error("Error al cargar tipos de pago");
-
-      const data = await response.json();
+      const data = response.data;
       const lista = Array.isArray(data.tipos_pagos) ? data.tipos_pagos : [];
       setTipos(lista);
     } catch (err) {

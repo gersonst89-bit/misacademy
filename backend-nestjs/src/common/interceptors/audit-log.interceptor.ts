@@ -1,4 +1,9 @@
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
+import {
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  CallHandler,
+} from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -26,7 +31,7 @@ export class AuditLogInterceptor implements NestInterceptor {
       tap(async (data) => {
         try {
           const module = url.split('/')[2] || 'unknown'; // api/v1/MODULE/...
-          
+
           // No loguear contraseñas o datos sensibles
           const cleanBody = { ...body };
           if (cleanBody.password) cleanBody.password = '********';

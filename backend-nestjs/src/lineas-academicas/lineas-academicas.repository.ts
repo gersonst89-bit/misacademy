@@ -25,7 +25,11 @@ export class LineasAcademicasRepository {
     private readonly rutaRepo: Repository<RutaAcademica>,
   ) {}
   // Lineas
-  async findAllLineas(filters: LineaFilters = {}, page = 1, perPage = 15): Promise<PaginatedResult<LineaAcademica>> {
+  async findAllLineas(
+    filters: LineaFilters = {},
+    page = 1,
+    perPage = 15,
+  ): Promise<PaginatedResult<LineaAcademica>> {
     const where: FindOptionsWhere<LineaAcademica> = {};
     if (filters.estado) where.estado = filters.estado;
     const [data, total] = await this.lineaRepo.findAndCount({
@@ -73,7 +77,10 @@ export class LineasAcademicasRepository {
       }),
     );
   }
-  async updateLinea(id: number, data: Partial<LineaAcademica>): Promise<LineaAcademica | null> {
+  async updateLinea(
+    id: number,
+    data: Partial<LineaAcademica>,
+  ): Promise<LineaAcademica | null> {
     await this.lineaRepo.update(
       { id_linea_academica: id },
       { ...data, fecha_actualizacion: new Date() },
@@ -84,7 +91,11 @@ export class LineasAcademicasRepository {
     await this.lineaRepo.delete({ id_linea_academica: id });
   }
   // Rutas
-  async findAllRutas(filters: any = {}, page = 1, perPage = 15): Promise<PaginatedResult<RutaAcademica>> {
+  async findAllRutas(
+    filters: any = {},
+    page = 1,
+    perPage = 15,
+  ): Promise<PaginatedResult<RutaAcademica>> {
     const [data, total] = await this.rutaRepo.findAndCount({
       relations: ['lineaAcademica', 'cursos'],
       skip: (page - 1) * perPage,
@@ -111,7 +122,11 @@ export class LineasAcademicasRepository {
       take: limit,
     });
   }
-  async buscarRutas(q: string, page = 1, perPage = 15): Promise<PaginatedResult<RutaAcademica>> {
+  async buscarRutas(
+    q: string,
+    page = 1,
+    perPage = 15,
+  ): Promise<PaginatedResult<RutaAcademica>> {
     const [data, total] = await this.rutaRepo.findAndCount({
       where: { nombre: Like(`%${q}%`) },
       relations: ['lineaAcademica'],
@@ -126,30 +141,35 @@ export class LineasAcademicasRepository {
       last_page: Math.ceil(total / perPage),
     };
   }
-  async createRuta(data: Partial<Omit<RutaAcademica, 'cursos'>> & { cursos?: number[] }): Promise<RutaAcademica> {
+  async createRuta(
+    data: Partial<Omit<RutaAcademica, 'cursos'>> & { cursos?: number[] },
+  ): Promise<RutaAcademica> {
     const { cursos, ...rest } = data;
     const ruta = this.rutaRepo.create({
       ...rest,
-      cursos: cursos ? cursos.map(id => ({ id_curso: id } as any)) : [],
+      cursos: cursos ? cursos.map((id) => ({ id_curso: id }) as any) : [],
       fecha_creacion: new Date(),
       fecha_actualizacion: new Date(),
     });
     return this.rutaRepo.save(ruta);
   }
-  async updateRuta(id: number, data: Partial<Omit<RutaAcademica, 'cursos'>> & { cursos?: number[] }): Promise<RutaAcademica | null> {
+  async updateRuta(
+    id: number,
+    data: Partial<Omit<RutaAcademica, 'cursos'>> & { cursos?: number[] },
+  ): Promise<RutaAcademica | null> {
     const { cursos, ...rest } = data;
     const updateData: any = { ...rest, fecha_actualizacion: new Date() };
     if (cursos) {
-      updateData.cursos = cursos.map(id => ({ id_curso: id }));
+      updateData.cursos = cursos.map((id) => ({ id_curso: id }));
     }
-    
+
     // Use save for updates with relations to ensure JoinTable is updated
     const existing = await this.findRutaById(id);
     if (!existing) return null;
-    
+
     return this.rutaRepo.save({
       ...existing,
-      ...updateData
+      ...updateData,
     });
   }
   async deleteRuta(id: number): Promise<void> {

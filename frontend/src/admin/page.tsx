@@ -22,7 +22,8 @@ import {
   ChevronsLeft,
   ChevronsRight
 } from "lucide-react";
-import { apiUrl } from "../config/api";
+import { apiClient } from "../services/apiClient";
+import { API_URL } from "../config/api";
 import { motion, AnimatePresence } from "framer-motion";
 
 import ConfirmModal from "./Components/ConfirmModal";
@@ -127,15 +128,9 @@ export default function AdminLayout() {
       return;
     }
 
-    fetch(apiUrl("/auth/profile"), {
-      headers: { Accept: "application/json" },
-      credentials: "include",
-    })
-      .then((r) => {
-        if (!r.ok) throw new Error("Unauthorized");
-        return r.json();
-      })
-      .then((p) => {
+    apiClient.get("/auth/profile")
+      .then((res) => {
+        const p = res.data;
         const userRole = p.id_rol || p.user?.id_rol || 3;
         setRol(userRole);
         setUserData(p.user || p);
@@ -156,17 +151,14 @@ export default function AdminLayout() {
 
 
   const handleLogout = async () => {
+    // ✅ Limpiar estado local PRIMERO
     localStorage.removeItem("user");
     try {
-      await fetch(apiUrl("/auth/logout"), { 
-        method: 'POST',
-        credentials: 'include'
-      });
+      await apiClient.post("/auth/logout");
     } catch (err) {
+      // No bloqueamos el logout aunque falle la llamada
       console.error("Error during admin logout:", err);
     }
-    // Limpiar CSRF token en memoria para que el próximo login genere uno fresco
-    
     window.location.href = "/";
   };
 
@@ -405,7 +397,7 @@ export default function AdminLayout() {
                         const nombre = userData?.nombre || userData?.user?.nombre || userData?.usuario?.nombre || "A";
 
                         if (imgPath) {
-                          const finalUrl = `${apiUrl("/").replace(/\/$/, "")}/${imgPath.replace(/^\/?(api\/)?/, "")}`;
+                          const finalUrl = `${API_URL}/${imgPath.replace(/^\/?(api\/)?/, "")}`;
                           return (
                             <img 
                               src={finalUrl} 

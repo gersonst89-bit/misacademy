@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import AdminModal from "../Components/AdminModal";
-import { apiUrl } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 import type { RutaAcademica } from "../../types/models";
 import { IoInformationCircleOutline, IoCalendarOutline, IoCashOutline, IoTimeOutline, IoBarChartOutline } from "react-icons/io5";
 
@@ -31,12 +31,8 @@ export function InfoRutaModal({ isOpen, onClose, ruta }: InfoRutaModalProps) {
       }
 
       try {
-        const res = await fetch(apiUrl("/lineas-academicas"), {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        const data = await res.json();
+        const res = await apiClient.get("/lineas-academicas");
+        const data = res.data;
         const lista = data.data || [];
         const linea = lista.find((l: any) => 
           (l.id_linea_academica === ruta.id_linea_academica) || 

@@ -14,7 +14,7 @@ import type { LineaAcademica } from "../../types/models";
 import { InfoLineaModal } from "./infoLineasAcademicas";
 import { AddLineaAcademicaModal } from "./agregarLineasAcademicas";
 import { EditLineaAcademicaModal } from "./editLineasAcademicas";
-import { apiUrl, API_URL } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 import { ArchiveModal } from "../Components/ArchiveModal";
 import DeleteModal from "../Components/DeleteModal";
 
@@ -104,14 +104,10 @@ export function LineasAcademicas() {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      let url = apiUrl("/lineas-academicas?");
-      if (filtroEstado) url += `estado=${filtroEstado}&`;
-      url = url.endsWith("&") ? url.slice(0, -1) : url;
-
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Error al obtener las líneas académicas");
-
-      const data = await response.json();
+      const response = await apiClient.get("/lineas-academicas", {
+        params: filtroEstado ? { estado: filtroEstado } : {}
+      });
+      const data = response.data;
       const mappedLineas = (data.data || []).map((l: any) => ({
         ...l,
         id_linea: l.id_linea || l.id_linea_academica
@@ -162,14 +158,9 @@ export function LineasAcademicas() {
     if (!lineaSeleccionada) return;
     const nuevoEstado = lineaSeleccionada.estado === "Publicado" ? "Archivado" : "Publicado";
     try {
-      const response = await fetch(apiUrl(`/lineas-academicas/${lineaSeleccionada.id_linea}/estado`), {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ estado: nuevoEstado }),
+      await apiClient.patch(`/lineas-academicas/${lineaSeleccionada.id_linea}/estado`, {
+        estado: nuevoEstado
       });
-      if (!response.ok) throw new Error("No se pudo cambiar el estado");
       setLineas((prev) => prev.map((l) => l.id_linea === lineaSeleccionada.id_linea ? { ...l, estado: nuevoEstado } : l));
       setIsEstadoModalOpen(false);
     } catch (error) {
@@ -181,13 +172,7 @@ export function LineasAcademicas() {
     if (!lineaAEliminar) return;
 
     try {
-      const response = await fetch(apiUrl(`/lineas-academicas/${lineaAEliminar.id_linea}`), {
-        method: "DELETE",
-        headers: {},
-      });
-
-      if (!response.ok) throw new Error("No se pudo eliminar la línea académica");
-
+      await apiClient.delete(`/lineas-academicas/${lineaAEliminar.id_linea}`);
       setLineas((prev) => prev.filter((l) => l.id_linea !== lineaAEliminar.id_linea));
       setLineaAEliminar(null);
       setIsDeleteModalOpen(false);
@@ -201,14 +186,7 @@ export function LineasAcademicas() {
   const handleGuardarEdicion = async (lineaActualizada: LineaAcademica) => {
     try {
       const { id_linea, id_linea_academica, fecha_creacion, fecha_actualizacion, rutas_academicas, slug, ...cleanData } = lineaActualizada as any;
-      const response = await fetch(apiUrl(`/lineas-academicas/${lineaActualizada.id_linea}`), {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(cleanData),
-      });
-      if (!response.ok) return false;
+      await apiClient.put(`/lineas-academicas/${lineaActualizada.id_linea}`, cleanData);
       setLineas((prev) => prev.map((l) => l.id_linea === lineaActualizada.id_linea ? lineaActualizada : l));
       return true;
     } catch (error) {
@@ -219,15 +197,8 @@ export function LineasAcademicas() {
   const crearLineaAcademica = async (newLinea: Omit<LineaAcademica, "id_linea">) => {
     try {
       const { id_linea, id_linea_academica, fecha_creacion, fecha_actualizacion, ...cleanData } = newLinea as any;
-      const response = await fetch(apiUrl("/lineas-academicas"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(cleanData),
-      });
-      if (!response.ok) return false;
-      const data = await response.json();
+      const response = await apiClient.post("/lineas-academicas", cleanData);
+      const data = response.data;
       if (data.linea_id || data.id_linea_academica) {
         const newId = data.linea_id || data.id_linea_academica;
         setLineas((prev) => [{ ...newLinea, id_linea: newId, id_linea_academica: newId } as any, ...prev]);

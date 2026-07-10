@@ -5,6 +5,7 @@ import { IoIosInformationCircle } from "react-icons/io";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { apiUrl } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 import { Sparkles, ArrowRight } from "lucide-react";
 
 type FeaturedItem = {
@@ -47,9 +48,9 @@ const FeaturedCarousel = ({ initialData }: { initialData?: FeaturedItem[] }) => 
         let page = 1;
 
         while (true) {
-          const res = await fetch(apiUrl(`/cursos?page=${page}`));
-          if (!res.ok) break;
-          const data = await res.json();
+          const res = await apiClient.get(`/cursos?page=${page}`).catch(() => null);
+          if (!res) break;
+          const data = res.data;
           const items = data.data || [];
           if (items.length === 0) break;
           allCourses = [...allCourses, ...items];

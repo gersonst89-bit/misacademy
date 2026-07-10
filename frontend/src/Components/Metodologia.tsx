@@ -57,8 +57,9 @@ const Metodologia: React.FC = () => {
   return (
     <section id="metodologia" className="relative pt-12 pb-24 lg:pb-32 overflow-hidden bg-transparent px-6">
       {/* Decorative Background Elements */}
-      <div className="absolute top-1/2 left-0 w-96 h-96 bg-sky-500/5 blur-[120px] rounded-full -translate-y-1/2 -translate-x-1/2" />
-      <div className="absolute top-1/4 right-0 w-80 h-80 bg-purple-500/5 blur-[100px] rounded-full translate-x-1/2" />
+      <div className="absolute top-1/2 left-0 w-[500px] h-[500px] bg-sky-500/8 blur-[140px] rounded-full -translate-y-1/2 -translate-x-1/4" />
+      <div className="absolute top-1/4 right-0 w-[450px] h-[450px] bg-purple-500/8 blur-[130px] rounded-full translate-x-1/4" />
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] bg-indigo-500/5 blur-[100px] rounded-full" />
 
       <div className="max-w-7xl mx-auto relative z-10">
         <div className="text-center mb-20">

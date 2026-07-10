@@ -6,7 +6,14 @@ import { CarritoRepository } from './carrito.repository';
 import { CarritoCompra, CarritoItem, Curso, RutaAcademica } from '../entities';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([CarritoCompra, CarritoItem, Curso, RutaAcademica])],
+  imports: [
+    TypeOrmModule.forFeature([
+      CarritoCompra,
+      CarritoItem,
+      Curso,
+      RutaAcademica,
+    ]),
+  ],
   controllers: [CarritoController],
   providers: [CarritoService, CarritoRepository],
 })

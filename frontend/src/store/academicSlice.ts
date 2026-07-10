@@ -1,16 +1,9 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { apiUrl } from '../config/api';
-
-interface LineaData {
-  id_linea: number;
-  nombre: string;
-  descripcion: string;
-  slug?: string;
-  estado: string;
-}
+import { apiClient } from '../services/apiClient';
+import type { LineaAcademica } from '../types/models';
 
 interface AcademicState {
-  lineas: LineaData[];
+  lineas: LineaAcademica[];
   loading: boolean;
   error: string | null;
   lastFetched: number | null;
@@ -33,10 +26,9 @@ export const fetchLineas = createAsyncThunk(
       return state.academic.lineas;
     }
 
-    const res = await fetch(apiUrl("/lineas-academicas"));
-    if (!res.ok) throw new Error("Error al obtener líneas académicas");
-    const data = await res.json();
-    return (data.data || []).filter((l: any) => l.estado === "Publicado");
+    // Usa apiClient (axios) en lugar de fetch nativo para heredar interceptores globales
+    const { data } = await apiClient.get('/lineas-academicas');
+    return (data.data || []).filter((l: LineaAcademica) => l.estado === 'Publicado');
   }
 );
 
@@ -48,6 +40,7 @@ const academicSlice = createSlice({
     builder
       .addCase(fetchLineas.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(fetchLineas.fulfilled, (state, action) => {
         state.loading = false;

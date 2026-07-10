@@ -1,10 +1,46 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 
-interface Answer {
+export interface Answer {
   selectedOptions: string[];
   markedForReview: boolean;
   answeredAt: string;
+}
+
+export interface Option {
+  id_opcion: string;
+  texto_opcion: string;
+  es_correcta?: boolean;
+}
+
+export interface Question {
+  id_pregunta: string;
+  texto_pregunta: string;
+  orden?: number;
+  index?: number;
+  allowMultipleAnswers?: boolean;
+  opciones?: Option[];
+}
+
+export interface EligibilityData {
+  eligible: boolean;
+  intentos_restantes?: number;
+  [key: string]: any;
+}
+
+export interface SecurityEvent {
+  type: string;
+  timestamp: string;
+  details?: any;
+}
+
+export interface EvaluationResults {
+  calificacion: number;
+  porcentaje?: number;
+  puntos_obtenidos: number;
+  puntos_maximos: number;
+  intentos_permitidos?: number;
+  intentos_realizados?: number;
 }
 
 interface EvaluationState {
@@ -13,7 +49,7 @@ interface EvaluationState {
   courseId: string;
   courseTitle: string;
   isEligible: boolean;
-  eligibilityData: any;
+  eligibilityData: EligibilityData | null;
   configuration: {
     totalQuestions: number;
     timeLimitSeconds: number;
@@ -25,7 +61,7 @@ interface EvaluationState {
   sessionToken: string;
   attemptId: string;
   startedAt: string;
-  questions: any[];
+  questions: Question[];
   currentQuestionIndex: number;
   answers: Record<string, Answer>;
   answeredCount: number;
@@ -36,9 +72,9 @@ interface EvaluationState {
   saveStatus: 'idle' | 'saving' | 'saved' | 'error';
   lastSaved: string;
   isOnline: boolean;
-  securityEvents: any[];
+  securityEvents: SecurityEvent[];
   warningLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  results: any;
+  results: EvaluationResults | null;
 }
 
 const initialState: EvaluationState = {
@@ -85,14 +121,14 @@ const evaluationSlice = createSlice({
     setCourseId(state: EvaluationState, action: PayloadAction<string>) {
       state.courseId = action.payload;
     },
-    setEligibility(state: EvaluationState, action: PayloadAction<any>) {
+    setEligibility(state: EvaluationState, action: PayloadAction<EligibilityData>) {
       state.isEligible = action.payload.eligible;
       state.eligibilityData = action.payload;
     },
     setConfiguration(state: EvaluationState, action: PayloadAction<EvaluationState['configuration']>) {
       state.configuration = action.payload;
     },
-    startSession(state: EvaluationState, action: PayloadAction<any>) {
+    startSession(state: EvaluationState, action: PayloadAction<{ intento?: any; preguntas?: Question[]; evaluacion?: { preguntas?: Question[] } }>) {
       state.sessionId = action.payload.intento?.id_intento || '';
       state.attemptId = action.payload.intento?.id_intento || '';
       state.startedAt = action.payload.intento?.fecha_inicio || '';
@@ -107,7 +143,7 @@ const evaluationSlice = createSlice({
       state.timerStatus = 'running';
       state.currentQuestionIndex = 0;
     },
-    resumeSession(state: EvaluationState, action: PayloadAction<any>) {
+    resumeSession(state: EvaluationState, action: PayloadAction<{ session?: any; tiempo_restante?: number }>) {
       state.sessionId = action.payload.session?.id_intento || '';
       state.attemptId = action.payload.session?.id_intento || '';
       state.startedAt = action.payload.session?.fecha_inicio || '';
@@ -187,10 +223,10 @@ const evaluationSlice = createSlice({
     setOnlineStatus(state: EvaluationState, action: PayloadAction<boolean>) {
       state.isOnline = action.payload;
     },
-    addSecurityEvent(state: EvaluationState, action: PayloadAction<any>) {
+    addSecurityEvent(state: EvaluationState, action: PayloadAction<SecurityEvent>) {
       state.securityEvents.push(action.payload);
     },
-    setResults(state: EvaluationState, action: PayloadAction<any>) {
+    setResults(state: EvaluationState, action: PayloadAction<EvaluationResults>) {
       state.results = action.payload;
       state.currentScreen = 'results';
       state.status = 'submitted';

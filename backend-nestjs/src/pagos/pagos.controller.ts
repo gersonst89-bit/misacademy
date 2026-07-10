@@ -11,10 +11,14 @@ import {
   UseGuards,
   UploadedFile,
   UseInterceptors,
+  HttpException,
+  HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { v4 as uuidv4 } from 'uuid';
 import { PagosService } from './pagos.service';
 import {
   CreatePagoDto,
@@ -25,6 +29,33 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { AdminGuard } from '../common/guards/roles.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Usuario } from '../entities/usuario.entity';
+
+// Configuración segura para comprobantes de pago
+const comprobanteMulterOptions = {
+  storage: diskStorage({
+    destination: './uploads/comprobantes',
+    filename: (req: any, file: any, cb: any) => {
+      cb(null, `${uuidv4()}${extname(file.originalname)}`);
+    },
+  }),
+  fileFilter: (req: any, file: any, cb: any) => {
+    // Solo imágenes y PDF son formatos válidos para comprobantes
+    if (file.mimetype.match(/\/(jpg|jpeg|png|webp|pdf)$/)) {
+      cb(null, true);
+    } else {
+      cb(
+        new HttpException(
+          'Formato de archivo no soportado. Solo se permiten imágenes (JPG, PNG, WebP) y PDF.',
+          HttpStatus.BAD_REQUEST,
+        ),
+        false,
+      );
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB máximo para comprobantes
+  },
+};
 
 type CreatePagoFormDto = {
   id_tipo_pago?: string | number;
@@ -38,6 +69,8 @@ type CreatePagoFormDto = {
 
 @Controller('pagos')
 export class PagosController {
+  private readonly logger = new Logger(PagosController.name);
+
   constructor(private readonly svc: PagosService) {}
 
   @Get('mis-pagos')
@@ -48,26 +81,13 @@ export class PagosController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
-  findById(@Param('id') id: number) {
-    return this.svc.findById(id);
+  findById(@Param('id') id: number, @CurrentUser() u: Usuario) {
+    return this.svc.findById(id, u);
   }
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(
-    FileInterceptor('imagen_comprobante', {
-      storage: diskStorage({
-        destination: './uploads/comprobantes',
-        filename: (req, file, cb) => {
-          const randomName = Array(32)
-            .fill(null)
-            .map(() => Math.round(Math.random() * 16).toString(16))
-            .join('');
-          return cb(null, `${randomName}${extname(file.originalname)}`);
-        },
-      }),
-    }),
-  )
+  @UseInterceptors(FileInterceptor('imagen_comprobante', comprobanteMulterOptions))
   async create(
     @CurrentUser() u: Usuario,
     @Body() dto: CreatePagoFormDto,
@@ -90,49 +110,52 @@ export class PagosController {
         typeof dto.observaciones === 'string' ? dto.observaciones : undefined,
     };
 
-    const isCursoItem = (item: any): boolean => 
-      item && (typeof item.id_curso === 'number' || typeof item.id_curso === 'string') &&
+    const isCursoItem = (item: any): boolean =>
+      item &&
+      (typeof item.id_curso === 'number' ||
+        typeof item.id_curso === 'string') &&
       (typeof item.precio === 'number' || typeof item.precio === 'string');
 
     if (typeof dto.cursos === 'string') {
       try {
         const parsed = JSON.parse(dto.cursos);
         if (Array.isArray(parsed)) {
-          payload.cursos = parsed.filter(isCursoItem).map(c => ({
+          payload.cursos = parsed.filter(isCursoItem).map((c) => ({
             id_curso: Number(c.id_curso),
-            precio: Number(c.precio)
+            precio: Number(c.precio),
           }));
         }
-      } catch (e) {
-        console.error('Error parseando cursos:', e);
+      } catch (e: any) {
+        this.logger.error('Error parseando cursos:', e.stack);
       }
     } else if (Array.isArray(dto.cursos)) {
-      payload.cursos = dto.cursos.map(c => ({
+      payload.cursos = dto.cursos.map((c) => ({
         id_curso: Number(c.id_curso),
-        precio: Number(c.precio)
+        precio: Number(c.precio),
       }));
     }
 
-    const isRutaItem = (item: any): boolean => 
-      item && (typeof item.id_ruta === 'number' || typeof item.id_ruta === 'string') &&
+    const isRutaItem = (item: any): boolean =>
+      item &&
+      (typeof item.id_ruta === 'number' || typeof item.id_ruta === 'string') &&
       (typeof item.precio === 'number' || typeof item.precio === 'string');
 
     if (typeof dto.rutas === 'string') {
       try {
         const parsed = JSON.parse(dto.rutas);
         if (Array.isArray(parsed)) {
-          payload.rutas = parsed.filter(isRutaItem).map(r => ({
+          payload.rutas = parsed.filter(isRutaItem).map((r) => ({
             id_ruta: Number(r.id_ruta),
-            precio: Number(r.precio)
+            precio: Number(r.precio),
           }));
         }
-      } catch (e) {
-        console.error('Error parseando rutas:', e);
+      } catch (e: any) {
+        this.logger.error('Error parseando rutas:', e.stack);
       }
     } else if (Array.isArray(dto.rutas)) {
-      payload.rutas = dto.rutas.map(r => ({
+      payload.rutas = dto.rutas.map((r) => ({
         id_ruta: Number(r.id_ruta),
-        precio: Number(r.precio)
+        precio: Number(r.precio),
       }));
     }
 

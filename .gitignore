@@ -1,17 +1,41 @@
 # Node / Frontend
 node_modules/
-dist/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Laravel / Backend
-vendor/
-.env
-.env.*
-/storage/*.key
-/public/storage
+# Builds — no subir artefactos compilados
+dist/
+*.zip
 
-# Sistema
+# Backend — NestJS
+backend-nestjs/.env
+backend-nestjs/.env.*
+
+# Frontend
+frontend/.env
+frontend/.env.*
+
+# Archivos de log generados en runtime
+*.log
+backend-nestjs/smtp-result.txt
+backend-nestjs/email-error.log
+
+# Chatbot — modelo entrenado (se regenera automáticamente)
+backend-nestjs/model.nlp
+
+# Git interno (submodulos residuales)
+frontend/FETCH_HEAD
+
+# Sistema operativo
 .DS_Store
 Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

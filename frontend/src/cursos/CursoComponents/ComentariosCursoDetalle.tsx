@@ -4,6 +4,7 @@ import FormularioComentario from "./FormularioComentario";
 import DeleteModal from "./DeleteModalComentario";
 import type { Resena } from "../../types/models";
 import { API_URL, BASE_URL } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 
 interface ComentariosProps {
   cursoId: number;
@@ -42,13 +43,8 @@ const Comentarios: React.FC<ComentariosProps> = ({
 
     const fetchPerfil = async () => {
       try {
-        const response = await fetch(`${API_URL}/auth/profile`, {
-          headers: { "Accept": "application/json" },
-        });
-
-        if (!response.ok) return;
-
-        const data = await response.json();
+        const response = await apiClient.get("/auth/profile");
+        const data = response.data;
         setUsuarioActual({
           id_usuario: data.id_usuario,
           nombre: data.nombre || "Anónimo",
@@ -72,16 +68,10 @@ const Comentarios: React.FC<ComentariosProps> = ({
       }
 
       try {
-        const resHistorial = await fetch(`${API_URL}/compras/historial`, {
-          headers: {
-            Accept: "application/json",
-          },
-        });
-
-        const dataHistorial = await resHistorial.json();
+        const resHistorial = await apiClient.get("/compras/historial");
+        const dataHistorial = resHistorial.data;
 
         if (
-          !resHistorial.ok ||
           dataHistorial.status !== "success" ||
           !Array.isArray(dataHistorial.compras)
         ) {
@@ -100,22 +90,8 @@ const Comentarios: React.FC<ComentariosProps> = ({
           return;
         }
 
-        const resProgreso = await fetch(
-          `${API_URL}/cursos/${cursoId}/progreso`,
-          {
-            headers: {
-              Accept: "application/json",
-            },
-          }
-        );
-
-        const dataProgreso = await resProgreso.json();
-
-        if (!resProgreso.ok) {
-          setCanComment(false);
-          setMustComplete(false);
-          return;
-        }
+        const resProgreso = await apiClient.get(`/cursos/${cursoId}/progreso`);
+        const dataProgreso = resProgreso.data;
 
         const progresoTotal =
           dataProgreso.curso?.progreso_total ??
@@ -162,11 +138,7 @@ const Comentarios: React.FC<ComentariosProps> = ({
   const confirmarEliminarResena = async () => {
     if (!resenaAEliminar) return;
     try {
-      const response = await fetch(
-        `${API_URL}/cursos/resenas/${resenaAEliminar.id_resena}`,
-        { method: "DELETE" }
-      );
-      if (!response.ok) throw new Error("Error al eliminar reseña");
+      await apiClient.delete(`/cursos/resenas/${resenaAEliminar.id_resena}`);
       setReseñas(
         reseñas.filter((r) => r.id_resena !== resenaAEliminar.id_resena)
       );

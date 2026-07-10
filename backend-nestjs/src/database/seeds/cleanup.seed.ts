@@ -11,38 +11,38 @@ import { Reclamacion } from '../../entities/reclamacion.entity';
 import { Notificacion } from '../../entities/notificacion.entity';
 
 export async function cleanupTestData(dataSource: DataSource): Promise<void> {
-    console.log('🧹 Iniciando limpieza PROFUNDA de datos de prueba...');
+  console.log('🧹 Iniciando limpieza PROFUNDA de datos de prueba...');
 
-    const queryRunner = dataSource.createQueryRunner();
-    await queryRunner.connect();
-    
-    // Desactivar checks de llaves foráneas para poder truncar
-    await queryRunner.query('SET FOREIGN_KEY_CHECKS = 0');
+  const queryRunner = dataSource.createQueryRunner();
+  await queryRunner.connect();
 
-    try {
-        const entities = [
-            { name: 'DetallePago', table: 'detalle_pagos' },
-            { name: 'Pago', table: 'pagos' },
-            { name: 'CarritoItem', table: 'carrito_items' },
-            { name: 'CarritoCompra', table: 'carrito_compras' },
-            { name: 'Inscripcion', table: 'inscripciones' },
-            { name: 'InscripcionRuta', table: 'inscripciones_rutas' },
-            { name: 'Resena', table: 'resenas' },
-            { name: 'Contacto', table: 'contacto' },
-            { name: 'Reclamacion', table: 'reclamaciones' },
-            { name: 'Notificacion', table: 'notificaciones' },
-        ];
+  // Desactivar checks de llaves foráneas para poder truncar
+  await queryRunner.query('SET FOREIGN_KEY_CHECKS = 0');
 
-        for (const entity of entities) {
-            console.log(`  🗑️ Limpiando tabla: ${entity.table}`);
-            await queryRunner.query(`TRUNCATE TABLE ${entity.table}`);
-        }
+  try {
+    const entities = [
+      { name: 'DetallePago', table: 'detalle_pagos' },
+      { name: 'Pago', table: 'pagos' },
+      { name: 'CarritoItem', table: 'carrito_items' },
+      { name: 'CarritoCompra', table: 'carrito_compras' },
+      { name: 'Inscripcion', table: 'inscripciones' },
+      { name: 'InscripcionRuta', table: 'inscripciones_rutas' },
+      { name: 'Resena', table: 'resenas' },
+      { name: 'Contacto', table: 'contacto' },
+      { name: 'Reclamacion', table: 'reclamaciones' },
+      { name: 'Notificacion', table: 'notificaciones' },
+    ];
 
-        console.log('✨ Limpieza completada con éxito.');
-    } catch (error) {
-        console.error('❌ Error durante la limpieza:', error);
-    } finally {
-        await queryRunner.query('SET FOREIGN_KEY_CHECKS = 1');
-        await queryRunner.release();
+    for (const entity of entities) {
+      console.log(`  🗑️ Limpiando tabla: ${entity.table}`);
+      await queryRunner.query(`TRUNCATE TABLE ${entity.table}`);
     }
+
+    console.log('✨ Limpieza completada con éxito.');
+  } catch (error) {
+    console.error('❌ Error durante la limpieza:', error);
+  } finally {
+    await queryRunner.query('SET FOREIGN_KEY_CHECKS = 1');
+    await queryRunner.release();
+  }
 }

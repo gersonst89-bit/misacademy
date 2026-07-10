@@ -6,6 +6,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor';
+import { CsrfMiddleware } from './common/middleware/csrf.middleware';
 import { join } from 'path';
 
 // All entities
@@ -30,19 +31,20 @@ import { ContactoModule } from './contacto/contacto.module';
 import { AdminModule } from './admin/admin.module';
 import { ChatbotModule } from './chatbot/chatbot.module';
 import { MaterialesModule } from './materiales/materiales.module';
-import { StorageController } from './storage.controller';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
     // Rate Limiting (Protección contra fuerza bruta)
-    ThrottlerModule.forRoot([{
-      ttl: 60000, // 1 minuto
-      limit: 500, // Máximo 500 peticiones por minuto (Suficiente para gestión administrativa)
-    }]),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 1 minuto
+        limit: 100, // Máximo 100 peticiones por minuto (endpoints críticos tienen throttle propio)
+      },
+    ]),
 
     // Environment variables - load FIRST
     ConfigModule.forRoot({ isGlobal: true }),
-
 
     // Mail configuration
     MailerModule.forRootAsync({
@@ -51,8 +53,8 @@ import { StorageController } from './storage.controller';
       useFactory: (config: ConfigService) => ({
         transport: {
           host: config.get<string>('MAIL_HOST', 'misacademyonline.com'),
-          port: config.get<number>('MAIL_PORT', 465),
-          secure: config.get<number>('MAIL_PORT') === 465, // True para 465, False para otros como 587
+          port: Number(config.get('MAIL_PORT', 465)),
+          secure: Number(config.get('MAIL_PORT', 465)) === 465, // True para 465, False para otros como 587
           auth: {
             user: config.get<string>('MAIL_USERNAME', ''),
             pass: config.get<string>('MAIL_PASSWORD', ''),
@@ -77,17 +79,17 @@ import { StorageController } from './storage.controller';
         port: config.get<number>('DB_PORT', 3306),
         username: config.get<string>('DB_USERNAME', 'root'),
         password: config.get<string>('DB_PASSWORD', ''),
-        database: config.get<string>('DB_DATABASE', 'mis_academy'),
+        database: config.get<string>('DB_DATABASE', 'siteadmin_mis_academy'),
         entities: Object.values(entities),
         synchronize: config.get<string>('APP_ENV') === 'development', // Solo sincronizar en desarrollo
         logging: config.get<string>('APP_ENV') === 'development',
       }),
     }),
 
-    // Feature Modules (16)
+    // Feature Modules (17)
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', '..', 'frontend', 'dist'),
-      exclude: ['/api/(.*)'],
+      exclude: ['/api', '/api/*path'],
     }),
     TypeOrmModule.forFeature([entities.AuditLog]),
     AuthModule,
@@ -108,8 +110,9 @@ import { StorageController } from './storage.controller';
     AdminModule,
     ChatbotModule,
     MaterialesModule,
+    StorageModule,
   ],
-  controllers: [StorageController],
+  controllers: [],
   providers: [
     {
       provide: APP_GUARD,
@@ -123,8 +126,8 @@ import { StorageController } from './storage.controller';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    //consumer
-      //.apply(CsrfMiddleware)
-      //.forRoutes('*');
+    consumer
+      .apply(CsrfMiddleware)
+      .forRoutes('*');
   }
 }

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import Header from "./Header";
 import Footer from "./Footer";
 import Chatbot from "./Chatbot";
+import WhatsAppButton from "./WhatsAppButton";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "react-router-dom";
 
@@ -39,6 +40,7 @@ const DefaultLayout: React.FC<DefaultLayoutProps> = ({ children }) => {
 
       <Footer />
       <Chatbot />
+      <WhatsAppButton />
     </div>
   );
 };

@@ -1,8 +1,14 @@
-import { IsNotEmpty, IsOptional, IsString, IsNumber, IsBoolean } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsBoolean,
+} from 'class-validator';
 
 export class CreateLeccionDto {
-  @IsNotEmpty() @IsNumber() id_modulo: number;
-  @IsNotEmpty() @IsString() titulo: string;
+  @IsNotEmpty() @IsNumber() id_modulo!: number;
+  @IsNotEmpty() @IsString() titulo!: string;
   @IsOptional() @IsString() descripcion?: string;
   @IsOptional() @IsString() contenido?: string;
   @IsOptional() @IsString() tipo?: string;
@@ -22,11 +28,11 @@ export class CompletarLeccionDto {
 }
 
 export class ComentarioDto {
-  @IsNotEmpty() @IsString() contenido: string;
+  @IsNotEmpty() @IsString() contenido!: string;
 }
 
 export class HeartbeatDto {
-  @IsNotEmpty() @IsNumber() id_leccion: number;
+  @IsNotEmpty() @IsNumber() id_leccion!: number;
   @IsOptional() @IsNumber() ultimo_segundo_visto?: number;
   @IsOptional() segmentos_vistos?: any;
   @IsOptional() @IsNumber() duracion_video?: number;

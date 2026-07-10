@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import InputComponent from "../Components/InputComponent";
 import type { Usuario } from "../../types/models";
-import { API_URL } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 
 
 export default function EditUsuario() {
@@ -28,17 +28,8 @@ export default function EditUsuario() {
 
     const fetchUsuario = async () => {
       try {
-        const res = await fetch(
-          `${API_URL}/admin/usuarios/${id}`,
-          {
-            headers: {
-              Accept: "application/json",
-            },
-          }
-        );
-
-        if (!res.ok) throw new Error("Usuario no encontrado");
-        const data = await res.json();
+        const res = await apiClient.get(`/admin/usuarios/${id}`);
+        const data = res.data;
         setUsuario({
           id_usuario: data.id_usuario,
           nombre: data.nombre,
@@ -61,24 +52,10 @@ export default function EditUsuario() {
 
   const handleSave = async () => {
     try {
-      const url = id
-        ? `${API_URL}/admin/usuarios/${id}`
-        : `${API_URL}/admin/usuarios`;
-
-      const method = id ? "PUT" : "POST";
-
-      const res = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(usuario),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Error al guardar usuario");
+      if (id) {
+        await apiClient.put(`/admin/usuarios/${id}`, usuario);
+      } else {
+        await apiClient.post("/admin/usuarios", usuario);
       }
 
       alert(`Usuario ${id ? "actualizado" : "creado"} con éxito`);

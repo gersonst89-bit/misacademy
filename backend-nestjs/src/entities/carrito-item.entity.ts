@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { CarritoCompra } from './carrito-compra.entity';
 import { Curso } from './curso.entity';
 import { RutaAcademica } from './ruta-academica.entity';
@@ -35,6 +41,3 @@ export class CarritoItem {
   @JoinColumn({ name: 'id_ruta' })
   ruta!: RutaAcademica;
 }
-
-
-

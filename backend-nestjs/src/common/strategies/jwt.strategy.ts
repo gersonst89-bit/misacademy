@@ -23,9 +23,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         },
       ]),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET || 'MIS_ACADEMY_JWT_SECRET_KEY_2025_VERY_SECURE',
+      secretOrKey: (() => {
+        const secret = process.env.JWT_SECRET;
+        if (!secret) throw new Error('JWT_SECRET env variable is required but not set');
+        return secret;
+      })(),
     });
-  } 
+  }
 
   async validate(payload: any) {
     const user = await this.usuarioRepo.findOne({

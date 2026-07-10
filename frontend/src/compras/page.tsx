@@ -5,6 +5,7 @@ import { FaPlay, FaGraduationCap, FaArrowRight } from "react-icons/fa";
 import { Sparkles, BookOpen, Clock } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { API_URL } from "../config/api";
+import { apiClient } from "../services/apiClient";
 import { motion } from "framer-motion";
 
 const LoadingSpinner = () => (
@@ -80,22 +81,14 @@ export default function MisCompras() {
   useEffect(() => {
     const fetchCompras = async () => {
       try {
-        const res = await fetch(`${API_URL}/compras/historial`, {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
-        });
-
-        const data = await res.json();
-        if (res.ok && data.status === "success" && Array.isArray(data.compras)) {
+        const res = await apiClient.get("/compras/historial");
+        const data = res.data;
+        if (data.status === "success" && Array.isArray(data.compras)) {
           const comprasConProgreso = await Promise.all(
             data.compras.map(async (compra: Compra) => {
               try {
-                const progresoRes = await fetch(`${API_URL}/cursos/${compra.curso.id_curso}/progreso`, {
-                  headers: { Accept: "application/json" }
-                });
-                const progresoData = await progresoRes.json();
+                const progresoRes = await apiClient.get(`/cursos/${compra.curso.id_curso}/progreso`);
+                const progresoData = progresoRes.data;
                 return {
                   ...compra,
                   progreso: progresoData.progreso || 0
@@ -120,10 +113,8 @@ export default function MisCompras() {
 
   const handleCompraClick = async (cursoId: number) => {
     try {
-      const res = await fetch(`${API_URL}/cursos/${cursoId}/contenido`, {
-        headers: { Accept: "application/json" }
-      });
-      const data = await res.json();
+      const res = await apiClient.get(`/cursos/${cursoId}/contenido`);
+      const data = res.data;
       
       let targetLeccionId = null;
       if (Array.isArray(data) && data.length > 0) {
@@ -236,6 +227,7 @@ export default function MisCompras() {
                     <img
                       src={data.imagen || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800"}
                       alt={isCurso ? (data as any).nombre : (data as any).nombre}
+                      loading="lazy"
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent" />

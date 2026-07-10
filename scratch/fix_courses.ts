@@ -1,8 +1,12 @@
 import { DataSource } from 'typeorm';
-import { Curso } from './backend-nestjs/src/entities/curso.entity';
+import { Curso } from './src/entities/curso.entity';
 import * as dotenv from 'dotenv';
 
 dotenv.config({ path: './backend-nestjs/.env' });
+
+if (!process.env.DB_PASSWORD) {
+  throw new Error('La variable de entorno DB_PASSWORD es obligatoria. Por favor configure el archivo .env.');
+}
 
 const curriculumData = [
   {
@@ -111,7 +115,7 @@ async function run() {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '3306'),
     username: process.env.DB_USERNAME || 'root',
-    password: process.env.DB_PASSWORD || '',
+    password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE || 'mis_academy',
     entities: [Curso],
     synchronize: false,

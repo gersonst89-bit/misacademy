@@ -3,9 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { User, Mail, MessageSquare, ArrowRight, FileText } from "lucide-react";
-import { API_URL } from "../config/api";
-
-const API_CONTACTO = `${API_URL}/contacto`;
+import { apiClient } from "../services/apiClient";
 
 interface ContactoResponse {
   status?: string;
@@ -13,6 +11,29 @@ interface ContactoResponse {
   contacto_id?: number;
   errors?: Record<string, string[]>;
 }
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.15,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 30 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 100,
+      damping: 15,
+    },
+  },
+};
 
 export default function RegisterForm() {
   const [formData, setFormData] = useState({
@@ -52,34 +73,30 @@ export default function RegisterForm() {
     setLoading(true);
 
     try {
-      const res = await fetch(API_CONTACTO, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+      const res = await apiClient.post("/contacto", formData);
+      const data: ContactoResponse = res.data;
+
+      setSuccess(data.message || "Mensaje enviado exitosamente.");
+      setFormData({
+        nombre: "",
+        apellido: "",
+        email: "",
+        asunto: "",
+        mensaje: "",
       });
-
-      const data: ContactoResponse = await res.json();
-
-      if (res.ok) {
-        setSuccess(data.message || "Mensaje enviado exitosamente.");
-        setFormData({
-          nombre: "",
-          apellido: "",
-          email: "",
-          asunto: "",
-          mensaje: "",
-        });
-      } else if (data.errors) {
-        const firstError = Object.values(data.errors)[0][0];
-        setError(firstError);
-      } else {
-        setError(data.message || "Ocurrió un error al enviar el mensaje.");
-      }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("Error de conexión con el servidor.");
+      if (err.response && err.response.data) {
+        const data = err.response.data as ContactoResponse;
+        if (data.errors) {
+          const firstError = Object.values(data.errors)[0]?.[0];
+          setError(firstError || "Ocurrió un error al enviar el mensaje.");
+        } else {
+          setError(data.message || "Ocurrió un error al enviar el mensaje.");
+        }
+      } else {
+        setError("Error de conexión con el servidor.");
+      }
     } finally {
       setLoading(false);
     }
@@ -97,11 +114,15 @@ export default function RegisterForm() {
 
   return (
     <section className="flex items-center justify-center px-4 text-white overflow-hidden py-10 lg:py-12">
-      <div className="flex flex-col items-center justify-center w-full max-w-3xl text-center">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, margin: "-80px" }}
+        className="flex flex-col items-center justify-center w-full max-w-3xl text-center"
+      >
         <motion.h2
-          initial={{ opacity: 0, y: -30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
+          variants={itemVariants}
           className="text-3xl md:text-5xl font-extrabold mb-4"
         >
           ¿Listo para transformar <br />
@@ -109,9 +130,7 @@ export default function RegisterForm() {
         </motion.h2>
 
         <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 0.3 }}
+          variants={itemVariants}
           className="text-base md:text-lg text-gray-300 mb-10 max-w-2xl"
         >
           Únete a <span className="font-semibold">MIS ACADEMY</span> y comienza
@@ -120,9 +139,7 @@ export default function RegisterForm() {
 
         <motion.form
           onSubmit={handleSubmit}
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.5 }}
+          variants={itemVariants}
           className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-xl w-full max-w-lg"
         >
           <h3 className="text-xl font-bold text-center mb-6">
@@ -216,7 +233,7 @@ export default function RegisterForm() {
             Al registrarte, aceptas recibir información sobre nuestros cursos.
           </p>
         </motion.form>
-      </div>
+      </motion.div>
     </section>
   );
 }

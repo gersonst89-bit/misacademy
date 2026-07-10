@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
-import axios from "axios";
+import { apiClient } from "../../services/apiClient";
 import * as Slider from "@radix-ui/react-slider";
-import { Play, Pause, Volume2, VolumeX, Maximize, Settings } from "lucide-react";
-import { API_URL } from "../../config/api";
+import { Play, Pause, Volume2, VolumeX, Maximize, Settings, VideoOff } from "lucide-react";
 
 interface Props {
   leccion: {
@@ -67,7 +66,17 @@ const ReproductorVideo: React.FC<Props> = (props) => {
 
   // Validar videoId antes de renderizar el reproductor
   if (!videoId || typeof videoId !== 'string' || videoId.length !== 11) {
-    return <div className="text-center text-red-500">Video no disponible o ID inválido.</div>;
+    return (
+      <div className="w-full max-w-3xl aspect-video rounded-lg bg-gradient-to-br from-[#101a2b] to-[#0d131f] border border-gray-800/80 flex flex-col items-center justify-center p-6 shadow-xl mx-auto mb-6">
+        <div className="p-4 rounded-full bg-slate-800/40 border border-slate-700/50 text-slate-400 mb-4 animate-pulse">
+          <VideoOff size={40} className="text-sky-400" />
+        </div>
+        <h3 className="text-lg font-semibold text-white mb-1">Clase teórica o lectura</h3>
+        <p className="text-sm text-slate-400 text-center max-w-md">
+          Esta lección no requiere reproducción de video. Consulta la descripción y los materiales adjuntos abajo para continuar.
+        </p>
+      </div>
+    );
   }
 
   // Heartbeat localStorage helpers
@@ -82,8 +91,8 @@ const ReproductorVideo: React.FC<Props> = (props) => {
     const pendientes = JSON.parse(localStorage.getItem("heartbeats_pendientes") || "[]");
     if (!pendientes.length) return;
     const promises = pendientes.map((hb: any) =>
-      axios.post(
-        `${API_URL}/lecciones/${leccion.id_leccion}/heartbeat`,
+      apiClient.post(
+        `/lecciones/${leccion.id_leccion}/heartbeat`,
         {
           id_progreso: hb.id_progreso,
           current_time: hb.current_time,
@@ -240,7 +249,7 @@ const ReproductorVideo: React.FC<Props> = (props) => {
         previous_time: Math.max(0, previousTimeRef.current),
       };
       previousTimeRef.current = currentTime;
-      axios.post(`${API_URL}/lecciones/${leccion.id_leccion}/heartbeat`, payload)
+      apiClient.post(`/lecciones/${leccion.id_leccion}/heartbeat`, payload)
       .then((res) => {
         if (typeof onLeccionCompletada === "function") {
           onLeccionCompletada(res.data);
@@ -370,7 +379,17 @@ const ReproductorVideo: React.FC<Props> = (props) => {
   }, [leccion.id_leccion]);
 
   if (!videoId) {
-    return <div className="text-center text-red-500">Video no disponible para esta lección.</div>;
+    return (
+      <div className="w-full max-w-3xl aspect-video rounded-lg bg-gradient-to-br from-[#101a2b] to-[#0d131f] border border-gray-800/80 flex flex-col items-center justify-center p-6 shadow-xl mx-auto mb-6">
+        <div className="p-4 rounded-full bg-slate-800/40 border border-slate-700/50 text-slate-400 mb-4 animate-pulse">
+          <VideoOff size={40} className="text-sky-400" />
+        </div>
+        <h3 className="text-lg font-semibold text-white mb-1">Clase teórica o lectura</h3>
+        <p className="text-sm text-slate-400 text-center max-w-md">
+          Esta lección no requiere reproducción de video. Consulta la descripción y los materiales adjuntos abajo para continuar.
+        </p>
+      </div>
+    );
   }
 
   const togglePlayPause = () => {

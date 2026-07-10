@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useAppSelector, useAppDispatch } from './redux';
 import { decrementTime } from '../store/evaluationSlice';
 
 export const useTimer = () => {
-  const dispatch = useDispatch();
-  const timeRemaining = useSelector((state: any) => state.evaluation.timeRemainingSeconds);
-  const timerStatus = useSelector((state: any) => state.evaluation.timerStatus);
+  const dispatch = useAppDispatch();
+  const timeRemaining = useAppSelector((state) => state.evaluation.timeRemainingSeconds);
+  const timerStatus = useAppSelector((state) => state.evaluation.timerStatus);
 
   useEffect(() => {
     if (timerStatus !== 'running') return;

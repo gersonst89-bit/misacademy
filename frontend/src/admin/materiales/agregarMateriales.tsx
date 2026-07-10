@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import InputComponent from "../Components/InputComponent";
 import type { Modulo, Curso, Material } from "../../types/models";
 import SearchableSelect from "../Components/SearchableSelect";
-import { apiUrl } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 import AdminModal from "../Components/AdminModal";
 import { IoCloudUploadOutline } from "react-icons/io5";
 
@@ -43,11 +43,10 @@ export const AddMaterialModal: React.FC<AddMaterialModalProps> = ({
         // Cursos - usar ruta admin
         let pageC = 1, lastC = 1, listC: Curso[] = [];
         do {
-          const r = await fetch(apiUrl(`/admin/cursos?page=${pageC}`), {
-            headers: { Accept: "application/json" },
-            credentials: "include",
+          const res = await apiClient.get(`/admin/cursos`, {
+            params: { page: pageC }
           });
-          const d = await r.json();
+          const d = res.data;
           listC = [...listC, ...(d.data || d || [])];
           lastC = d.last_page || d.meta?.last_page || 1;
           pageC++;
@@ -57,11 +56,10 @@ export const AddMaterialModal: React.FC<AddMaterialModalProps> = ({
         // Modulos
         let pageM = 1, lastM = 1, listM: Modulo[] = [];
         do {
-          const r = await fetch(apiUrl(`/admin/modulos?page=${pageM}`), {
-            headers: { Accept: "application/json" },
-            credentials: "include",
+          const res = await apiClient.get(`/admin/modulos`, {
+            params: { page: pageM }
           });
-          const d = await r.json();
+          const d = res.data;
           listM = [...listM, ...(d.data || d || [])];
           lastM = d.last_page || d.meta?.last_page || 1;
           pageM++;
@@ -94,23 +92,12 @@ export const AddMaterialModal: React.FC<AddMaterialModalProps> = ({
 
     setSaving(true);
     try {
-      const res = await fetch(apiUrl("/admin/materiales"), {
-        method: "POST",
-        credentials: "include",
-        body: formData,
-        // No enviamos Content-Type manual para que el navegador ponga el boundary de FormData
-        // pero sí necesitamos las credenciales para la sesión/cookie
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || "Error al crear material");
-      }
-      const data = await res.json();
-      onSave(data);
+      const res = await apiClient.post("/admin/materiales", formData);
+      onSave(res.data);
       onClose();
     } catch (err: any) {
-      setError(err.message || "No se pudo subir el material.");
+      const errorMsg = err.response?.data?.message || err.message || "No se pudo subir el material.";
+      setError(errorMsg);
     } finally {
       setSaving(false);
     }

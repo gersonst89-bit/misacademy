@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { NotificacionModal } from "./notificacionModal";
-import { API_URL } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 import { IoNotificationsOutline, IoPersonCircleOutline, IoTimeOutline, IoChevronForwardOutline } from "react-icons/io5";
 
 interface Auditoria {
@@ -26,13 +26,8 @@ export const Notificaciones = () => {
   useEffect(() => {
     const obtenerNotificaciones = async () => {
       try {
-        const respuesta = await fetch(`${API_URL}/auditoria`, {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        if (!respuesta.ok) return setCargando(false);
-        const data = await respuesta.json();
+        const respuesta = await apiClient.get(`/auditoria`);
+        const data = respuesta.data;
         setNotificaciones(data?.data || []);
       } catch {
         setCargando(false);

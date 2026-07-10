@@ -19,7 +19,7 @@ import { EditMaterialModal } from "./editMateriales";
 import { AddMaterialModal } from "./agregarMateriales";
 import { ArchiveModal } from "../Components/ArchiveModal";
 import DeleteModal from "../Components/DeleteModal";
-import { apiUrl } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 import { FiltroModulo } from "../Components/FiltroModuloMateriales";
 
 function FiltroEstado({
@@ -130,16 +130,9 @@ export function Materiales() {
     if (!materialSeleccionadoEstado) return;
     const nuevoEstado = materialSeleccionadoEstado.estado === "Publicado" ? "Archivado" : "Publicado";
     try {
-      const response = await fetch(
-        apiUrl(`/admin/materiales/${materialSeleccionadoEstado.id_material}/estado`),
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ estado: nuevoEstado }),
-        }
-      );
-      if (!response.ok) throw new Error("Error");
+      await apiClient.patch(`/admin/materiales/${materialSeleccionadoEstado.id_material}/estado`, {
+        estado: nuevoEstado
+      });
       setMateriales((prev) => prev.map((m) => m.id_material === materialSeleccionadoEstado.id_material ? { ...m, estado: nuevoEstado } : m));
       setIsEstadoModalOpen(false);
     } catch (e) { console.error(e); }
@@ -147,13 +140,7 @@ export function Materiales() {
 
   const handleGuardarEdicion = async (materialActualizado: Material): Promise<boolean> => {
     try {
-      const response = await fetch(apiUrl(`/admin/materiales/${materialActualizado.id_material}`), {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(materialActualizado),
-      });
-      if (!response.ok) return false;
+      await apiClient.put(`/admin/materiales/${materialActualizado.id_material}`, materialActualizado);
       setMateriales((prev) => prev.map((m) => m.id_material === materialActualizado.id_material ? materialActualizado : m));
       return true;
     } catch (e) { return false; }
@@ -169,11 +156,7 @@ export function Materiales() {
   const handleEliminar = async () => {
     if (!materialToDelete) return;
     try {
-      const response = await fetch(apiUrl(`/admin/materiales/${materialToDelete.id_material}`), { 
-        method: "DELETE",
-        credentials: "include"
-      });
-      if (!response.ok) throw new Error();
+      await apiClient.delete(`/admin/materiales/${materialToDelete.id_material}`);
       setMateriales((prev) => prev.filter((m) => m.id_material !== materialToDelete.id_material));
       setIsDeleteOpen(false);
     } catch (e) { console.error(e); }
@@ -187,11 +170,14 @@ export function Materiales() {
         let todas: Material[] = [];
         let pagina = 1, ultima = 1;
         do {
-          const res = await fetch(apiUrl(`/admin/materiales?page=${pagina}&estado=${filtroEstado}&id_modulo=${filtroModulo}`), {
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
+          const res = await apiClient.get(`/admin/materiales`, {
+            params: {
+              page: pagina,
+              estado: filtroEstado || undefined,
+              id_modulo: filtroModulo || undefined
+            }
           });
-          const d = await res.json();
+          const d = res.data;
           todas = [...todas, ...(d.data || [])];
           ultima = d.last_page || 1;
           pagina++;
@@ -210,10 +196,10 @@ export function Materiales() {
         let all: Modulo[] = [];
         let p = 1, u = 1;
         do {
-          const res = await fetch(apiUrl(`/admin/modulos?page=${p}`), {
-            credentials: "include"
+          const res = await apiClient.get(`/admin/modulos`, {
+            params: { page: p }
           });
-          const d = await res.json();
+          const d = res.data;
           all = [...all, ...(d.data || [])];
           u = d.last_page || 1;
           p++;

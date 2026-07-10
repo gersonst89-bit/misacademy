@@ -7,7 +7,7 @@ import ModernD3Chart from "./Components/ModernD3Chart";
 import InscripcionesRecientes from "./Components/InscripcionesRecientes";
 import AccionesRapidas from "./Components/AccionesRapidas";
 import EstadoSistema from "./Components/EstadoSistema";
-import { apiUrl } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 
 interface CursoMasVendido {
   id_curso: number;
@@ -59,32 +59,18 @@ export function Dashboard() {
     const fetchDashboard = async () => {
       setLoading(true);
       try {
-        // Parallel fetching for performance
-        // Fetch consolidated dashboard data
-        const dashboardRes = await fetch(apiUrl("/estadisticas/dashboard"), {
-        });
-        
-        const [lineasRes, retencionRes, ventasRes] = await Promise.all([
-          fetch(apiUrl("/estadisticas/estudiantes/por-linea"), {}),
-          fetch(apiUrl("/estadisticas/usuarios/retencion-mensual"), {}),
-          fetch(apiUrl("/estadisticas/cursos/mas-vendidos-mes"), {})
+        // Parallel fetching with apiClient
+        const [dashboardRes, lineasRes, retencionRes, ventasRes] = await Promise.all([
+          apiClient.get("/estadisticas/dashboard"),
+          apiClient.get("/estadisticas/estudiantes/por-linea"),
+          apiClient.get("/estadisticas/usuarios/retencion-mensual"),
+          apiClient.get("/estadisticas/cursos/mas-vendidos-mes")
         ]);
-        
-        const safeJson = async (res: Response) => {
-          try {
-            if (!res.ok) return {};
-            return await res.json();
-          } catch {
-            return {};
-          }
-        };
 
-        const [dashboardData, lineasData, retencionData, ventasData] = await Promise.all([
-          safeJson(dashboardRes),
-          safeJson(lineasRes),
-          safeJson(retencionRes),
-          safeJson(ventasRes)
-        ]);
+        const dashboardData = dashboardRes.data || {};
+        const lineasData = lineasRes.data || {};
+        const retencionData = retencionRes.data || {};
+        const ventasData = ventasRes.data || {};
 
         // Process KPIs
         setUsuariosTotales(dashboardData.totalUsuarios || 0);

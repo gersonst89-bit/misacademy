@@ -7,7 +7,7 @@ import SelectComponent from "../Components/SelectComponent";
 import AdminModal from "../Components/AdminModal";
 import SearchableSelect from "../Components/SearchableSelect";
 import type { Curso, RutaAcademica } from "../../types/models";
-import { API_URL } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 import { IoBookOutline, IoTimeOutline, IoWalletOutline, IoLayersOutline, IoSaveOutline, IoSparklesOutline } from "react-icons/io5";
 
 interface EditCursoModalProps {
@@ -66,8 +66,8 @@ export const EditCursoModal: React.FC<EditCursoModalProps> = ({
       setIdDocenteSeleccionado(docId as number | "");
       
       if (curso.rutas && curso.rutas.length > 0) {
-        const firstRuta = curso.rutas[0];
-        setIdRutaSeleccionada(typeof firstRuta === 'object' ? (firstRuta as any).id_ruta : (firstRuta as number));
+         const firstRuta = curso.rutas[0];
+         setIdRutaSeleccionada(typeof firstRuta === 'object' ? (firstRuta as any).id_ruta : (firstRuta as number));
       }
     }
   }, [isOpen, curso]);
@@ -75,9 +75,8 @@ export const EditCursoModal: React.FC<EditCursoModalProps> = ({
   useEffect(() => {
     const fetchRutas = async () => {
       try {
-        const res = await fetch(`${API_URL}/rutas-academicas`);
-        const data = await res.json();
-        setRutas(data.data || []);
+        const res = await apiClient.get("/rutas-academicas");
+        setRutas(res.data.data || []);
       } catch (error) {
         console.error("Error cargando rutas académicas:", error);
       }
@@ -88,14 +87,8 @@ export const EditCursoModal: React.FC<EditCursoModalProps> = ({
   useEffect(() => {
     const fetchDocentes = async () => {
       try {
-
-        const res = await fetch(`${API_URL}/admin/usuarios`, {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        const data = await res.json();
-        const docentesFiltrados = (data.data || []).filter((u: any) => (u.id_rol === 2 || u.id_rol === 1) && u.estado === "Activo");
+        const res = await apiClient.get("/admin/usuarios");
+        const docentesFiltrados = (res.data.data || []).filter((u: any) => (u.id_rol === 2 || u.id_rol === 1) && u.estado === "Activo");
         setDocentes(docentesFiltrados.map((d: any) => ({ id_usuario: d.id_usuario, nombre: d.nombre, apellido: d.apellido })));
       } catch (error) {
         console.error("Error al obtener docentes:", error);

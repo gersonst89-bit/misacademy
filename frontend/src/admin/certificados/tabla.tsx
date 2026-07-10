@@ -15,9 +15,7 @@ import { AddCertificadoModal } from "./agregarCertificados";
 import { EditCertificadoModal } from "./editCertificados";
 import DeleteModal from "../Components/DeleteModal";
 import FiltroCurso from "../Components/FiltroCursoCertificado";
-import { API_URL } from "../../config/api";
-
-const API_ADMIN = `${API_URL}/admin`;
+import { apiClient } from "../../services/apiClient";
 
 type TipoCertificado = "" | "empresa" | "adicional";
 
@@ -161,21 +159,18 @@ export function Certificados() {
         setLoading(true);
         try {
             // Cursos
-            const resC = await fetch(`${API_URL}/mis-cursos`, { headers: { Accept: "application/json" } });
-            const dataC = await resC.json();
-            setCursos(parseList<Curso>(dataC));
+            const resC = await apiClient.get("/mis-cursos");
+            setCursos(parseList<Curso>(resC.data));
 
             // Usuarios
-            const resU = await fetch(`${API_ADMIN}/usuarios`, { headers: { Accept: "application/json" } });
-            const dataU = await resU.json();
-            setUsuarios(parseList<Usuario>(dataU));
+            const resU = await apiClient.get("/admin/usuarios");
+            setUsuarios(parseList<Usuario>(resU.data));
 
             // Certificados
-            let url = `${API_ADMIN}/certificaciones`;
-            if (tipoFiltro) url += `?tipo_certificado=${tipoFiltro}`;
-            const r = await fetch(url, { headers: { Accept: "application/json" } });
-            const list = parseList<Certificacion>(await r.json());
-            setItems(decorate(list));
+            const params: any = {};
+            if (tipoFiltro) params.tipo_certificado = tipoFiltro;
+            const r = await apiClient.get("/admin/certificaciones", { params });
+            setItems(decorate(parseList<Certificacion>(r.data)));
         } catch (err) { console.error(err); }
         finally { setLoading(false); }
     };
@@ -208,16 +203,9 @@ export function Certificados() {
     const handleEliminar = async () => {
         if (!certToDelete) return;
         try {
-            const res = await fetch(`${API_ADMIN}/certificaciones/${certToDelete.id_certificacion}`, {
-                method: "DELETE",
-                headers: { Accept: "application/json" }
-            });
-            if (res.ok) {
-                fetchData();
-                setIsDeleteOpen(false);
-            } else {
-                alert("No se pudo eliminar el certificado.");
-            }
+            await apiClient.delete(`/admin/certificaciones/${certToDelete.id_certificacion}`);
+            fetchData();
+            setIsDeleteOpen(false);
         } catch (err) {
             console.error(err);
             alert("Error eliminando certificado.");
@@ -434,23 +422,25 @@ export function Certificados() {
 
             <InfoCertificadoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} item={selected} />
             <AddCertificadoModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onSave={async (n) => {
-                const res = await fetch(`${API_ADMIN}/certificaciones`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(n),
-                });
-                if (res.ok) { fetchData(); return true; }
-                return false;
+                try {
+                    await apiClient.post("/admin/certificaciones", n);
+                    fetchData();
+                    return true;
+                } catch (error) {
+                    console.error(error);
+                    return false;
+                }
             }} />
             {isEditModalOpen && certToEdit && (
                 <EditCertificadoModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} item={certToEdit} onSave={async (e) => {
-                    const res = await fetch(`${API_ADMIN}/certificaciones/${e.id_certificacion}`, {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(e),
-                    });
-                    if (res.ok) { fetchData(); return true; }
-                    return false;
+                    try {
+                        await apiClient.put(`/admin/certificaciones/${e.id_certificacion}`, e);
+                        fetchData();
+                        return true;
+                    } catch (error) {
+                        console.error(error);
+                        return false;
+                    }
                 }} />
             )}
 

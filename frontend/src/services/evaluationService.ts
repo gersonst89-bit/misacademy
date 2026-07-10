@@ -1,15 +1,12 @@
 
 
 
-import axios from 'axios';
-import { API_URL } from '../config/api';
-
-const API = `${API_URL}/evaluaciones`;
+import { apiClient } from './apiClient';
 
 export const evaluationService = {
   async checkEligibility(courseId: string) {
     try {
-      const res = await axios.get(`${API_URL}/courses/${courseId}/evaluation/check-eligibility`);
+      const res = await apiClient.get(`/courses/${courseId}/evaluation/check-eligibility`);
       return res.data;
     } catch (error: any) {
       if (error.response && error.response.data) {
@@ -19,11 +16,11 @@ export const evaluationService = {
     }
   },
   async getEvaluationInfo(courseId: string) {
-    const res = await axios.get(`${API_URL}/courses/${courseId}/evaluation/info`);
+    const res = await apiClient.get(`/courses/${courseId}/evaluation/info`);
     return res.data;
   },
   async startEvaluation(courseId: string | number, acceptedRules: boolean) {
-    const res = await axios.post(`${API_URL}/evaluaciones/${courseId}/iniciar`, {
+    const res = await apiClient.post(`/evaluaciones/${courseId}/iniciar`, {
       acceptedRules,
       clientTimestamp: new Date().toISOString(),
     });
@@ -31,27 +28,27 @@ export const evaluationService = {
     return res.data;
   },
   async resumeSession(sessionId: string) {
-    const res = await axios.get(`${API_URL}/evaluation-sessions/${sessionId}/resume`);
+    const res = await apiClient.get(`/evaluation-sessions/${sessionId}/resume`);
     return res.data;
   },
   async saveAnswer(sessionId: string, answerData: any) {
-    const res = await axios.post(`${API_URL}/evaluation-sessions/${sessionId}/answers`, answerData);
+    const res = await apiClient.post(`/evaluation-sessions/${sessionId}/answers`, answerData);
     return res.data;
   },
   async saveAnswersBatch(sessionId: string, answers: any[]) {
-    const res = await axios.post(`${API_URL}/evaluation-sessions/${sessionId}/answers/batch`, { answers });
+    const res = await apiClient.post(`/evaluation-sessions/${sessionId}/answers/batch`, { answers });
     return res.data;
   },
   async sendHeartbeat(sessionId: string, data: any) {
-    const res = await axios.post(`${API_URL}/evaluation-sessions/${sessionId}/heartbeat`, data);
+    const res = await apiClient.post(`/evaluation-sessions/${sessionId}/heartbeat`, data);
     return res.data;
   },
   async recordEvents(sessionId: string, events: any[]) {
-    const res = await axios.post(`${API_URL}/evaluation-sessions/${sessionId}/events`, { events });
+    const res = await apiClient.post(`/evaluation-sessions/${sessionId}/events`, { events });
     return res.data;
   },
   async submitEvaluation(sessionId: string, finalAnswers: any[], submissionType: string) {
-    const res = await axios.post(`${API_URL}/evaluation-sessions/${sessionId}/submit`, {
+    const res = await apiClient.post(`/evaluation-sessions/${sessionId}/submit`, {
       finishedAt: new Date().toISOString(),
       finalAnswers,
       submissionType,
@@ -60,7 +57,8 @@ export const evaluationService = {
     return res.data;
   },
   async getResults(attemptId: string) {
-    const res = await axios.get(`${API}/intentos/${attemptId}`);
+    const res = await apiClient.get(`/evaluaciones/intentos/${attemptId}`);
     return res.data;
   },
 };
+

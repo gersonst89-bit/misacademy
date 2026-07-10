@@ -6,12 +6,20 @@ import { AdminGuard } from '../common/guards/roles.guard';
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class EstadisticasController {
   constructor(private readonly svc: EstadisticasService) {}
-  
-  @Get('dashboard') getDashboard() { return this.svc.getDashboard(); }
-  
-  @Get('estudiantes/por-linea') getPorLinea() { return this.svc.getEstudiantesPorLinea(); }
-  
-  @Get('usuarios/retencion-mensual') getRetencion() { return this.svc.getRetencionMensual(); }
-  
-  @Get('cursos/mas-vendidos-mes') getMasVendidos() { return this.svc.getMasVendidosMes(); }
+
+  @Get('dashboard') getDashboard() {
+    return this.svc.getDashboard();
+  }
+
+  @Get('estudiantes/por-linea') getPorLinea() {
+    return this.svc.getEstudiantesPorLinea();
+  }
+
+  @Get('usuarios/retencion-mensual') getRetencion() {
+    return this.svc.getRetencionMensual();
+  }
+
+  @Get('cursos/mas-vendidos-mes') getMasVendidos() {
+    return this.svc.getMasVendidosMes();
+  }
 }

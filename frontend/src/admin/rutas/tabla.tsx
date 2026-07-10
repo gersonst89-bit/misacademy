@@ -15,7 +15,7 @@ import { EditRutaModal } from "./EditRutaModal";
 import { AddRutaModal } from "./AddRutaModal";
 import { ArchiveModal } from "../Components/ArchiveModal";
 import DeleteModal from "../Components/DeleteModal";
-import { apiUrl } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 
 function FiltroEstado({
   value,
@@ -110,10 +110,13 @@ export function RutasAcademicas() {
     setErrorMessage(null);
     setCargando(true);
     try {
-      const response = await fetch(apiUrl(`/rutas-academicas?page=${pagina}&per_page=10`));
-      if (!response.ok) throw new Error("Error al obtener las rutas académicas");
-
-      const data = await response.json();
+      const response = await apiClient.get("/rutas-academicas", {
+        params: {
+          page: pagina,
+          per_page: 10
+        }
+      });
+      const data = response.data;
       const lista = data.data || data.rutas || data || [];
       setRutas(lista);
       setRutasFiltradas(lista);
@@ -168,22 +171,12 @@ export function RutasAcademicas() {
         destacado: Boolean(rutaEstado.destacado),
       };
       
-      const response = await fetch(
-        apiUrl(`/rutas-academicas/${rutaEstado.id_ruta}`),
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(cleanData),
-        }
+      const response = await apiClient.put(
+        `/rutas-academicas/${rutaEstado.id_ruta}`,
+        cleanData
       );
 
-      const data = await response.json();
-      if (!response.ok) {
-        alert("Error al cambiar estado: " + (data.message || "Error desconocido"));
-        return;
-      }
+      const data = response.data;
 
       setRutas((prev) =>
         prev.map((r) =>
@@ -196,9 +189,9 @@ export function RutasAcademicas() {
         )
       );
       setIsEstadoModalOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al cambiar estado:", error);
-      alert("Error de conexión al cambiar estado.");
+      alert("Error al cambiar estado: " + (error.response?.data?.message || "Error de conexión."));
     }
   };
 
@@ -206,15 +199,7 @@ export function RutasAcademicas() {
     if (!rutaAEliminar) return;
 
     try {
-      const response = await fetch(
-        apiUrl(`/rutas-academicas/${rutaAEliminar.id_ruta}`),
-        {
-          method: "DELETE",
-          headers: {},
-        }
-      );
-
-      if (!response.ok) throw new Error("No se pudo eliminar la ruta");
+      await apiClient.delete(`/rutas-academicas/${rutaAEliminar.id_ruta}`);
 
       setRutas((prev) => prev.filter((r) => r.id_ruta !== rutaAEliminar.id_ruta));
       setRutasFiltradas((prev) => prev.filter((r) => r.id_ruta !== rutaAEliminar.id_ruta));
@@ -222,9 +207,9 @@ export function RutasAcademicas() {
       setRutaAEliminar(null);
       setIsDeleteModalOpen(false);
       alert("Ruta académica eliminada correctamente");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al eliminar ruta:", error);
-      alert("Hubo un error al eliminar la ruta.");
+      alert("Hubo un error al eliminar la ruta: " + (error.response?.data?.message || "Error desconocido."));
     }
   };
 
@@ -249,29 +234,19 @@ export function RutasAcademicas() {
         destacado: Boolean(rutaActualizada.destacado),
       };
       
-      const response = await fetch(
-        apiUrl(`/rutas-academicas/${rutaActualizada.id_ruta}`),
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(cleanData),
-        }
+      const response = await apiClient.put(
+        `/rutas-academicas/${rutaActualizada.id_ruta}`,
+        cleanData
       );
 
-      const data = await response.json();
+      const data = response.data;
       console.log("Editar ruta →", data);
-
-      if (!response.ok) {
-        alert("Error al editar ruta: " + (data.message || "Error desconocido"));
-        return false;
-      }
 
       await fetchRutas();
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al actualizar ruta:", error);
+      alert("Error al editar ruta: " + (error.response?.data?.message || "Error desconocido"));
       return false;
     }
   };
@@ -290,27 +265,16 @@ export function RutasAcademicas() {
         destacado: Boolean(nuevaRuta.destacado),
       };
       
-      const response = await fetch(apiUrl("/rutas-academicas"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(cleanData),
-      });
+      const response = await apiClient.post("/rutas-academicas", cleanData);
 
-      const data = await response.json();
+      const data = response.data;
       console.log("Crear ruta →", data);
-
-      if (!response.ok) {
-        alert("Error al crear ruta: " + (data.message || "Error desconocido"));
-        return false;
-      }
 
       await fetchRutas();
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al crear ruta:", error);
-      alert("Error de conexión al crear ruta.");
+      alert("Error al crear ruta: " + (error.response?.data?.message || "Error desconocido"));
       return false;
     }
   };

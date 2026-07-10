@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useEffect, useState, type ReactNode } from "react";
-import { apiUrl } from "../config/api";
+import { apiClient } from "../services/apiClient";
 
 export default function ProtectedAdminRoute({
   children,
@@ -24,15 +24,9 @@ export default function ProtectedAdminRoute({
     }
 
     // 2. Verificación real con el servidor
-    fetch(apiUrl("/auth/profile"), {
-      headers: { Accept: "application/json" },
-      credentials: "include",
-    })
-      .then((r) => {
-        if (!r.ok) throw new Error("Unauthorized");
-        return r.json();
-      })
-      .then((p) => {
+    apiClient.get("/auth/profile")
+      .then((res) => {
+        const p = res.data;
         const userRole = p.id_rol || p.user?.id_rol || 3;
         if (userRole === 1 || userRole === 2) {
           setAllowed(true);

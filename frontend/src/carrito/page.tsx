@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Trash2, ShoppingBag, ArrowRight, ShieldCheck, CreditCard, Check } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { API_URL } from "../config/api";
+import { apiClient } from "../services/apiClient";
 import { motion, AnimatePresence } from "framer-motion";
 
 const LoadingSpinner = () => (
@@ -54,33 +55,27 @@ export default function Carrito() {
   const fetchCarrito = async () => {
     try {
       const [resCarrito, resCompras] = await Promise.all([
-        fetch(`${API_URL}/carrito?t=${Date.now()}`, {
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
+        apiClient.get(`/carrito?t=${Date.now()}`).catch((err: any) => {
+          if (err?.response?.status === 401) {
+            navigate("/login?expired=true");
+          }
+          throw err;
         }),
-        fetch(`${API_URL}/compras/historial?t=${Date.now()}`, {
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
+        apiClient.get(`/compras/historial?t=${Date.now()}`).catch((err: any) => {
+          throw err;
         })
       ]);
 
-      if (resCarrito.status === 401) {
-        navigate("/login?expired=true");
-        return;
-      }
+      const dataCarrito = resCarrito.data;
+      const dataCompras = resCompras.data;
 
-      const dataCarrito = await resCarrito.json();
-      const dataCompras = await resCompras.json();
-
-      if (resCarrito.ok && dataCarrito.data) {
+      if (dataCarrito && dataCarrito.data) {
         setCarrito(dataCarrito.data);
       } else {
         setCarrito({ id_carrito: 0, items: [] });
       }
 
-      if (resCompras.ok) {
-        setCompras(dataCompras.compras || dataCompras.data || []);
-      }
+      setCompras(dataCompras.compras || dataCompras.data || []);
     } catch (err) {
       console.error("Error al conectar con el servidor:", err);
       setError("Error al conectar con el servidor.");
@@ -95,27 +90,17 @@ export default function Carrito() {
 
   const eliminarCurso = async (id_item: number) => {
     try {
-      const response = await fetch(`${API_URL}/carrito/${id_item}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-      });
+      await apiClient.delete(`/carrito/${id_item}`);
 
-      if (response.ok) {
-        setCarrito((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            items: prev.items.filter((item) => item.id_item !== id_item)
-          };
-        });
-        setMensaje("Eliminado correctamente");
-        setTimeout(() => setMensaje(null), 2000);
-      } else {
-        console.error("Error al eliminar del carrito");
-      }
+      setCarrito((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          items: prev.items.filter((item) => item.id_item !== id_item)
+        };
+      });
+      setMensaje("Eliminado correctamente");
+      setTimeout(() => setMensaje(null), 2000);
     } catch (err) {
       console.error(err);
     }

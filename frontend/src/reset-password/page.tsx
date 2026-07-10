@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, Lock } from "lucide-react";
 import { API_URL } from "../config/api";
+import { apiClient } from "../services/apiClient";
 
 const API_BASE = API_URL;
 
@@ -46,23 +47,14 @@ export default function ResetPasswordPage() {
 
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/auth/reset-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          token,
-          email,
-          password,
-          password_confirmation: passwordConfirmation,
-        }),
-        credentials: "include",
+      const res = await apiClient.post(`/auth/reset-password`, {
+        token,
+        email,
+        password,
+        password_confirmation: passwordConfirmation,
+      }).catch((err: any) => {
+        throw new Error(err?.response?.data?.message || err?.message || "No se pudo restablecer la contraseña.");
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.message || "No se pudo restablecer la contraseña.");
-      }
 
       setSuccess("¡Contraseña restablecida exitosamente! Redirigiendo a login...");
       setTimeout(() => navigate("/login"), 2000);

@@ -3,11 +3,11 @@ import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 export class CreateResenaDto {
   @IsNotEmpty()
   @IsNumber()
-  id_curso: number;
+  id_curso!: number;
 
   @IsNotEmpty()
   @IsNumber()
-  calificacion: number;
+  calificacion!: number;
 
   @IsOptional()
   @IsString()

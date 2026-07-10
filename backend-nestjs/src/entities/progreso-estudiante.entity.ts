@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { Inscripcion } from './inscripcion.entity';
 import { Leccion } from './leccion.entity';
 
@@ -7,9 +14,11 @@ export class ProgresoEstudiante {
   @PrimaryGeneratedColumn({ name: 'id_progreso' })
   id_progreso!: number;
 
+  @Index()
   @Column()
   id_inscripcion!: number;
 
+  @Index()
   @Column()
   id_leccion!: number;
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { API_URL } from '../../config/api';
+import { apiClient } from '../../services/apiClient';
 
 interface NoAttemptsLeftProps {
   puntos_obtenidos?: number;
@@ -34,14 +34,9 @@ const NoAttemptsLeft: React.FC<NoAttemptsLeftProps> = ({
     }
 
     try {
-      const response = await fetch(`${API_URL}/certificaciones/solicitar`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ id_curso: finalCourseId }),
-      });
-      const data = await response.json();
-      if (response.ok && data.codigo_certificado) {
+      const response = await apiClient.post('/certificaciones/solicitar', { id_curso: finalCourseId });
+      const data = response.data;
+      if (data && data.codigo_certificado) {
         navigate(`/certificado/${data.codigo_certificado}`);
       } else {
         navigate('/certificados');

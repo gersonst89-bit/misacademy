@@ -4,6 +4,7 @@ import { FaCalendarAlt, FaDownload } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
 import { API_URL } from "../config/api";
+import { apiClient } from "../services/apiClient";
 
 const LoadingSpinner = () => (
   <div className="flex justify-center items-center h-screen">
@@ -154,17 +155,16 @@ export default function MisCertificados() {
     // Eliminamos la comprobación manual de cookies por ser HttpOnly.
 
     try {
-      const response = await fetch(`${API_URL}/certificaciones/solicitar`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ id_curso: certificadoId }), // Aquí 'certificadoId' es en realidad el ID del curso
+      const response = await apiClient.post("/certificaciones/solicitar", { id_curso: certificadoId }).catch((err: any) => {
+        alert(err?.response?.data?.message || "No se pudo cargar el certificado");
+        return null;
       });
 
-      const data = await response.json();
+      if (!response) return;
 
-      if (response.ok && data.codigo_certificado) {
+      const data = response.data;
+
+      if (data.codigo_certificado) {
         // Redirigir a la página de visualización del certificado
         navigate(`/certificado/${data.codigo_certificado}`);
       } else {
@@ -179,24 +179,13 @@ export default function MisCertificados() {
     const fetchCertificados = async () => {
       // Eliminamos la comprobación manual de cookies ya que son HttpOnly y no son visibles para JS.
       // El servidor se encargará de validar la sesión y el interceptor global manejará el 401 si es necesario.
-
       try {
-        // Llamamos al endpoint específico para los certificados del usuario logueado
-        const res = await fetch(`${API_URL}/certificaciones/mis-certificados`, {
-          headers: {
-            Accept: "application/json",
-          },
-        });
+        const res = await apiClient.get("/certificaciones/mis-certificados");
+        const data = res.data;
 
-        const data = await res.json();
-
-        if (res.ok) {
-          // El endpoint mis-certificados devuelve un array directamente
-          const allCerts = Array.isArray(data) ? data : (data.data || []);
-          setCertificados(allCerts);
-        } else {
-          setError(data.message || "No se pudieron cargar tus certificados.");
-        }
+        // El endpoint mis-certificados devuelve un array directamente
+        const allCerts = Array.isArray(data) ? data : (data.data || []);
+        setCertificados(allCerts);
       } catch (err) {
         setError("Error de conexión con el servidor.");
       } finally {

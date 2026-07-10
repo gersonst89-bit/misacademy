@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FaQuoteLeft } from "react-icons/fa";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { motion } from "framer-motion";
 
 type Testimonio = {
   id: number;
@@ -87,20 +88,50 @@ const Opiniones: React.FC = () => {
 
   return (
     <section className="py-24 px-6 lg:px-8 bg-[#03070C] relative overflow-hidden">
-      {/* Luces de fondo muy sutiles para dar profundidad sin lavar el negro */}
-      <div className="absolute top-0 left-1/4 w-full h-full bg-sky-500/[0.03] rounded-full blur-[120px] -z-10" />
+      {/* Luces de fondo para dar profundidad */}
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-sky-500/6 rounded-full blur-[140px] -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-indigo-500/6 rounded-full blur-[120px] -z-10" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[100px] bg-blue-400/3 rounded-full blur-[60px] -z-10" />
 
       <div className="max-w-6xl mx-auto text-center relative z-10">
-        <h2 className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tight">
-          Lo que dicen nuestros estudiantes
-        </h2>
-        <p className="text-lg sm:text-xl text-gray-400 max-w-3xl mx-auto mb-16 font-medium">
-          Testimonios de estudiantes que han transformado su carrera con
-          nuestros cursos especializados
-        </p>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 mb-6"
+        >
+          <div className="w-2 h-2 bg-sky-400 rounded-full animate-pulse" />
+          <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-sky-400">Testimonios Reales</span>
+        </motion.div>
+        <motion.h2 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tight font-['Outfit'] uppercase"
+        >
+          Lo que dicen{" "}
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-blue-300 to-indigo-400">
+            nuestros alumnos
+          </span>
+        </motion.h2>
+        <motion.p 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.1 }}
+          className="text-lg sm:text-xl text-gray-400 max-w-3xl mx-auto mb-16 font-medium"
+        >
+          Testimonios de estudiantes que han transformado su carrera con nuestros cursos especializados
+        </motion.p>
 
         {/* Carrusel */}
-        <div className="relative max-w-4xl mx-auto select-none">
+        <motion.div 
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+          className="relative max-w-4xl mx-auto select-none"
+        >
           {/* Pista */}
           <div className="overflow-hidden rounded-[2.5rem]">
             <div
@@ -184,7 +215,7 @@ const Opiniones: React.FC = () => {
               />
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* Tip: si quieres mostrar 2–3 tarjetas a la vez, se puede adaptar el ancho de cada slide con CSS grid.
             Este carrusel deja una sola card por vista para foco y lectura cómoda. */}

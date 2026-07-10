@@ -17,12 +17,17 @@ function Hero() {
 
   return (
     <section className="relative min-h-screen w-full flex items-center justify-center text-white overflow-hidden bg-transparent py-20 px-6">
+
       {/* Background elements */}
       <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none" />
       
       {/* Atmospheric Lighting */}
-      <div className="absolute top-[-20%] left-[-10%] w-[800px] h-[800px] bg-sky-500/10 blur-[150px] rounded-full animate-pulse pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-[-20%] left-[-10%] w-[800px] h-[800px] bg-sky-500/15 blur-[150px] rounded-full animate-pulse pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none" />
+      
+      {/* Central glow aura behind title for depth */}
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-sky-500/15 blur-[180px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-indigo-500/10 blur-[150px] rounded-full pointer-events-none animate-pulse" style={{ animationDuration: '8s' }} />
 
       <div className="relative z-10 max-w-7xl mx-auto text-center pointer-events-auto">
         {/* Animated Badge */}
@@ -47,9 +52,9 @@ function Hero() {
         >
           <motion.span 
             initial={{ opacity: 0, letterSpacing: "0.2em" }}
-            animate={{ opacity: 0.8, letterSpacing: "0.8em" }}
+            animate={{ opacity: 1, letterSpacing: "0.8em" }}
             transition={{ delay: 0.5, duration: 1 }}
-            className="text-sky-400 text-xs md:text-base font-bold mb-4 ml-[0.8em]"
+            className="text-sky-300 text-sm md:text-xl font-black mb-4 ml-[0.8em] tracking-[0.8em] drop-shadow-[0_0_12px_rgba(125,211,252,0.6)]"
           >
             MIS
           </motion.span>
@@ -81,7 +86,7 @@ function Hero() {
             </span>
           </p>
 
-          <p className="text-base md:text-lg text-slate-400 max-w-xl mx-auto leading-relaxed">
+          <p className="text-base md:text-lg text-slate-300 max-w-xl mx-auto leading-relaxed">
             Especialízate en IA, Desarrollo y Negocios con rutas de aprendizaje 
             diseñadas para liderar la nueva era digital.
           </p>

@@ -2,9 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { ShoppingCart, User, Menu, X, ChevronDown, Sparkles, LayoutDashboard, LogOut, Settings, Home, BookOpen, Route as RouteIcon, Search } from "lucide-react";
 import { apiUrl } from "../config/api";
+import { apiClient } from "../services/apiClient";
 import { motion, AnimatePresence } from "framer-motion";
-import { useDispatch, useSelector } from "react-redux";
+import { useAppSelector, useAppDispatch } from "../hooks/redux";
 import { fetchLineas } from "../store/academicSlice";
+import { UserMenu } from "./Header/UserMenu";
+import { MobileMenu } from "./Header/MobileMenu";
 
 const slugify = (s: string) =>
     (s || "")
@@ -16,8 +19,8 @@ const slugify = (s: string) =>
         .replace(/[^a-z0-9-]/g, "");
 
 function Header() {
-    const dispatch = useDispatch<any>();
-    const { lineas, loading: loadingLineas } = useSelector((state: any) => state.academic);
+    const dispatch = useAppDispatch();
+    const { lineas, loading: loadingLineas } = useAppSelector((state) => state.academic);
     const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
     const [user, setUser] = useState<any>(null);
     const [lineasHover, setLineasHover] = useState(false);
@@ -48,30 +51,21 @@ function Header() {
     useEffect(() => {
         const userStored = localStorage.getItem("user");
         if (userStored && !isUserLoggedIn) {
-            fetch(apiUrl(`/auth/profile?t=${Date.now()}`), {
-                headers: {
-                    Accept: "application/json",
-                },
-                credentials: "include", // Importante para cookies
-            })
+            apiClient.get(`/auth/profile?t=${Date.now()}`)
                 .then((res) => {
-                    if (res.status === 401) {
-                        // Si el servidor dice que no está autorizado, limpiamos el localStorage
-                        localStorage.removeItem("user");
-                        return null;
-                    }
-                    return res.ok ? res.json() : null;
-                })
-                .then((data) => {
+                    const data = res.data;
                     if (data) {
                         setUser(data);
                         setIsUserLoggedIn(true);
 
                         // Cargar carrito para el contador
-                        fetch(apiUrl("/carrito"), { credentials: "include" })
-                            .then(res => res.json())
-                            .then(cartData => {
+                        apiClient.get("/carrito")
+                            .then(resCarrito => {
+                                const cartData = resCarrito.data;
                                 setCartCount(cartData?.data?.items?.length || 0);
+                            })
+                            .catch(() => {
+                                setCartCount(0);
                             });
                     } else {
                         localStorage.removeItem("user");
@@ -94,39 +88,25 @@ function Header() {
     }, []);
 
     const handleLogout = async () => {
+        // ✅ 1. Limpiamos el estado local PRIMERO para evitar que el
+        //    useEffect de autenticación se dispare durante la llamada API
         setMenuPerfil(false);
         setIsUserLoggedIn(false);
         setUser(null);
         localStorage.removeItem("user");
 
-        // Forzar borrado manual de cookies con TODAS las etiquetas de seguridad (Secure; SameSite=None)
-        //const domains = [window.location.hostname, "." + window.location.hostname];
-        //domains.forEach(dom => {
-        //document.cookie = `is_logged_in=; Path=/; Domain=${dom}; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Secure; SameSite=None`;
-        //document.cookie = `XSRF-TOKEN=; Path=/; Domain=${dom}; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Secure; SameSite=None`;
-        //});
-        // Sin dominio explícito
-        //document.cookie = "is_logged_in=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Secure; SameSite=None";
-        //document.cookie = "XSRF-TOKEN=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Secure; SameSite=None";
-
-        // Clear cookie on logout via API call
+        // ✅ 2. Llamamos al backend para que borre las httpOnly cookies
+        //    y marque el refresh_token como inválido en BD
         try {
-            await fetch(apiUrl("/auth/logout"), {
-                method: 'POST',
-                credentials: 'include'
-            });
+            await apiClient.post("/auth/logout");
         } catch (err) {
+            // Si falla la llamada (p.ej. token ya expirado) no bloqueamos la salida
             console.error("Error during logout:", err);
         }
 
-        // Limpiar CSRF token en memoria para que el próximo login genere uno fresco
-
-        // Si ya estamos en inicio, forzamos recarga. Si no, redirigimos a inicio.
-        if (window.location.pathname === "/") {
-            window.location.reload();
-        } else {
-            window.location.href = "/";
-        }
+        // ✅ 3. Redirigimos al inicio con reload completo para limpiar
+        //    cualquier estado residual en memoria del SPA
+        window.location.href = "/";
     };
 
     const handleMouseEnter = () => {
@@ -144,86 +124,18 @@ function Header() {
 
     return (
         <>
-            <AnimatePresence>
-                {sidebarOpen && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[9999] flex"
-                    >
-                        <div className="flex-1 bg-black/80 backdrop-blur-md" onClick={() => setSidebarOpen(false)} />
-                        <motion.div
-                            initial={{ x: "100%" }}
-                            animate={{ x: 0 }}
-                            exit={{ x: "100%" }}
-                            transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                            className="w-full max-w-[320px] bg-[#03070c] text-white h-full p-8 shadow-2xl border-l border-white/10"
-                        >
-                            <div className="flex justify-between items-center mb-16">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 bg-sky-500 rounded-lg flex items-center justify-center">
-                                        <Sparkles size={16} className="text-white" />
-                                    </div>
-                                    <h3 className="text-lg font-black tracking-tighter uppercase italic">MENÚ</h3>
-                                </div>
-                                <button onClick={() => setSidebarOpen(false)} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-full hover:bg-white/10 transition">
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-
-                            <nav className="flex flex-col gap-6 text-xl font-black uppercase tracking-tight">
-                                {["Inicio", "Cursos", "Líneas", "Consulta"].map((item) => (
-                                    <Link
-                                        key={item}
-                                        to={item === "Líneas" ? "/lineas-academicas" : `/${item.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === "inicio" ? "" : item.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")}`}
-                                        onClick={() => setSidebarOpen(false)}
-                                        className="hover:text-sky-400 transition-all flex items-center justify-between group"
-                                    >
-                                        {item}
-                                        <div className="w-0 group-hover:w-8 h-px bg-sky-500 transition-all duration-500" />
-                                    </Link>
-                                ))}
-
-                                <div className="pt-12 mt-8 border-t border-white/5 flex flex-col gap-5">
-                                    {!isUserLoggedIn ? (
-                                        <>
-                                            <Link
-                                                to="/login"
-                                                className="btn-premium w-full py-5 text-sm"
-                                                onClick={() => setSidebarOpen(false)}
-                                            >
-                                                LOGIN
-                                            </Link>
-                                            <Link
-                                                to="/registro"
-                                                className="btn-premium btn-premium-outline w-full py-5 text-sm"
-                                                onClick={() => setSidebarOpen(false)}
-                                            >
-                                                REGISTRO
-                                            </Link>
-                                        </>
-                                    ) : (
-                                        <>
-                                            {(user?.id_rol === 1 || user?.id_rol === 2) && (
-                                                <Link to="/admin" onClick={() => setSidebarOpen(false)} className="text-sky-400 text-sm">ADMIN PANEL</Link>
-                                            )}
-                                            <Link to="/compras" onClick={() => setSidebarOpen(false)} className="text-sm">MIS CURSOS</Link>
-                                            <Link to="/carrito" onClick={() => setSidebarOpen(false)} className="text-sm">MI CARRITO</Link>
-                                            <button onClick={() => { setSidebarOpen(false); goPerfil(); }} className="text-left text-sm">PERFIL</button>
-                                            <button onClick={() => { handleLogout(); setSidebarOpen(false); }} className="text-left text-sm text-rose-500">SALIR</button>
-                                        </>
-                                    )}
-                                </div>
-                            </nav>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <MobileMenu
+                isOpen={sidebarOpen}
+                onClose={() => setSidebarOpen(false)}
+                isUserLoggedIn={isUserLoggedIn}
+                user={user}
+                goPerfil={goPerfil}
+                handleLogout={handleLogout}
+            />
 
             <header
-                className={`w-full z-[100] transition-all duration-500 fixed top-0 left-0 right-0 border-b border-white/[0.05] ${scrolled || !isHomePage
-                        ? "bg-[#03070c]/60 backdrop-blur-3xl py-3 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.5)]"
+                className={`w-full z-[100] transition-all duration-500 fixed top-0 left-0 right-0 border-b border-white/5 ${scrolled || !isHomePage
+                        ? "bg-[#03070c]/65 backdrop-blur-md py-3 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)]"
                         : "bg-transparent py-8"
                     }`}
             >
@@ -232,18 +144,11 @@ function Header() {
 
 
                         <div className="flex items-center gap-6">
-                            <button
-                                className="md:hidden text-white/50 p-2 hover:text-white transition-colors"
-                                onClick={() => setSidebarOpen(true)}
-                            >
-                                <Menu className="w-6 h-6" />
-                            </button>
-
                             <Link to="/" className="group flex items-center transition-transform duration-500 hover:scale-105">
                                 <img
                                     src="/logomatt.png"
                                     alt="MIS ACADEMY"
-                                    className="h-14 md:h-16 relative z-10 drop-shadow-[0_0_20px_rgba(14,165,233,0.6)] group-hover:drop-shadow-[0_0_30px_rgba(14,165,233,0.9)] transition-all duration-500"
+                                    className="h-12 md:h-16 relative z-10 drop-shadow-[0_0_20px_rgba(14,165,233,0.4)] group-hover:drop-shadow-[0_0_35px_rgba(14,165,233,0.75)] transition-all duration-500"
                                 />
                             </Link>
                         </div>
@@ -261,18 +166,18 @@ function Header() {
                                     <Link
                                         key={item.name}
                                         to={item.name === "Líneas" ? "/lineas-academicas" : `/${item.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === "inicio" ? "" : item.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")}`}
-                                        className={`px-5 py-2 text-[10px] font-bold tracking-[0.15em] uppercase rounded-lg transition-all duration-300 relative group flex items-center gap-2.5 ${isActive ? "text-white" : "text-white/40 hover:text-white/80"
+                                        className={`px-5 py-2 text-[10px] font-bold tracking-[0.15em] uppercase rounded-lg transition-all duration-300 relative group flex items-center gap-2.5 ${isActive ? "text-white" : "text-white/70 hover:text-white"
                                             }`}
                                         onMouseEnter={item.name === "Líneas" ? handleMouseEnter : undefined}
                                         onMouseLeave={item.name === "Líneas" ? handleMouseLeave : undefined}
                                     >
-                                        <span className={`${isActive ? "text-sky-400" : "text-white/20 group-hover:text-white/40"} transition-colors`}>
+                                        <span className={`${isActive ? "text-sky-400" : "text-white/40 group-hover:text-sky-400"} transition-colors`}>
                                             {item.icon}
                                         </span>
                                         <span className="relative z-10">{item.name}</span>
                                         {item.name === "Líneas" && <ChevronDown size={12} className={`transition-transform duration-300 group-hover:rotate-180 opacity-20 group-hover:opacity-100`} />}
                                         {isActive && (
-                                            <motion.div layoutId="nav-active" className="absolute bottom-0 left-5 right-5 h-0.5 bg-sky-500 shadow-[0_0_10px_rgba(14,165,233,0.5)]" />
+                                            <motion.div layoutId="nav-active" className="absolute bottom-0 left-5 right-5 h-0.5 bg-sky-500 shadow-[0_0_12px_rgba(14,165,233,0.85)]" />
                                         )}
                                     </Link>
                                 );
@@ -290,7 +195,7 @@ function Header() {
                                     </Link>
                                     <Link
                                         to="/registro"
-                                        className="relative overflow-hidden group px-6 py-2 rounded-lg bg-sky-500 text-white text-[10px] font-bold tracking-[0.1em] uppercase transition-all hover:scale-105 active:scale-95"
+                                        className="relative overflow-hidden group px-6 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-white text-[10px] font-bold tracking-[0.1em] uppercase transition-all hover:scale-105 hover:shadow-lg hover:shadow-sky-500/20 active:scale-95"
                                     >
                                         <span className="relative z-10">Únete</span>
                                     </Link>
@@ -335,85 +240,24 @@ function Header() {
                                             </div>
                                         </button>
 
-                                        <AnimatePresence>
-                                            {menuPerfil && (
-                                                <>
-                                                    {/* Overlay sutil para el dropdown de perfil */}
-                                                    <motion.div
-                                                        initial={{ opacity: 0 }}
-                                                        animate={{ opacity: 1 }}
-                                                        exit={{ opacity: 0 }}
-                                                        onClick={() => setMenuPerfil(false)}
-                                                        className="fixed inset-0 bg-black/40 backdrop-blur-[1px] z-[90]"
-                                                    />
-
-                                                    <motion.div
-                                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                        className="absolute right-0 mt-5 w-72 bg-[#050a12]/90 backdrop-blur-2xl p-4 rounded-[2rem] z-[100] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.8)] border border-white/10 overflow-hidden"
-                                                    >
-                                                        {/* Reflection effect */}
-                                                        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-
-                                                        <div className="flex items-center gap-4 px-4 py-4 mb-2 bg-white/5 rounded-[1.5rem] border border-white/5">
-                                                            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-lg ring-2 ring-white/10">
-                                                                {user?.nombre?.charAt(0).toUpperCase()}
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className="text-sm font-black text-white truncate leading-none mb-1">{user?.nombre}</p>
-                                                                <p className="text-[10px] text-slate-500 truncate">{user?.email}</p>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="grid gap-1 mt-4">
-                                                            {(user?.id_rol === 1 || user?.id_rol === 2) && (
-                                                                <Link
-                                                                    to="/admin"
-                                                                    className="group/item flex items-center gap-3 px-4 py-3 hover:bg-sky-500/10 text-sky-400 font-bold text-xs rounded-xl transition-all cursor-pointer"
-                                                                    onClick={() => setMenuPerfil(false)}
-                                                                >
-                                                                    <LayoutDashboard className="w-4 h-4 group-hover/item:scale-110 transition-transform" />
-                                                                    <span className="tracking-wide">Panel de Control</span>
-                                                                </Link>
-                                                            )}
-
-                                                            {!(user?.id_rol === 1 || user?.id_rol === 2) && (
-                                                                <Link
-                                                                    to="/compras"
-                                                                    className="group/item flex items-center gap-3 px-4 py-3 hover:bg-sky-500/10 text-slate-300 hover:text-sky-400 font-bold text-xs rounded-xl transition-all cursor-pointer"
-                                                                    onClick={() => setMenuPerfil(false)}
-                                                                >
-                                                                    <Sparkles className="w-4 h-4 group-hover/item:scale-110 transition-transform text-slate-500 group-hover/item:text-sky-400" />
-                                                                    <span className="tracking-wide">Mis Cursos</span>
-                                                                </Link>
-                                                            )}
-
-                                                            <button
-                                                                onClick={() => { setMenuPerfil(false); goPerfil(); }}
-                                                                className="group/item flex items-center gap-3 px-4 py-3 hover:bg-white/5 text-slate-300 hover:text-white font-bold text-xs rounded-xl transition-all cursor-pointer"
-                                                            >
-                                                                <User className="w-4 h-4 group-hover/item:scale-110 transition-transform text-slate-500 group-hover/item:text-sky-400" />
-                                                                <span className="tracking-wide">Mi Perfil</span>
-                                                            </button>
-
-                                                            <div className="h-px bg-white/5 my-2 mx-4" />
-
-                                                            <button
-                                                                onClick={handleLogout}
-                                                                className="group/item flex items-center gap-3 px-4 py-3 bg-rose-500/5 hover:bg-rose-500/10 text-rose-500 font-black text-xs rounded-xl transition-all cursor-pointer"
-                                                            >
-                                                                <LogOut className="w-4 h-4 group-hover/item:translate-x-1 transition-transform" />
-                                                                <span className="tracking-widest uppercase text-[10px]">Cerrar Sesión</span>
-                                                            </button>
-                                                        </div>
-                                                    </motion.div>
-                                                </>
-                                            )}
-                                        </AnimatePresence>
+                                        <UserMenu
+                                            isOpen={menuPerfil}
+                                            onClose={() => setMenuPerfil(false)}
+                                            user={user}
+                                            goPerfil={goPerfil}
+                                            handleLogout={handleLogout}
+                                        />
                                     </div>
                                 </div>
                             )}
+
+                            {/* Botón de Menú Hamburguesa Móvil a la extrema derecha */}
+                            <button
+                                className="md:hidden text-white/60 p-2.5 bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white rounded-xl transition-all duration-300"
+                                onClick={() => setSidebarOpen(true)}
+                            >
+                                <Menu className="w-5 h-5" />
+                            </button>
                         </div>
                     </div>
                 </div>

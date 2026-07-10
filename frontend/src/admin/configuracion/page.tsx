@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { API_URL } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 import { IoCameraOutline, IoPersonOutline, IoKeyOutline, IoMailOutline, IoCallOutline, IoTextOutline, IoSaveOutline } from "react-icons/io5";
 import InputComponent from "../Components/InputComponent";
 
@@ -25,15 +26,10 @@ export const Configuracion = () => {
 
   const cargarPerfil = async () => {
     try {
-      const res = await fetch(`${API_URL}/perfil`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-      });
-      const data = await res.json();
+      const res = await apiClient.get("/perfil");
+      const data = res.data;
       const user = data.usuario || data;
-      if (res.ok && user) {
+      if (user) {
         setPerfil(user);
         setPreview(user.imagen_perfil || null);
         setForm({
@@ -67,19 +63,13 @@ export const Configuracion = () => {
     if (imagen) formData.append("imagen_perfil", imagen);
 
     try {
-      const res = await fetch(`${API_URL}/perfil`, {
-        method: "PUT",
-        headers: { Accept: "application/json" },
-        body: formData,
-      });
-      if (res.ok) {
-        setMensaje("Perfil actualizado correctamente.");
-        cargarPerfil();
-      } else {
-        const data = await res.json();
-        setError(data.message || "No se pudo actualizar el perfil.");
-      }
-    } catch { setError("Error al conectar con el servidor."); }
+      await apiClient.put("/perfil", formData);
+      setMensaje("Perfil actualizado correctamente.");
+      cargarPerfil();
+    } catch (err: any) { 
+      const errMsg = err.response?.data?.message || "No se pudo actualizar el perfil.";
+      setError(errMsg); 
+    }
     finally { setLoading(false); }
   };
 
@@ -87,17 +77,12 @@ export const Configuracion = () => {
     setResetMsg("");
     setSendingReset(true);
     try {
-      const res = await fetch(`${API_URL}/auth/change-password`, {
-        method: "POST",
-        headers: { Accept: "application/json" },
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setResetMsg(data.message || "No se pudo enviar el correo.");
-        return;
-      }
+      await apiClient.post("/auth/change-password");
       setResetMsg("Se envió un correo para cambiar tu contraseña.");
-    } catch { setResetMsg("Error de red al enviar el correo."); }
+    } catch (err: any) { 
+      const errMsg = err.response?.data?.message || "No se pudo enviar el correo.";
+      setResetMsg(errMsg); 
+    }
     finally { setSendingReset(false); }
   };
 

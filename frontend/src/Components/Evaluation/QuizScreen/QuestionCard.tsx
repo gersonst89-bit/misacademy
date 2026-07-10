@@ -1,6 +1,7 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { setAnswer, toggleMarkForReview } from '../../../store/evaluationSlice';
+import { API_URL } from '../../../config/api';
 import styles from '../QuizScreen.module.css';
 
 interface Props {
@@ -65,6 +66,16 @@ const QuestionCard: React.FC<Props> = ({ question, currentAnswer }) => {
         <h3 className="text-xl sm:text-2xl font-medium text-white leading-relaxed mb-10">
           {question.texto_pregunta}
         </h3>
+
+        {question.imagen_url && (
+          <div className="w-full mb-8 overflow-hidden rounded-2xl border border-white/10 flex items-center justify-center bg-white/5 p-4 max-h-[350px]">
+            <img 
+              src={question.imagen_url.startsWith("http") ? question.imagen_url : `${API_URL}/${question.imagen_url.startsWith("/") ? question.imagen_url.slice(1) : question.imagen_url}`} 
+              alt="Planteamiento de la pregunta" 
+              className="max-h-[320px] object-contain rounded-xl"
+            />
+          </div>
+        )}
 
         <div className="space-y-3">
           {question.opciones?.map((op: any) => {

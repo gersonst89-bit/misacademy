@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import type { Material, Modulo, Curso } from "../../types/models";
 import SearchableSelect from "../Components/SearchableSelect";
 import InputComponent from "../Components/InputComponent";
-import { apiUrl } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 import AdminModal from "../Components/AdminModal";
 import { IoCloudUploadOutline } from "react-icons/io5";
 
@@ -42,11 +42,10 @@ export const EditMaterialModal: React.FC<EditMaterialModalProps> = ({
         // Cursos - usar ruta admin
         let pageC = 1, lastC = 1, listC: Curso[] = [];
         do {
-          const r = await fetch(apiUrl(`/admin/cursos?page=${pageC}`), {
-            headers: { Accept: "application/json" },
-            credentials: "include",
+          const res = await apiClient.get(`/admin/cursos`, {
+            params: { page: pageC }
           });
-          const d = await r.json();
+          const d = res.data;
           listC = [...listC, ...(d.data || d || [])];
           lastC = d.last_page || d.meta?.last_page || 1;
           pageC++;
@@ -56,11 +55,10 @@ export const EditMaterialModal: React.FC<EditMaterialModalProps> = ({
         // Modulos
         let pageM = 1, lastM = 1, listM: Modulo[] = [];
         do {
-          const r = await fetch(apiUrl(`/admin/modulos?page=${pageM}`), {
-            headers: { Accept: "application/json" },
-            credentials: "include",
+          const res = await apiClient.get(`/admin/modulos`, {
+            params: { page: pageM }
           });
-          const d = await r.json();
+          const d = res.data;
           listM = [...listM, ...(d.data || d || [])];
           lastM = d.last_page || d.meta?.last_page || 1;
           pageM++;

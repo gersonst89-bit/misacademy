@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { LoadingSpinner } from '../../reseñas/page';
+import { LoadingSpinner } from '../../resenas/page';
 import './instructions-screen.css';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate } from 'react-router-dom';

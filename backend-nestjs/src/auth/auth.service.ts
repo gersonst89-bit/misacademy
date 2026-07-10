@@ -1,49 +1,81 @@
-import { Injectable, HttpException, HttpStatus, UnauthorizedException } from '@nestjs/common'; import { JwtService } from '@nestjs/jwt';
+import {
+  Injectable,
+  HttpException,
+  HttpStatus,
+  UnauthorizedException,
+  Logger,
+} from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { MailerService } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { AuthRepository } from './auth.repository';
-import { RegisterDto, LoginDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto';
+import {
+  RegisterDto,
+  LoginDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+} from './dto/auth.dto';
 import { Usuario } from '../entities/usuario.entity';
 
 @Injectable()
 export class AuthService {
-    constructor(
-        private readonly authRepo: AuthRepository,
-        private readonly jwtService: JwtService,
-        private readonly mailerService: MailerService,
-        private readonly configService: ConfigService,
-    ) { }
+  private readonly logger = new Logger(AuthService.name);
 
-    private get appUrl(): string {
-        return this.configService.get<string>('APP_URL_BASE', 'http://localhost:5173') ?? 'http://localhost:5173';
+  constructor(
+    private readonly authRepo: AuthRepository,
+    private readonly jwtService: JwtService,
+    private readonly mailerService: MailerService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  private get appUrl(): string {
+    return (
+      this.configService.get<string>('APP_URL_BASE', 'http://localhost:5173') ??
+      'http://localhost:5173'
+    );
+  }
+
+  private get apiBaseUrl(): string {
+    const publicApiUrl = this.configService.get<string>('API_URL_PUBLIC');
+    if (publicApiUrl) return publicApiUrl;
+
+    const port = this.configService.get<string>('APP_PORT', '8000');
+    return `http://127.0.0.1:${port}/api`;
+  }
+
+  private get refreshSecret(): string {
+    const secret = this.configService.get<string>('REFRESH_JWT_SECRET');
+    if (!secret) {
+      throw new Error('REFRESH_JWT_SECRET env variable is required but not set');
+    }
+    return secret;
+  }
+
+  private get jwtExpiration(): string {
+    return this.configService.get<string>('JWT_EXPIRATION', '15m');
+  }
+
+  async register(dto: RegisterDto) {
+    // Check if email exists
+    const existing = await this.authRepo.findByEmail(dto.email);
+    if (existing) {
+      throw new HttpException(
+        'El email ya está registrado',
+        HttpStatus.CONFLICT,
+      );
     }
 
-    private get apiBaseUrl(): string {
-        const publicApiUrl = this.configService.get<string>('API_URL_PUBLIC');
-        if (publicApiUrl) return publicApiUrl;
+    const user = await this.authRepo.register(dto);
+    const token = await this.authRepo.createVerificationToken(user.id_usuario);
 
-        const port = this.configService.get<string>('APP_PORT', '8000');
-        return `http://127.0.0.1:${port}/api`;
-    }
-
-    async register(dto: RegisterDto) {
-        // Check if email exists
-        const existing = await this.authRepo.findByEmail(dto.email);
-        if (existing) {
-            throw new HttpException('El email ya está registrado', HttpStatus.CONFLICT);
-        }
-
-        const user = await this.authRepo.register(dto);
-        const token = await this.authRepo.createVerificationToken(user.id_usuario);
-
-        // Send verification email
-        const verifyUrl = `${this.apiBaseUrl}/auth/verify/${token}`;
-        try {
-            await this.mailerService.sendMail({
-                to: user.email,
-                subject: '✅ Verifica tu cuenta — MIS Academy',
-                html: `
+    // Send verification email
+    const verifyUrl = `${this.apiBaseUrl}/auth/verify/${token}`;
+    try {
+      await this.mailerService.sendMail({
+        to: user.email,
+        subject: '✅ Verifica tu cuenta — MIS Academy',
+        html: `
                     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; border-radius: 12px; overflow: hidden;">
                         <div style="background: linear-gradient(135deg, #0ea5e9, #6366f1); padding: 32px 24px; text-align: center;">
                             <h1 style="color: white; margin: 0; font-size: 24px;">🎓 MIS Academy</h1>
@@ -70,108 +102,114 @@ export class AuthService {
                         </div>
                     </div>
                 `,
-            });
-            console.log(`📧 Email de verificación enviado a: ${user.email}`);
-        } catch (err: any) {
-            console.error('❌ Error enviando email de verificación:', err);
-            require('fs').writeFileSync('email-error.log', JSON.stringify(err, null, 2) + '\\n' + err.message);
-            // No lanzamos error para no bloquear el registro
-        }
-
-        return {
-            message: 'Usuario registrado. Revisa tu correo para verificar la cuenta.',
-            user: {
-                id_usuario: user.id_usuario,
-                nombre: user.nombre,
-                apellido: user.apellido,
-                email: user.email,
-            },
-        };
+      });
+      this.logger.log(`📧 Email de verificación enviado a: ${user.email}`);
+    } catch (err: any) {
+      this.logger.error(`❌ Error enviando email de verificación a ${user.email}: ${err.message}`, err.stack);
+      // No lanzamos error para no bloquear el registro
     }
 
-    async login(dto: LoginDto, ip: string, userAgent: string) {
-        const user = await this.authRepo.findByEmail(dto.email);
+    return {
+      message: 'Usuario registrado. Revisa tu correo para verificar la cuenta.',
+      user: {
+        id_usuario: user.id_usuario,
+        nombre: user.nombre,
+        apellido: user.apellido,
+        email: user.email,
+      },
+    };
+  }
 
-        if (!user || !(await bcrypt.compare(dto.password, user.password))) {
-            // Log failed attempt
-            await this.authRepo.createAuthLog({
-                authenticatable_type: 'App\\Models\\Usuario',
-                authenticatable_id: user?.id_usuario || undefined,
-                ip_address: ip,
-                user_agent: userAgent,
-                login_successful: false,
-                failure_reason: 'Credenciales inválidas',
-                login_at: new Date(),
-            });
-            throw new HttpException('Credenciales inválidas.', HttpStatus.UNAUTHORIZED);
-        }
+  async login(dto: LoginDto, ip: string, userAgent: string) {
+    const user = await this.authRepo.findByEmail(dto.email);
 
-        if (!user.email_verificado) {
-            throw new HttpException('Debes verificar tu correo antes de iniciar sesión.', HttpStatus.FORBIDDEN);
-        }
-
-        // Generate JWT
-        const payload = { sub: user.id_usuario, email: user.email };
-
-        // 🔹 Access Token (corto)
-        const accessToken = this.jwtService.sign(payload, {
-            expiresIn: '15m',
-        });
-
-        // 🔹 Refresh Token (largo)
-        const refreshToken = this.jwtService.sign(payload, {
-            expiresIn: '7d',
-        });
-
-        await this.authRepo.saveRefreshToken(user.id_usuario, refreshToken);
-
-        return {
-            accessToken,
-            refreshToken,
-            user: {
-                id_usuario: user.id_usuario,
-                nombre: user.nombre,
-                email: user.email,
-            },
-        };
+    if (!user || !(await bcrypt.compare(dto.password, user.password))) {
+      // Log failed attempt
+      await this.authRepo.createAuthLog({
+        authenticatable_type: 'Usuario',
+        authenticatable_id: user?.id_usuario || undefined,
+        ip_address: ip,
+        user_agent: userAgent,
+        login_successful: false,
+        failure_reason: 'Credenciales inválidas',
+        login_at: new Date(),
+      });
+      throw new HttpException(
+        'Credenciales inválidas.',
+        HttpStatus.UNAUTHORIZED,
+      );
     }
 
-    async logout(userId: number) {
-        await this.authRepo.updateLogout(userId);
-        return { message: 'Sesión cerrada correctamente.' };
+    if (!user.email_verificado) {
+      throw new HttpException(
+        'Debes verificar tu correo antes de iniciar sesión.',
+        HttpStatus.FORBIDDEN,
+      );
     }
 
-    async verify(token: string) {
-        const appUrl = this.appUrl;
-        const tokenData = await this.authRepo.findByVerificationToken(token);
+    // Generate JWT
+    const payload = { sub: user.id_usuario, email: user.email };
 
-        if (!tokenData) {
-            return { redirect: `${appUrl}/verificado?error=token` };
-        }
-        if (tokenData.fecha_expiracion && new Date() > new Date(tokenData.fecha_expiracion)) {
-            return { redirect: `${appUrl}/verificado?error=expirado` };
-        }
+    // 🔹 Access Token (corto)
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: this.jwtExpiration as any,
+    });
 
-        await this.authRepo.markTokenAsUsed(token);
-        await this.authRepo.markEmailVerified(tokenData.id_usuario);
+    // 🔹 Refresh Token (largo, secreto separado)
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: this.refreshSecret,
+      expiresIn: '7d',
+    });
 
-        const redirectUrl = `${appUrl}/verificado?success=1`;
-        console.log(`✅ Usuario verificado. Redirigiendo a: ${redirectUrl}`);
-        return { redirect: redirectUrl };
+    await this.authRepo.saveRefreshToken(user.id_usuario, refreshToken);
+
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id_usuario: user.id_usuario,
+        nombre: user.nombre,
+        email: user.email,
+      },
+    };
+  }
+
+
+
+  async verify(token: string) {
+    const appUrl = this.appUrl;
+    const tokenData = await this.authRepo.findByVerificationToken(token);
+
+    if (!tokenData) {
+      return { redirect: `${appUrl}/verificado?error=token` };
+    }
+    if (
+      tokenData.fecha_expiracion &&
+      new Date() > new Date(tokenData.fecha_expiracion)
+    ) {
+      return { redirect: `${appUrl}/verificado?error=expirado` };
     }
 
-    async forgotPassword(dto: ForgotPasswordDto) {
-        const user = await this.authRepo.findByEmail(dto.email);
-        if (user) {
-            const token = await this.authRepo.createResetToken(user.id_usuario);
+    await this.authRepo.markTokenAsUsed(token);
+    await this.authRepo.markEmailVerified(tokenData.id_usuario);
 
-            // Send reset password email
-            const resetUrl = `${this.appUrl}/reset-password?token=${token}&email=${encodeURIComponent(user.email)}`;
-            try {
-                await this.mailerService.sendMail({
-                    to: user.email,
-                    subject: '🔐 Restablecer contraseña — MIS Academy',
-                    html: `
+    const redirectUrl = `${appUrl}/verificado?success=1`;
+    this.logger.log(`✅ Usuario verificado. Redirigiendo a: ${redirectUrl}`);
+    return { redirect: redirectUrl };
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const user = await this.authRepo.findByEmail(dto.email);
+    if (user) {
+      const token = await this.authRepo.createResetToken(user.id_usuario);
+
+      // Send reset password email
+      const resetUrl = `${this.appUrl}/reset-password?token=${token}&email=${encodeURIComponent(user.email)}`;
+      try {
+        await this.mailerService.sendMail({
+          to: user.email,
+          subject: '🔐 Restablecer contraseña — MIS Academy',
+          html: `
                         <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; border-radius: 12px; overflow: hidden;">
                             <div style="background: linear-gradient(135deg, #f59e0b, #ef4444); padding: 32px 24px; text-align: center;">
                                 <h1 style="color: white; margin: 0; font-size: 24px;">🔐 MIS Academy</h1>
@@ -197,51 +235,64 @@ export class AuthService {
                             </div>
                         </div>
                     `,
-                });
-                console.log(`📧 Email de reset enviado a: ${user.email}`);
-            } catch (err: any) {
-                console.error('❌ Error enviando email de reset:', err);
-            }
-        }
-        return { message: 'Se ha enviado un correo con instrucciones para restablecer tu contraseña.' };
+        });
+        this.logger.log(`📧 Email de reset enviado a: ${user.email}`);
+      } catch (err: any) {
+        this.logger.error('❌ Error enviando email de reset:', err.stack);
+      }
+    }
+    return {
+      message:
+        'Se ha enviado un correo con instrucciones para restablecer tu contraseña.',
+    };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const tokenData = await this.authRepo.findValidResetToken(dto.token);
+    if (!tokenData) {
+      throw new HttpException(
+        'Token inválido o expirado',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (
+      tokenData.fecha_expiracion &&
+      new Date() > new Date(tokenData.fecha_expiracion)
+    ) {
+      throw new HttpException('Token expirado', HttpStatus.BAD_REQUEST);
     }
 
-    async resetPassword(dto: ResetPasswordDto) {
-        const tokenData = await this.authRepo.findValidResetToken(dto.token);
-        if (!tokenData) {
-            throw new HttpException('Token inválido o expirado', HttpStatus.BAD_REQUEST);
-        }
-        if (tokenData.fecha_expiracion && new Date() > new Date(tokenData.fecha_expiracion)) {
-            throw new HttpException('Token expirado', HttpStatus.BAD_REQUEST);
-        }
-
-        const user = await this.authRepo.findById(tokenData.id_usuario);
-        if (!user || user.email !== dto.email) {
-            throw new HttpException('Usuario no coincide con el token', HttpStatus.BAD_REQUEST);
-        }
-
-        await this.authRepo.updatePassword(user.id_usuario, dto.password);
-        await this.authRepo.markTokenAsUsed(dto.token);
-
-        return { success: true, message: 'Contraseña actualizada correctamente' };
+    const user = await this.authRepo.findById(tokenData.id_usuario);
+    if (!user || user.email !== dto.email) {
+      throw new HttpException(
+        'Usuario no coincide con el token',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
-    async getProfile(userId: number) {
-        const user = await this.authRepo.findById(userId);
-        if (!user) throw new HttpException('Usuario no encontrado', HttpStatus.NOT_FOUND);
-        return user;
-    }
+    await this.authRepo.updatePassword(user.id_usuario, dto.password);
+    await this.authRepo.markTokenAsUsed(dto.token);
 
-    async changePassword(user: Usuario) {
-        const token = await this.authRepo.createResetToken(user.id_usuario);
+    return { success: true, message: 'Contraseña actualizada correctamente' };
+  }
 
-        // Send change password email
-        const resetUrl = `${this.appUrl}/reset-password?token=${token}&email=${encodeURIComponent(user.email)}`;
-        try {
-            await this.mailerService.sendMail({
-                to: user.email,
-                subject: '🔑 Cambio de contraseña — MIS Academy',
-                html: `
+  async getProfile(userId: number) {
+    const user = await this.authRepo.findById(userId);
+    if (!user)
+      throw new HttpException('Usuario no encontrado', HttpStatus.NOT_FOUND);
+    return user;
+  }
+
+  async changePassword(user: Usuario) {
+    const token = await this.authRepo.createResetToken(user.id_usuario);
+
+    // Send change password email
+    const resetUrl = `${this.appUrl}/reset-password?token=${token}&email=${encodeURIComponent(user.email)}`;
+    try {
+      await this.mailerService.sendMail({
+        to: user.email,
+        subject: '🔑 Cambio de contraseña — MIS Academy',
+        html: `
                     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; border-radius: 12px; overflow: hidden;">
                         <div style="background: linear-gradient(135deg, #0ea5e9, #6366f1); padding: 32px 24px; text-align: center;">
                             <h1 style="color: white; margin: 0; font-size: 24px;">🔑 MIS Academy</h1>
@@ -264,100 +315,157 @@ export class AuthService {
                         </div>
                     </div>
                 `,
-            });
-            console.log(`📧 Email de cambio de contraseña enviado a: ${user.email}`);
-        } catch (err) {
-            console.error('❌ Error enviando email de cambio de contraseña:', err);
-        }
-
-        return { success: true, message: 'Se ha enviado un correo con instrucciones para cambiar tu contraseña.' };
+      });
+      this.logger.log(`📧 Email de cambio de contraseña enviado a: ${user.email}`);
+    } catch (err: any) {
+      this.logger.error('❌ Error enviando email de cambio de contraseña:', err.stack);
     }
-    async githubLogin(req: any) {
-        if (!req.user) {
-            throw new HttpException('No user from github', HttpStatus.BAD_REQUEST);
-        }
 
-        const { email, nombre, imagen_perfil } = req.user;
-
-        let user = await this.authRepo.findByEmail(email);
-
-        if (!user) {
-            user = await this.authRepo.register({
-                email,
-                nombre,
-                apellido: '',
-                password: Math.random().toString(36).slice(-10),
-            });
-
-            await this.authRepo.markEmailVerified(user.id_usuario);
-
-            if (imagen_perfil) {
-                await this.authRepo.updateAvatar(user.id_usuario, imagen_perfil);
-            }
-        }
-
-        // 🔥 PAYLOAD
-        const payload = { sub: user.id_usuario, email: user.email };
-
-        // 🔹 Access Token
-        const accessToken = this.jwtService.sign(payload, {
-            expiresIn: '15m',
-        });
-
-        // 🔹 Refresh Token
-        const refreshToken = this.jwtService.sign(payload, {
-            expiresIn: '7d',
-        });
-
-        // 🔥 GUARDAR EN BD (CLAVE)
-        await this.authRepo.saveRefreshToken(user.id_usuario, refreshToken);
-
-        return {
-            accessToken,
-            refreshToken,
-            user: {
-                id_usuario: user.id_usuario,
-                nombre: user.nombre,
-                email: user.email,
-            },
-        };
+    return {
+      success: true,
+      message:
+        'Se ha enviado un correo con instrucciones para cambiar tu contraseña.',
+    };
+  }
+  async githubLogin(req: any) {
+    if (!req.user) {
+      throw new HttpException('No user from github', HttpStatus.BAD_REQUEST);
     }
-    async refresh(refreshToken: string) {
-        const tokenInDb = await this.authRepo.findRefreshToken(refreshToken);
 
-        if (
-            !tokenInDb ||
-            tokenInDb.usado ||
-            (tokenInDb.fecha_expiracion && new Date() > tokenInDb.fecha_expiracion)
-        ) {
-            throw new UnauthorizedException('Invalid or expired refresh token');
-        }
+    const { email, nombre, imagen_perfil } = req.user;
 
-        const user = await this.authRepo.findById(tokenInDb.id_usuario);
+    let user = await this.authRepo.findByEmail(email);
 
-        if (!user) {
-            throw new UnauthorizedException('User not found');
-        }
+    if (!user) {
+      user = await this.authRepo.register({
+        email,
+        nombre,
+        apellido: '',
+        password: Math.random().toString(36).slice(-10),
+      });
 
-        const payload = {
-            sub: user.id_usuario,
-            email: user.email,
-        };
+      await this.authRepo.markEmailVerified(user.id_usuario);
 
-        const newAccessToken = this.jwtService.sign(payload, {
-            expiresIn: '15m',
-        });
-
-        // 🔥 SOLO ACCESS TOKEN (SIN ROTACIÓN)
-        return {
-            accessToken: newAccessToken,
-        };
+      if (imagen_perfil) {
+        await this.authRepo.updateAvatar(user.id_usuario, imagen_perfil);
+      }
     }
-    async invalidateRefreshToken(refreshToken: string) {
-        const token = await this.authRepo.findRefreshToken(refreshToken);
-        if (token) {
-            token.usado = true;
-            await this.authRepo.updateToken(token);
-        }
+
+    // 🔥 PAYLOAD
+    const payload = { sub: user.id_usuario, email: user.email };
+
+    // 🔹 Access Token
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: this.jwtExpiration as any,
+    });
+
+    // 🔹 Refresh Token (secreto separado)
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: this.refreshSecret,
+      expiresIn: '7d',
+    });
+
+    // 🔥 GUARDAR EN BD (CLAVE)
+    await this.authRepo.saveRefreshToken(user.id_usuario, refreshToken);
+
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id_usuario: user.id_usuario,
+        nombre: user.nombre,
+        email: user.email,
+      },
+    };
+  }
+  async refresh(refreshToken: string) {
+    // Verificar firma del refresh token con su secreto exclusivo
+    try {
+      this.jwtService.verify(refreshToken, { secret: this.refreshSecret });
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token signature');
     }
+
+    const tokenInDb = await this.authRepo.findRefreshToken(refreshToken);
+
+    // Detección de reuso de token (Token Reuse Detection):
+    // Si el token existe en base de datos pero ya fue marcado como "usado",
+    // esto es un indicador de que el token fue comprometido y reutilizado.
+    // Como medida preventiva extrema, revocamos todos los tokens de refresco del usuario.
+    if (tokenInDb && tokenInDb.usado) {
+      await this.authRepo.invalidateAllUserRefreshTokens(tokenInDb.id_usuario);
+      throw new UnauthorizedException('Compromised session. Please login again.');
+    }
+
+    if (
+      !tokenInDb ||
+      (tokenInDb.fecha_expiracion && new Date() > tokenInDb.fecha_expiracion)
+    ) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    const user = await this.authRepo.findById(tokenInDb.id_usuario);
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Rotación del refresh token:
+    // 1. Marcar el refresh token actual como usado
+    tokenInDb.usado = true;
+    await this.authRepo.updateToken(tokenInDb);
+
+    const payload = {
+      sub: user.id_usuario,
+      email: user.email,
+    };
+
+    // 2. Generar nuevos tokens
+    const newAccessToken = this.jwtService.sign(payload, {
+      expiresIn: this.jwtExpiration as any,
+    });
+
+    const newRefreshToken = this.jwtService.sign(payload, {
+      secret: this.refreshSecret,
+      expiresIn: '7d',
+    });
+
+    // 3. Guardar el nuevo refresh token en BD
+    await this.authRepo.saveRefreshToken(user.id_usuario, newRefreshToken);
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+    };
+  }
+
+  async invalidateRefreshToken(refreshToken: string) {
+    const token = await this.authRepo.findRefreshToken(refreshToken);
+    if (token) {
+      token.usado = true;
+      await this.authRepo.updateToken(token);
+    }
+  }
+
+  async logout(userId?: number, refreshToken?: string): Promise<void> {
+    let resolvedUserId = userId;
+
+    if (refreshToken) {
+      const token = await this.authRepo.findRefreshToken(refreshToken);
+      if (token) {
+        token.usado = true;
+        await this.authRepo.updateToken(token);
+        resolvedUserId = resolvedUserId || token.id_usuario;
+      }
+    }
+
+    if (resolvedUserId) {
+      await this.authRepo.updateLogout(resolvedUserId);
+    }
+  }
+
+  decodeToken(token: string): any {
+    return this.jwtService.decode(token);
+  }
 }
+

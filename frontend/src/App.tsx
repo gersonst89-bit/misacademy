@@ -5,8 +5,8 @@ import {
   Navigate,
 } from "react-router-dom";
 import React, { useEffect, Suspense, lazy } from "react";
-import { useSelector, useDispatch } from "react-redux";
 import { useParams } from "react-router-dom";
+import { useAppSelector, useAppDispatch } from "./hooks/redux";
 import { setCourseId, resetEvaluation } from "./store/evaluationSlice";
 
 // Components that should stay in the main bundle for immediate structure
@@ -22,6 +22,8 @@ const Metodologia = lazy(() => import("./Components/Metodologia"));
 const Opiniones = lazy(() => import("./Components/Opiniones"));
 const CursosDestacadosHome = lazy(() => import("./Components/CursosDestacadosHome"));
 const RegisterForm = lazy(() => import("./Components/RegisterForm"));
+// En la ruta /contacto, el mismo formulario actúa como formulario de contacto
+const ContactForm = lazy(() => import("./Components/RegisterForm"));
 
 const CursosPage = lazy(() => import("./cursos/page"));
 const LoginPage = lazy(() => import("./login/page"));
@@ -41,7 +43,7 @@ const Reclamaciones = lazy(() => import("./reclamaciones/page"));
 const Carrito = lazy(() => import("./carrito/page"));
 const PerfilPage = lazy(() => import("./perfil/page"));
 const CursoPlayerPage = lazy(() => import("./cursos/VideoPage"));
-const MisReseñas = lazy(() => import("./reseñas/page"));
+const MisReseñas = lazy(() => import("./resenas/page"));
 const MisCertificados = lazy(() => import("./certificados/page"));
 const PaginaLeccion = lazy(() => import("./cursos/PaginaLeccion"));
 const ConsultaLinea = lazy(() => import("./consulta/ConsultaLinea"));
@@ -53,6 +55,8 @@ const ResultsScreen = lazy(() => import("./Components/Evaluation/ResultsScreen")
 const ReviewScreen = lazy(() => import("./Components/Evaluation/ReviewScreen"));
 const EvaluationLayout = lazy(() => import("./Components/Evaluation/EvaluationLayout"));
 const ProtectedAdminRoute = lazy(() => import("./Components/ProtectedAdminRoute"));
+const ProtectedRoute = lazy(() => import("./Components/ProtectedRoute"));
+const PublicRoute = lazy(() => import("./Components/PublicRoute"));
 
 /**
  * Pantalla de carga elegante para las transiciones entre páginas
@@ -71,11 +75,11 @@ const LoadingScreen = () => (
 
 // Wrapper component that uses useParams INSIDE the Router context
 function EvaluationRouteWrapper() {
-  const currentScreen = useSelector(
-    (state: any) => state.evaluation.currentScreen
+  const currentScreen = useAppSelector(
+    (state) => state.evaluation.currentScreen
   );
-  const courseId = useSelector((state: any) => state.evaluation.courseId);
-  const dispatch = useDispatch();
+  const courseId = useAppSelector((state) => state.evaluation.courseId);
+  const dispatch = useAppDispatch();
   const params = useParams();
 
   useEffect(() => {
@@ -137,11 +141,13 @@ function App() {
               }
             />
             <Route
-              path="/video-page/:cursoIdSlug"
+              path="/video-page/:slug"
               element={
-                <DefaultLayout>
-                  <CursoPlayerPage />
-                </DefaultLayout>
+                <ProtectedRoute>
+                  <DefaultLayout>
+                    <CursoPlayerPage />
+                  </DefaultLayout>
+                </ProtectedRoute>
               }
             />
 
@@ -183,9 +189,11 @@ function App() {
             <Route
               path="/pago"
               element={
-                <DefaultLayout>
-                  <Pago />
-                </DefaultLayout>
+                <ProtectedRoute>
+                  <DefaultLayout>
+                    <Pago />
+                  </DefaultLayout>
+                </ProtectedRoute>
               }
             />
 
@@ -193,17 +201,21 @@ function App() {
             <Route
               path="/login"
               element={
-                <NoHeaderFooterLayout>
-                  <LoginPage />
-                </NoHeaderFooterLayout>
+                <PublicRoute>
+                  <NoHeaderFooterLayout>
+                    <LoginPage />
+                  </NoHeaderFooterLayout>
+                </PublicRoute>
               }
             />
             <Route
               path="/registro"
               element={
-                <NoHeaderFooterLayout>
-                  <RegistroPage />
-                </NoHeaderFooterLayout>
+                <PublicRoute>
+                  <NoHeaderFooterLayout>
+                    <RegistroPage />
+                  </NoHeaderFooterLayout>
+                </PublicRoute>
               }
             />
             <Route
@@ -237,25 +249,31 @@ function App() {
             <Route
               path="/compras"
               element={
-                <DefaultLayout>
-                  <MisCompras />
-                </DefaultLayout>
+                <ProtectedRoute>
+                  <DefaultLayout>
+                    <MisCompras />
+                  </DefaultLayout>
+                </ProtectedRoute>
               }
             />
             <Route
-              path="/reseñas"
+              path="/resenas"
               element={
-                <DefaultLayout>
-                  <MisReseñas />
-                </DefaultLayout>
+                <ProtectedRoute>
+                  <DefaultLayout>
+                    <MisReseñas />
+                  </DefaultLayout>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/certificados"
               element={
-                <DefaultLayout>
-                  <MisCertificados />
-                </DefaultLayout>
+                <ProtectedRoute>
+                  <DefaultLayout>
+                    <MisCertificados />
+                  </DefaultLayout>
+                </ProtectedRoute>
               }
             />
             <Route
@@ -278,7 +296,7 @@ function App() {
               path="/contacto"
               element={
                 <DefaultLayout>
-                  <RegisterForm />
+                  <ContactForm />
                 </DefaultLayout>
               }
             />
@@ -295,9 +313,11 @@ function App() {
             <Route
               path="/carrito"
               element={
-                <DefaultLayout>
-                  <Carrito />
-                </DefaultLayout>
+                <ProtectedRoute>
+                  <DefaultLayout>
+                    <Carrito />
+                  </DefaultLayout>
+                </ProtectedRoute>
               }
             />
 
@@ -305,9 +325,11 @@ function App() {
             <Route
               path="/perfil"
               element={
-                <DefaultLayout>
-                  <PerfilPage />
-                </DefaultLayout>
+                <ProtectedRoute>
+                  <DefaultLayout>
+                    <PerfilPage />
+                  </DefaultLayout>
+                </ProtectedRoute>
               }
             />
             {/* Compatibilidad: si alguien entra a /perfil/33 -> redirige a /perfil */}
@@ -318,11 +340,19 @@ function App() {
 
             <Route
               path="/curso/:idCurso/leccion/:idLeccion"
-              element={<PaginaLeccion />}
+              element={
+                <ProtectedRoute>
+                  <PaginaLeccion />
+                </ProtectedRoute>
+              }
             />
             <Route
               path="/evaluation/:courseId"
-              element={<EvaluationRouteWrapper />}
+              element={
+                <ProtectedRoute>
+                  <EvaluationRouteWrapper />
+                </ProtectedRoute>
+              }
             />
 
             {/* 404 - Must be LAST route */}

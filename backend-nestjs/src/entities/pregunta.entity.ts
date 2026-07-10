@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+} from 'typeorm';
 import { Evaluacion } from './evaluacion.entity';
 import { OpcionRespuesta } from './opcion-respuesta.entity';
 
@@ -21,6 +28,9 @@ export class Pregunta {
 
   @Column({ type: 'int', default: 0 })
   orden!: number;
+
+  @Column({ length: 255, nullable: true })
+  imagen_url?: string;
 
   @ManyToOne(() => Evaluacion)
   @JoinColumn({ name: 'id_evaluacion' })

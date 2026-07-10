@@ -39,8 +39,8 @@ export function AddCertificadoModal({ isOpen, onClose, onSave }: Props) {
 
   const handleSubmit = async () => {
     setError(null);
-    if (!/^ADI[A-Z0-9]{6}$/.test(codigo)) {
-      return setError("El código debe comenzar con 'ADI' y tener 9 caracteres.");
+    if (!/^MIS-[A-Z0-9]{12}$/.test(codigo)) {
+      return setError("El código debe comenzar con 'MIS-' y tener exactamente 12 caracteres (letras o números).");
     }
     if (!nombreEstudiante || !nombreCurso || !fechaInicio || !fechaFin || !totalHoras || !emailDestinatario) {
       return setError("Por favor completa todos los campos requeridos.");
@@ -116,10 +116,15 @@ export function AddCertificadoModal({ isOpen, onClose, onSave }: Props) {
             value={codigo}
             onChange={(e) => {
               let v = e.target.value.toUpperCase();
-              if (!v.startsWith("ADI")) v = "ADI" + v.replace(/^ADI/i, "");
-              setCodigo(v.slice(0, 9));
+              if (!v.startsWith("MIS-")) {
+                v = "MIS-" + v.replace(/^MIS-?/i, "");
+              }
+              const prefix = "MIS-";
+              const rest = v.substring(prefix.length).replace(/[^A-Z0-9]/g, "");
+              v = prefix + rest;
+              setCodigo(v.slice(0, 16));
             }}
-            placeholder="Ej: ADI123456"
+            placeholder="Ej: MIS-ABC123XYZ789"
           />
           <InputComponent
             label="Fecha de Emisión"

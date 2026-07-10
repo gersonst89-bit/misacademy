@@ -1,0 +1,46 @@
+name: MIS Academy CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies (Root, Backend, and Frontend)
+        run: |
+          npm install
+          npm run install:all
+
+      - name: Run Lint (Backend)
+        run: |
+          cd backend-nestjs
+          npm run lint --if-present
+
+      - name: Check TypeScript types (Frontend)
+        run: |
+          cd frontend
+          npx tsc --noEmit
+
+      - name: Build Backend (NestJS)
+        run: |
+          cd backend-nestjs
+          npm run build
+
+      - name: Build Frontend (Vite)
+        run: |
+          cd frontend
+          npm run build

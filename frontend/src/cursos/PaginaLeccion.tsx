@@ -9,9 +9,8 @@ import MaterialesModulo from "./CursoComponents/MaterialesModulo";
 import NavegacionRapida from "./CursoComponents/NavegacionRapida";
 import ModalCompletacion from "./CursoComponents/ModalCompletacion";
 import { useParams } from "react-router-dom";
-import axios from "axios";
+import { apiClient } from "../services/apiClient";
 import HeaderLeccionSimple from "./CursoComponents/HeaderLeccionSimple";
-import { API_URL } from "../config/api";
 
 // LayoutDosColumnas: estructura responsive sin header propio
 const LayoutDosColumnas: React.FC<{ sidebar: React.ReactNode; children: React.ReactNode }> = ({ sidebar, children }) => {
@@ -83,12 +82,12 @@ const PaginaLeccion: React.FC = () => {
       setEstadoPagina("cargando");
       try {
         // 1. Acceso y progreso de la lección
-        const resLeccion = await axios.get(`${API_URL}/lecciones/${idLeccion}/acceso`);
+        const resLeccion = await apiClient.get(`/lecciones/${idLeccion}/acceso`);
         const dataLeccion = resLeccion.data;
         // 3. Progreso completo del curso (sidebar) - SIEMPRE
         let dataProgreso = null;
         try {
-          const resProgreso = await axios.get(`${API_URL}/cursos/${idCurso}/progreso`);
+          const resProgreso = await apiClient.get(`/cursos/${idCurso}/progreso`);
           dataProgreso = resProgreso.data;
           setCurso({ ...dataProgreso.curso, id_curso: dataProgreso.curso.id });
           // Marcar la lección actual en la estructura antes de setModulos
@@ -111,7 +110,7 @@ const PaginaLeccion: React.FC = () => {
           return;
         }
         // 2. Datos completos de la lección (incluye url_video)
-        const resLeccionInfo = await axios.get(`${API_URL}/lecciones/${idLeccion}`);
+        const resLeccionInfo = await apiClient.get(`/lecciones/${idLeccion}`);
         const infoLeccion = resLeccionInfo.data;
         // Asigna todos los campos de la lección incluyendo url_video
         setLeccionActual({
@@ -121,7 +120,7 @@ const PaginaLeccion: React.FC = () => {
         setProgresoActual(dataLeccion.progreso);
 
         // Obtener navegación real desde el backend
-        const resNavegacion = await axios.get(`${API_URL}/lecciones/${idLeccion}/navegacion`);
+        const resNavegacion = await apiClient.get(`/lecciones/${idLeccion}/navegacion`);
         const navData = resNavegacion.data;
         setNavegacion({
           leccionAnterior: navData.anterior,
@@ -130,7 +129,7 @@ const PaginaLeccion: React.FC = () => {
         // Consultar acceso para la lección siguiente si existe
         if (navData.siguiente?.id_leccion) {
           try {
-            const resAccesoSiguiente = await axios.get(`${API_URL}/lecciones/${navData.siguiente.id_leccion}/acceso`);
+            const resAccesoSiguiente = await apiClient.get(`/lecciones/${navData.siguiente.id_leccion}/acceso`);
             setPuedeAccederSiguiente(!!resAccesoSiguiente.data.puede_acceder);
           } catch {
             setPuedeAccederSiguiente(false);
@@ -143,7 +142,7 @@ const PaginaLeccion: React.FC = () => {
         if (e.response?.status === 403) {
           // Consultar progreso aunque acceso denegado
           try {
-            const resProgreso = await axios.get(`${API_URL}/cursos/${idCurso}/progreso`);
+            const resProgreso = await apiClient.get(`/cursos/${idCurso}/progreso`);
             const dataProgreso = resProgreso.data;
             setCurso({ ...dataProgreso.curso, id_curso: dataProgreso.curso.id });
             const estructuraConActual = dataProgreso.modulos.map((mod: any) => ({
@@ -266,7 +265,7 @@ const PaginaLeccion: React.FC = () => {
             // Si hay siguiente lección, consultar acceso y actualizar estado
             if (navegacion.leccionSiguiente?.id_leccion) {
               try {
-                const resAccesoSiguiente = await axios.get(`${API_URL}/lecciones/${navegacion.leccionSiguiente.id_leccion}/acceso`);
+                const resAccesoSiguiente = await apiClient.get(`/lecciones/${navegacion.leccionSiguiente.id_leccion}/acceso`);
                 setPuedeAccederSiguiente(!!resAccesoSiguiente.data.puede_acceder);
               } catch {
                 setPuedeAccederSiguiente(false);
@@ -275,7 +274,7 @@ const PaginaLeccion: React.FC = () => {
               // Actualizar sidebar: consultar progreso y recargar estructura, pero sin limpiar el estado principal
               setUI((prev: any) => ({ ...prev, sidebarActualizando: true }));
               try {
-                const resProgreso = await axios.get(`${API_URL}/cursos/${idCurso}/progreso`);
+                const resProgreso = await apiClient.get(`/cursos/${idCurso}/progreso`);
                 const dataProgreso = resProgreso.data;
                 setCurso((prevCurso: any) => ({ ...prevCurso, ...dataProgreso.curso, id_curso: dataProgreso.curso.id }));
                 const estructuraConActual = dataProgreso.modulos.map((mod: any) => ({

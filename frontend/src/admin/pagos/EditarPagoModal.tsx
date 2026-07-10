@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AdminModal from "../Components/AdminModal";
 import SelectComponent from "../Components/SelectComponent";
 import type { Pago } from "../../types/models";
 import { IoReceiptOutline, IoPersonOutline, IoCalendarOutline, IoCashOutline, IoCheckmarkCircleOutline } from "react-icons/io5";
 import { BASE_URL } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 
 interface EditarPagoModalProps {
   pago: Pago | null;
@@ -16,6 +17,24 @@ interface EditarPagoModalProps {
 export default function EditarPagoModal({ pago, onClose, onActualizar }: EditarPagoModalProps) {
   const [nuevoEstado, setNuevoEstado] = useState(pago?.estado || "");
   const [loading, setLoading] = useState(false);
+  const [detallesPago, setDetallesPago] = useState<Pago | null>(null);
+  const [cargandoDetalles, setCargandoDetalles] = useState(true);
+
+  useEffect(() => {
+    const fetchDetalles = async () => {
+      try {
+        if (!pago) return;
+        setCargandoDetalles(true);
+        const res = await apiClient.get(`/pagos/${pago.id_pago}`);
+        setDetallesPago(res.data);
+      } catch (error) {
+        console.error("Error al cargar detalles del pago:", error);
+      } finally {
+        setCargandoDetalles(false);
+      }
+    };
+    fetchDetalles();
+  }, [pago]);
 
   if (!pago) return null;
 
@@ -67,6 +86,56 @@ export default function EditarPagoModal({ pago, onClose, onActualizar }: EditarP
               Estado Actual: {pago.estado}
             </div>
           </div>
+        </div>
+
+        {/* Purchased Items Section */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 mb-2 px-2">
+            <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-500 flex items-center justify-center shadow-sm">
+              <IoReceiptOutline size={18} />
+            </div>
+            <h4 className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Concepto de Pago / Ítems</h4>
+          </div>
+
+          {cargandoDetalles ? (
+            <div className="py-4 text-center text-xs text-slate-400 font-bold uppercase tracking-widest animate-pulse">
+              Cargando detalles de compra...
+            </div>
+          ) : detallesPago?.detalles && detallesPago.detalles.length > 0 ? (
+            <div className="space-y-3">
+              {detallesPago.detalles.map((det) => {
+                const isRuta = !!det.ruta;
+                const nombreItem = isRuta ? det.ruta?.nombre : det.curso?.nombre;
+                const badgeText = isRuta ? "Ruta Académica" : "Curso Individual";
+                const badgeColor = isRuta ? "bg-purple-100 text-purple-700 border-purple-200" : "bg-sky-100 text-sky-700 border-sky-200";
+
+                return (
+                  <div key={det.id_detalle} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between gap-4">
+                    <div className="min-w-0 flex-1 text-left">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider border ${badgeColor}`}>
+                          {badgeText}
+                        </span>
+                      </div>
+                      <span className="text-sm font-bold text-slate-700 block leading-snug">
+                        {nombreItem || `Ítem #${isRuta ? det.id_ruta : det.id_curso}`}
+                      </span>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Precio</span>
+                      <span className="text-sm font-black text-slate-900">
+                        S/ {Number(det.precio_unitario).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">
+              {pago.detalles_transaccion || "No se especificaron detalles de los cursos/rutas."}
+            </div>
+          )}
         </div>
 
         <div className="space-y-4 md:space-y-6">

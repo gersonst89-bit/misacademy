@@ -15,7 +15,7 @@ import {
 import type { Leccion, Modulo } from "../../types/models";
 import { InfoLeccionModal } from "./infoLecciones";
 import { EditLeccionModal } from "./editLecciones";
-import { apiUrl } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 import { AddLeccionModal } from "./agregarLecciones";
 import DeleteModal from "../Components/DeleteModal";
 
@@ -197,7 +197,6 @@ function FiltroEstado({
 function getEmbedUrl(url: string): string | null {
   if (!url) return null;
 
-  // Si es un ID de YouTube o una URL de YouTube
   const ytMatch = url.match(
     /(?:youtube\.com.*(?:\?|&)v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/
   );
@@ -205,8 +204,6 @@ function getEmbedUrl(url: string): string | null {
     return `https://www.youtube.com/embed/${ytMatch[1]}`;
   }
 
-  // Si es una URL completa (http...) la dejamos pasar si es segura, 
-  // si no, mejor no intentar renderizarla como iframe
   if (url.startsWith('http')) return url;
 
   return null;
@@ -249,18 +246,7 @@ export function Lecciones() {
     if (!leccionAEliminar) return;
 
     try {
-      const response = await fetch(
-        apiUrl(`/admin/lecciones/${leccionAEliminar.id_leccion}`),
-        {
-          method: "DELETE",
-          headers: {},
-        }
-      );
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.message || "No se pudo eliminar la lección");
-      }
+      await apiClient.delete(`/admin/lecciones/${leccionAEliminar.id_leccion}`);
 
       setLecciones((prev) =>
         prev.filter((l) => l.id_leccion !== leccionAEliminar.id_leccion)
@@ -271,7 +257,8 @@ export function Lecciones() {
       alert("Lección eliminada con éxito");
     } catch (error: any) {
       console.error("Error al eliminar:", error);
-      alert(error.message || "Error al eliminar la lección");
+      const errMsg = error.response?.data?.message || error.response?.data?.mensaje || "Error al eliminar la lección";
+      alert(errMsg);
     }
   };
 
@@ -284,7 +271,6 @@ export function Lecciones() {
     }
 
     try {
-      // White-list estricto de campos permitidos por el DTO del servidor
       const cleanData = {
         titulo: leccionActualizada.titulo,
         descripcion: leccionActualizada.descripcion,
@@ -295,21 +281,7 @@ export function Lecciones() {
         id_modulo: leccionActualizada.id_modulo,
       };
 
-      const response = await fetch(
-        apiUrl(`/admin/lecciones/${leccionActualizada.id_leccion}`),
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(cleanData),
-        }
-      );
-
-      if (!response.ok) {
-        console.error("Error al guardar los cambios:", await response.json());
-        return false;
-      }
+      await apiClient.put(`/admin/lecciones/${leccionActualizada.id_leccion}`, cleanData);
 
       setLecciones((prev) =>
         prev.map((l) =>
@@ -333,24 +305,8 @@ export function Lecciones() {
     }
 
     try {
-      const response = await fetch(
-        apiUrl("/admin/lecciones"),
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(newLeccion),
-        }
-      );
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => null);
-        console.error("Error al crear lección:", err);
-        return false;
-      }
-
-      const data = await response.json();
+      const response = await apiClient.post("/admin/lecciones", newLeccion);
+      const data = response.data;
       if (data.leccion) {
         setLecciones((prev) => [data.leccion, ...prev]);
         return true;
@@ -368,12 +324,11 @@ export function Lecciones() {
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [cargando, setCargando] = useState(false);
 
-  // Debounce para la búsqueda (espera 500ms antes de buscar en el servidor)
   const [busquedaDebounced, setBusquedaDebounced] = useState(busqueda);
   useEffect(() => {
     const handler = setTimeout(() => {
       setBusquedaDebounced(busqueda);
-      setPagina(1); // Resetear a página 1 al buscar
+      setPagina(1);
     }, 500);
     return () => clearTimeout(handler);
   }, [busqueda]);
@@ -383,28 +338,17 @@ export function Lecciones() {
     setErrorMessage(null);
 
     try {
-      const queryParams = new URLSearchParams({
-        page: pagina.toString(),
-        per_page: "15",
-        q: busquedaDebounced,
-        id_modulo: filtroModulo.toString(),
-        estado: filtroEstado
+      const response = await apiClient.get("/admin/lecciones", {
+        params: {
+          page: pagina,
+          per_page: 15,
+          q: busquedaDebounced,
+          id_modulo: filtroModulo,
+          estado: filtroEstado
+        }
       });
 
-      const response = await fetch(
-        apiUrl(`/admin/lecciones?${queryParams.toString()}`),
-        {
-          headers: {
-            Accept: "application/json",
-          },
-        }
-      );
-
-      if (!response.ok) throw new Error("Error al obtener las lecciones");
-
-      const data = await response.json();
-      
-      // Ajuste según la estructura de respuesta del backend
+      const data = response.data;
       const items = data.data || [];
       const lastPage = data.last_page || 1;
 
@@ -420,17 +364,10 @@ export function Lecciones() {
 
   const fetchModulos = async () => {
     try {
-      // Pedimos una cantidad grande de módulos de una vez para el filtro (ej. 200)
-      const response = await fetch(
-        apiUrl(`/admin/modulos?per_page=200`),
-        {
-          headers: {},
-        }
-      );
-
-      if (!response.ok) throw new Error("Error al cargar los módulos");
-
-      const data = await response.json();
+      const response = await apiClient.get("/admin/modulos", {
+        params: { per_page: 200 }
+      });
+      const data = response.data;
       setModulos(data.data || data || []);
     } catch (error) {
       console.error("Error al cargar módulos:", error);

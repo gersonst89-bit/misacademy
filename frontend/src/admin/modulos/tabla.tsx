@@ -17,7 +17,7 @@ import { AddModuloModal } from "./agregarModulos";
 import { InfoModuloModal } from "./infoModulos";
 import { EditModuloModal } from "./editModulos";
 import DeleteModal from "../Components/DeleteModal";
-import { apiUrl, API_URL } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 const FK = "id_curso";
 
 type EstadoUI = "Activo" | "Inactivo";
@@ -52,26 +52,18 @@ function getLastPage(json: any): number {
 }
 
 async function fetchJson(url: string) {
-  const headers: Record<string, string> = {
-    Accept: "application/json",
-  };
-
-
-  const r = await fetch(url, {
-    cache: "no-store",
-    headers,
-    credentials: "include",
-  });
-
-  if (!r.ok) {
-    const text = await r.text();
-    throw new Error(`${r.status} ${r.statusText}: ${text}`);
-  }
-
   try {
-    return await r.json();
-  } catch {
-    return {};
+    const r = await apiClient.get(url, {
+      headers: {
+        Accept: "application/json",
+      },
+    });
+    return r.data;
+  } catch (err: any) {
+    const status = err.response?.status || "Error";
+    const statusText = err.response?.statusText || "";
+    const text = typeof err.response?.data === 'string' ? err.response?.data : JSON.stringify(err.response?.data || "");
+    throw new Error(`${status} ${statusText}: ${text}`);
   }
 }
 
@@ -315,12 +307,10 @@ export function Modulos() {
   /* --------- Cargar todos los cursos (una sola vez para el filtro) --------- */
   const fetchCursos = async () => {
     try {
-      // Pedimos una cantidad grande para el dropdown (ej. 200)
-      const res = await fetch(apiUrl("/admin/cursos?per_page=200"), {
-        headers: { Accept: "application/json" }
+      const res = await apiClient.get("/admin/cursos", {
+        params: { per_page: 200 }
       });
-      const data = await res.json();
-      setCursos(data.data || []);
+      setCursos(res.data.data || []);
     } catch {
       setCursos([]);
     }
@@ -331,30 +321,24 @@ export function Modulos() {
     setIsLoading(true);
     setCargando(true);
     try {
-      const queryParams = new URLSearchParams({
-        page: pagina.toString(),
-        per_page: "15",
+      const params: any = {
+        page: pagina,
+        per_page: 15,
         q: busquedaDebounced,
-        id_curso: cursoFiltro.toString(),
-      });
+        id_curso: cursoFiltro || undefined,
+      };
 
       if (estadoFiltro) {
-        queryParams.append("estado", uiToPublicado(estadoFiltro as EstadoUI));
+        params.estado = uiToPublicado(estadoFiltro as EstadoUI);
       }
 
-      const res = await fetch(apiUrl(`/admin/modulos?${queryParams.toString()}`), {
-        headers: { Accept: "application/json" }
-      });
-
-      if (!res.ok) throw new Error("Error al cargar módulos");
-
-      const data = await res.json();
-      const items = data.data || [];
+      const res = await apiClient.get(`/admin/modulos`, { params });
+      const items = res.data.data || [];
       const norm = items.map((m: any) => ({ ...m, estado: toUi(m.estado) }));
       
       setModulos(norm);
       setFiltrados(norm);
-      setTotalPaginas(data.last_page || 1);
+      setTotalPaginas(res.data.last_page || 1);
     } catch (e) {
       console.error(e);
       setModulos([]);
@@ -390,25 +374,13 @@ export function Modulos() {
         estado: uiToPublicado(nuevo.estado as EstadoUI),
       };
 
-      const res = await fetch(apiUrl("/admin/modulos"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        alert(`Error al crear el módulo:\n${errText}`);
-        return false;
-      }
-
+      await apiClient.post("/admin/modulos", payload);
       await fetchModulos();
       return true;
     } catch (e: any) {
       console.error(e);
-      alert(`Ocurrió un error al crear el módulo.\n${e?.message || ""}`);
+      const errMsg = e.response?.data?.message || e.message || "Ocurrió un error al crear el módulo.";
+      alert(`Error al crear el módulo:\n${Array.isArray(errMsg) ? errMsg.join("\n") : errMsg}`);
       return false;
     }
   };
@@ -427,25 +399,13 @@ export function Modulos() {
         estado: uiToPublicado(edit.estado as EstadoUI),
       };
 
-      const res = await fetch(apiUrl(`/admin/modulos/${edit.id_modulo}`), {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        alert(`Error al actualizar el módulo:\n${errText}`);
-        return false;
-      }
-
+      await apiClient.put(`/admin/modulos/${edit.id_modulo}`, payload);
       await fetchModulos();
       return true;
     } catch (e: any) {
       console.error(e);
-      alert(`Error al actualizar el módulo.\n${e?.message || ""}`);
+      const errMsg = e.response?.data?.message || e.message || "Error al actualizar el módulo.";
+      alert(`Error al actualizar el módulo:\n${Array.isArray(errMsg) ? errMsg.join("\n") : errMsg}`);
       return false;
     }
   };
@@ -458,23 +418,15 @@ export function Modulos() {
   const handleConfirmDelete = async () => {
     if (!moduloAEliminar) return;
     try {
-      const res = await fetch(apiUrl(`/admin/modulos/${moduloAEliminar.id_modulo}`), {
-        method: "DELETE",
-        headers: { Accept: "application/json" },
-      });
-
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt);
-      }
-
+      await apiClient.delete(`/admin/modulos/${moduloAEliminar.id_modulo}`);
       await fetchModulos();
       setIsDeleteModalOpen(false);
       setModuloAEliminar(null);
       alert("Módulo eliminado con éxito");
     } catch (e: any) {
       console.error(e);
-      alert("Error al eliminar el módulo: " + e.message);
+      const errMsg = e.response?.data?.message || e.message || "Error al eliminar el módulo.";
+      alert("Error al eliminar el módulo: " + errMsg);
     }
   };
 

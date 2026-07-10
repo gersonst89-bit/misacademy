@@ -1,9 +1,4 @@
-import {
-  Controller,
-  Get,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { MaterialesService } from './materiales.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CursoInscripcionGuard } from '../common/guards/curso-inscripcion.guard';

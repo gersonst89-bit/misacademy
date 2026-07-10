@@ -14,4 +14,6 @@ export class CreateCertificacionDto {
   @IsOptional() @IsString() email_destinatario?: string;
   @IsOptional() @IsString() fecha_emision?: string;
 }
-export class BuscarCertificadoDto { @IsNotEmpty() @IsString() codigo!: string; }
+export class BuscarCertificadoDto {
+  @IsNotEmpty() @IsString() codigo!: string;
+}

@@ -1,7 +1,7 @@
 import { IsNotEmpty, IsOptional, IsString, IsNumber } from 'class-validator';
 export class CreatePagoDto {
   @IsOptional() @IsNumber() id_tipo_pago?: number;
-  @IsNotEmpty() @IsNumber() monto_total: number;
+  @IsNotEmpty() @IsNumber() monto_total!: number;
   @IsOptional() @IsString() numero_operacion?: string;
   @IsOptional() @IsString() comprobante_url?: string;
   @IsOptional() @IsString() observaciones?: string;
@@ -12,7 +12,7 @@ export class UpdatePagoDto {
   @IsOptional() @IsString() observaciones?: string;
 }
 export class CreateTipoPagoDto {
-  @IsNotEmpty() @IsString() nombre: string;
+  @IsNotEmpty() @IsString() nombre!: string;
   @IsOptional() @IsString() descripcion?: string;
   @IsOptional() @IsNumber() comision?: number;
 }

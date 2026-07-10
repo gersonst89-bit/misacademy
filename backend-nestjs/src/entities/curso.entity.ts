@@ -1,4 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, ManyToMany, JoinColumn, JoinTable } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  ManyToMany,
+  JoinColumn,
+  JoinTable,
+  BeforeInsert,
+  BeforeUpdate,
+} from 'typeorm';
 import { Usuario } from './usuario.entity';
 
 @Entity('cursos')
@@ -12,7 +23,7 @@ export class Curso {
   @Column({ length: 200 })
   nombre!: string;
 
-  @Column({ length: 255, nullable: true })
+  @Column({ length: 255, nullable: true, unique: true })
   slug!: string;
 
   @Column({ type: 'text', nullable: true })
@@ -74,4 +85,19 @@ export class Curso {
     inverseJoinColumn: { name: 'id_ruta', referencedColumnName: 'id_ruta' },
   })
   rutas!: any[];
+
+  @BeforeInsert()
+  @BeforeUpdate()
+  generateSlug() {
+    if (this.nombre && (!this.slug || this.slug.trim() === '')) {
+      this.slug = this.nombre
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Quitar tildes y diacríticos
+        .replace(/[^a-z0-9 -]/g, '') // Quitar caracteres especiales
+        .replace(/\s+/g, '-') // Reemplazar múltiples espacios por guión
+        .replace(/-+/g, '-') // Reemplazar múltiples guiones por uno solo
+        .replace(/^-+|-+$/g, ''); // Quitar guiones al inicio o final
+    }
+  }
 }

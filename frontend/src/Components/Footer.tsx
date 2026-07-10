@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { FaFacebook, FaInstagram, FaLinkedin, FaYoutube } from "react-icons/fa";
-import { apiUrl } from "../config/api";
+import { apiClient } from "../services/apiClient";
 import { Link } from "react-router-dom";
 import { Mail, ArrowUpRight, Sparkles } from "lucide-react";
 
@@ -28,8 +28,8 @@ const Footer: React.FC = () => {
   useEffect(() => {
     const fetchLineas = async () => {
       try {
-        const res = await fetch(apiUrl("/lineas-academicas"));
-        const data = await res.json();
+        const res = await apiClient.get("/lineas-academicas");
+        const data = res.data;
         const lineasPublicadas = (data?.data || []).filter(
           (linea: LineaAcademica) => linea.estado === "Publicado"
         );
@@ -92,8 +92,16 @@ const Footer: React.FC = () => {
               </h3>
             </Link>
             <p className="text-slate-400 leading-relaxed mb-10 text-base font-medium max-w-sm">
-              Potenciamos el talento digital con formación de vanguardia. 
-              Especialízate en las tecnologías que están construyendo el futuro.
+              Plataforma educativa de{" "}
+              <a
+                href="https://www.mattinnovasolution.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white hover:text-sky-400 transition-colors underline decoration-sky-500/30 underline-offset-4 font-bold"
+              >
+                MATT INNOVA SOLUTION
+              </a>
+              , diseñada para personas que desean aprender y especializarse en áreas tecnológicas.
             </p>
 
             <div className="flex gap-4">
@@ -115,7 +123,7 @@ const Footer: React.FC = () => {
           </div>
 
           <div className="lg:col-span-2">
-            <h4 className="text-[10px] uppercase font-black text-white tracking-[0.3em] mb-10 opacity-50">
+            <h4 className="text-xs uppercase font-bold text-white/70 tracking-[0.2em] mb-6">
               Especialidades
             </h4>
             <ul className="grid gap-5">
@@ -126,10 +134,10 @@ const Footer: React.FC = () => {
                   <li key={linea.id_linea || `footer-linea-${index}`}>
                     <Link
                       to={`/lineas-academicas/${slugify(linea.nombre)}`}
-                      className="text-slate-400 hover:text-sky-400 transition-colors duration-300 text-sm font-bold flex items-center gap-2 group"
+                      className="text-slate-400 hover:text-sky-400 hover:translate-x-1 transition-all duration-300 text-sm font-bold flex items-center gap-2 group"
                     >
                       {linea.nombre}
-                      <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-all -translate-y-1 translate-x-1" />
+                      <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-all -translate-y-0.5 translate-x-0.5" />
                     </Link>
                   </li>
                 ))
@@ -137,19 +145,42 @@ const Footer: React.FC = () => {
             </ul>
           </div>
 
-          <div className="lg:col-span-2">
-            <h4 className="text-[10px] uppercase font-black text-white tracking-[0.3em] mb-10 opacity-50">
+          <div className="lg:col-span-3">
+            <h4 className="text-xs uppercase font-bold text-white/70 tracking-[0.2em] mb-6">
               Recursos
             </h4>
             <ul className="grid gap-5">
-              <li><Link to="/cursos" className="text-slate-400 hover:text-sky-400 transition-colors text-sm font-bold">Explorar Cursos</Link></li>
-              <li><Link to="/consulta" className="text-slate-400 hover:text-sky-400 transition-colors text-sm font-bold">Validar Certificado</Link></li>
-              <li><Link to="/terminos" className="text-slate-400 hover:text-sky-400 transition-colors text-sm font-bold">Términos Legales</Link></li>
-              <li><Link to="/reclamaciones" className="text-slate-400 hover:text-sky-400 transition-colors text-sm font-bold">Libro Reclamaciones</Link></li>
+              <li>
+                <Link to="/cursos" className="text-slate-400 hover:text-sky-400 hover:translate-x-1 transition-all duration-300 text-sm font-bold flex items-center gap-2 group whitespace-nowrap">
+                  Explorar Cursos
+                  <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-all -translate-y-0.5 translate-x-0.5" />
+                </Link>
+              </li>
+              <li>
+                <Link to="/consulta" className="text-slate-400 hover:text-sky-400 hover:translate-x-1 transition-all duration-300 text-sm font-bold flex items-center gap-2 group whitespace-nowrap">
+                  Validar Certificado
+                  <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-all -translate-y-0.5 translate-x-0.5" />
+                </Link>
+              </li>
+              <li>
+                <Link to="/terminos" className="text-slate-400 hover:text-sky-400 hover:translate-x-1 transition-all duration-300 text-sm font-bold flex items-center gap-2 group whitespace-nowrap">
+                  Términos Legales
+                  <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-all -translate-y-0.5 translate-x-0.5" />
+                </Link>
+              </li>
+              <li>
+                <Link to="/reclamaciones">
+                  <img
+                    src="/libro.jpg"
+                    alt="Libro de Reclamaciones"
+                    className="w-28 rounded-lg opacity-80 hover:opacity-100 hover:scale-105 transition-all duration-300 shadow-md shadow-black/30"
+                  />
+                </Link>
+              </li>
             </ul>
           </div>
 
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-3">
             <div className="p-8 glass-card rounded-[2.5rem] border-white/10 relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
                  <Mail size={80} />
@@ -173,11 +204,24 @@ const Footer: React.FC = () => {
 
         <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center">
-              <img src="/logomatt.png" alt="Logo" className="h-6 opacity-50" />
-            </div>
+            <a
+              href="https://www.mattinnovasolution.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center hover:bg-white/10 transition-colors"
+            >
+              <img src="/logomatt.png" alt="Logo" className="h-6 opacity-50 hover:opacity-100 transition-opacity" />
+            </a>
             <div className="text-slate-500 text-[10px] uppercase font-black tracking-[0.1em]">
-              © 2025 MIS ACADEMY — MATT INNOVA SOLUTION.
+              © 2025 MIS ACADEMY —{" "}
+              <a
+                href="https://www.mattinnovasolution.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-sky-400 transition-colors"
+              >
+                MATT INNOVA SOLUTION.
+              </a>
             </div>
           </div>
           

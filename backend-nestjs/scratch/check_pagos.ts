@@ -7,6 +7,10 @@ import * as path from 'path';
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
+if (!process.env.DB_PASSWORD) {
+    throw new Error('La variable de entorno DB_PASSWORD es obligatoria. Por favor configure el archivo .env.');
+}
+
 async function checkPagos() {
     try {
         const connection = await createConnection({

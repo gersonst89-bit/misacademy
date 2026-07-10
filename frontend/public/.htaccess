@@ -8,13 +8,22 @@
   RewriteRule ^ index.html [L]
 </IfModule>
 
-# FORZAR NO CACHEAR EL ARCHIVO PRINCIPAL
-<FilesMatch "\.(html|htm|js|css)$">
+# 1. EVITAR CACHÉ DE INDEX.HTML (siempre debe validarse para ver si hay nuevo build)
+<FilesMatch "index\.html$">
   FileETag None
   <IfModule mod_headers.c>
     Header unset ETag
     Header set Cache-Control "max-age=0, no-cache, no-store, must-revalidate"
     Header set Pragma "no-cache"
     Header set Expires "Wed, 11 Jan 1984 05:00:00 GMT"
+  </IfModule>
+</FilesMatch>
+
+# 2. CACHÉ DE ASSETS DE VITE (Js y Css con hash en el nombre) E IMÁGENES/FUENTES
+# Como Vite agrega un hash único en el nombre del archivo (ej. index-C_yogKMj.css),
+# podemos cachearlos de forma segura por un año (max-age=31536000) e inmutable.
+<FilesMatch "\.(js|css|webp|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|otf)$">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "public, max-age=31536000, immutable"
   </IfModule>
 </FilesMatch>

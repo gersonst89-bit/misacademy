@@ -1,6 +1,4 @@
-"use client";
-
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   IoCreateOutline, 
   IoTrashOutline, 
@@ -11,18 +9,13 @@ import {
   IoBulbOutline,
   IoOptionsOutline,
   IoListOutline,
-  IoAlertCircleOutline
+  IoAlertCircleOutline,
+  IoCloudUploadOutline
 } from "react-icons/io5";
-import { apiUrl } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
+import { API_URL } from "../../config/api";
 import AdminModal from "../Components/AdminModal";
 import InputComponent from "../Components/InputComponent";
-
-function authHeaders() {
-  return {
-    Accept: "application/json",
-    "Content-Type": "application/json",
-  };
-}
 
 interface OpcionRespuesta {
   id_opcion: number;
@@ -38,6 +31,7 @@ interface Pregunta {
   tipo: string;
   puntos: number;
   orden: number;
+  imagen_url?: string;
 }
 
 interface PreguntaConOpciones extends Pregunta {
@@ -62,7 +56,54 @@ export default function AgregarPreguntasModal({ isOpen, onClose, id_evaluacion }
     tipo: "opcion_multiple",
     puntos: 1,
     orden: 1,
+    imagen_url: "",
   });
+
+  const [imagenFile, setImagenFile] = useState<File | null>(null);
+  const [imagenPreview, setImagenPreview] = useState<string>("");
+
+  useEffect(() => {
+    if (editPregunta) {
+      if (editPregunta.imagen_url) {
+        setImagenPreview(editPregunta.imagen_url.startsWith("http") ? editPregunta.imagen_url : `${API_URL}/${editPregunta.imagen_url.startsWith("/") ? editPregunta.imagen_url.slice(1) : editPregunta.imagen_url}`);
+      } else {
+        setImagenPreview("");
+      }
+      setImagenFile(null);
+    } else {
+      setImagenPreview("");
+      setImagenFile(null);
+    }
+  }, [editPregunta]);
+
+  useEffect(() => {
+    if (!crearPreguntaOpen && !editPregunta) {
+      setImagenPreview("");
+      setImagenFile(null);
+    }
+  }, [crearPreguntaOpen, editPregunta]);
+
+  const handleImagenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImagenFile(file);
+      setImagenPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const quitarImagen = () => {
+    setImagenFile(null);
+    setImagenPreview("");
+  };
+
+  const uploadImagen = async (file: File) => {
+    const formData = new FormData();
+    formData.append("imagen_pregunta", file);
+    const res = await apiClient.post("/admin/preguntas/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" }
+    });
+    return res.data.url;
+  };
 
   // States para crear/editar opcion
   const [crearOpcionOpen, setCrearOpcionOpen] = useState<{open: boolean, id_pregunta: number | null}>({ open: false, id_pregunta: null });
@@ -84,11 +125,10 @@ export default function AgregarPreguntasModal({ isOpen, onClose, id_evaluacion }
     if (!id_evaluacion) return;
     setIsLoading(true);
     try {
-      const res = await fetch(apiUrl(`/admin/preguntas?id_evaluacion=${id_evaluacion}`), {
-        headers: authHeaders(),
-        credentials: "include",
+      const res = await apiClient.get("/admin/preguntas", {
+        params: { id_evaluacion }
       });
-      const data = await res.json();
+      const data = res.data;
       
       const rawPreguntas = Array.isArray(data) ? data : (data.data || []);
       
@@ -113,75 +153,69 @@ export default function AgregarPreguntasModal({ isOpen, onClose, id_evaluacion }
 
   const crearPregunta = async () => {
     try {
+      let uploadedUrl = "";
+      if (imagenFile) {
+        uploadedUrl = await uploadImagen(imagenFile);
+      }
       const payload = {
         id_evaluacion,
         texto: nuevaPregunta.texto_pregunta,
         tipo: nuevaPregunta.tipo,
         puntaje: nuevaPregunta.puntos,
         orden: nuevaPregunta.orden,
+        imagen_url: uploadedUrl || undefined,
       };
-      const res = await fetch(apiUrl("/admin/preguntas"), {
-        method: "POST",
-        headers: authHeaders(),
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        setCrearPreguntaOpen(false);
-        setNuevaPregunta({ texto_pregunta: "", tipo: "opcion_multiple", puntos: 1, orden: 1 });
-        cargarPreguntas();
-      } else {
-        const errorData = await res.json();
-        alert("Error al crear pregunta: " + (errorData.message || "Error desconocido"));
-      }
-    } catch (error) {
+      await apiClient.post("/admin/preguntas", payload);
+      setCrearPreguntaOpen(false);
+      setNuevaPregunta({ texto_pregunta: "", tipo: "opcion_multiple", puntos: 1, orden: 1, imagen_url: "" });
+      setImagenFile(null);
+      setImagenPreview("");
+      cargarPreguntas();
+    } catch (error: any) {
       console.error(error);
-      alert("Error de conexión al crear pregunta");
+      const errorMsg = error.response?.data?.message || "Error de conexión al crear pregunta";
+      alert("Error al crear pregunta: " + errorMsg);
     }
   };
 
   const guardarPregunta = async () => {
     if (!editPregunta) return;
     try {
+      let uploadedUrl = editPregunta.imagen_url || "";
+      if (imagenFile) {
+        uploadedUrl = await uploadImagen(imagenFile);
+      } else if (imagenPreview === "") {
+        uploadedUrl = "";
+      }
       const payload = {
         id_evaluacion: editPregunta.id_evaluacion,
         texto: editPregunta.texto_pregunta,
         tipo: editPregunta.tipo,
         puntaje: editPregunta.puntos,
         orden: editPregunta.orden,
+        imagen_url: uploadedUrl || null,
       };
-      const res = await fetch(apiUrl(`/admin/preguntas/${editPregunta.id_pregunta}`), {
-        method: "PUT",
-        headers: authHeaders(),
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        setEditPregunta(null);
-        cargarPreguntas();
-      } else {
-        const errorData = await res.json();
-        alert("Error al guardar pregunta: " + (errorData.message || "Error desconocido"));
-      }
-    } catch (error) {
+      await apiClient.put(`/admin/preguntas/${editPregunta.id_pregunta}`, payload);
+      setEditPregunta(null);
+      setImagenFile(null);
+      setImagenPreview("");
+      cargarPreguntas();
+    } catch (error: any) {
       console.error(error);
-      alert("Error de conexión al guardar pregunta");
+      const errorMsg = error.response?.data?.message || "Error de conexión al guardar pregunta";
+      alert("Error al guardar pregunta: " + errorMsg);
     }
   };
 
   const eliminarPregunta = async (id: number) => {
     if (!confirm("¿Eliminar esta pregunta?")) return;
     try {
-      const res = await fetch(apiUrl(`/admin/preguntas/${id}`), {
-        method: "DELETE",
-        headers: authHeaders(),
-        credentials: "include",
-      });
-      if (res.ok) cargarPreguntas();
-      else alert("Error al eliminar pregunta");
-    } catch (error) {
+      await apiClient.delete(`/admin/preguntas/${id}`);
+      cargarPreguntas();
+    } catch (error: any) {
       console.error(error);
-      alert("Error de conexión al eliminar pregunta");
+      const errorMsg = error.response?.data?.message || "Error al eliminar pregunta";
+      alert("Error: " + errorMsg);
     }
   };
 
@@ -193,23 +227,14 @@ export default function AgregarPreguntasModal({ isOpen, onClose, id_evaluacion }
         texto: nuevaOpcion.texto_opcion,
         es_correcta: nuevaOpcion.es_correcta,
       };
-      const res = await fetch(apiUrl("/admin/opciones-respuesta"), {
-        method: "POST",
-        headers: authHeaders(),
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        setCrearOpcionOpen({ open: false, id_pregunta: null });
-        setNuevaOpcion({ texto_opcion: "", es_correcta: false });
-        cargarPreguntas();
-      } else {
-        const errorData = await res.json();
-        alert("Error al crear opción: " + (errorData.message || "Error desconocido"));
-      }
-    } catch (error) {
+      await apiClient.post("/admin/opciones-respuesta", payload);
+      setCrearOpcionOpen({ open: false, id_pregunta: null });
+      setNuevaOpcion({ texto_opcion: "", es_correcta: false });
+      cargarPreguntas();
+    } catch (error: any) {
       console.error(error);
-      alert("Error de conexión al crear opción");
+      const errorMsg = error.response?.data?.message || "Error de conexión al crear opción";
+      alert("Error al crear opción: " + errorMsg);
     }
   };
 
@@ -221,42 +246,29 @@ export default function AgregarPreguntasModal({ isOpen, onClose, id_evaluacion }
         texto: editOpcion.texto_opcion,
         es_correcta: editOpcion.es_correcta,
       };
-      const res = await fetch(apiUrl(`/admin/opciones-respuesta/${editOpcion.id_opcion}`), {
-        method: "PUT",
-        headers: authHeaders(),
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        setEditOpcion(null);
-        cargarPreguntas();
-      } else {
-        const errorData = await res.json();
-        alert("Error al guardar opción: " + (errorData.message || "Error desconocido"));
-      }
-    } catch (error) {
+      await apiClient.put(`/admin/opciones-respuesta/${editOpcion.id_opcion}`, payload);
+      setEditOpcion(null);
+      cargarPreguntas();
+    } catch (error: any) {
       console.error(error);
-      alert("Error de conexión al guardar opción");
+      const errorMsg = error.response?.data?.message || "Error de conexión al guardar opción";
+      alert("Error al guardar opción: " + errorMsg);
     }
   };
 
   const eliminarOpcion = async (id: number) => {
     if (!confirm("¿Eliminar esta opción?")) return;
     try {
-      const res = await fetch(apiUrl(`/admin/opciones-respuesta/${id}`), {
-        method: "DELETE",
-        headers: authHeaders(),
-        credentials: "include",
-      });
-      if (res.ok) cargarPreguntas();
-      else alert("Error al eliminar opción");
-    } catch (error) {
+      await apiClient.delete(`/admin/opciones-respuesta/${id}`);
+      cargarPreguntas();
+    } catch (error: any) {
       console.error(error);
-      alert("Error de conexión al eliminar opción");
+      const errorMsg = error.response?.data?.message || "Error al eliminar opción";
+      alert("Error: " + errorMsg);
     }
   };
 
-  const totalPuntos = preguntas.reduce((acc, p) => acc + (p.puntos || 0), 0);
+  const totalPuntos = preguntas.reduce((acc: number, p: PreguntaConOpciones) => acc + (p.puntos || 0), 0);
 
   return (
     <AdminModal
@@ -321,7 +333,7 @@ export default function AgregarPreguntasModal({ isOpen, onClose, id_evaluacion }
           </div>
         ) : (
           <div className="space-y-6">
-            {preguntas.map((p, idx) => (
+            {preguntas.map((p: PreguntaConOpciones, idx: number) => (
               <div key={p.id_pregunta} className="bg-white border border-slate-100 rounded-[2.5rem] shadow-sm hover:shadow-xl hover:shadow-slate-900/5 transition-all duration-500 group/card overflow-hidden">
                  {/* Card Header */}
                  <div className="p-6 md:p-8 bg-slate-50/30 border-b border-slate-50 flex flex-col md:flex-row justify-between items-start gap-6">
@@ -338,6 +350,15 @@ export default function AgregarPreguntasModal({ isOpen, onClose, id_evaluacion }
                           <h5 className="text-[17px] font-black text-slate-800 leading-tight group-hover/card:text-slate-900 transition-colors">
                              {p.texto_pregunta}
                           </h5>
+                          {p.imagen_url && (
+                             <div className="mt-4 max-w-[200px] max-h-[120px] overflow-hidden rounded-xl border border-slate-100 bg-slate-50/50 flex items-center justify-center">
+                               <img 
+                                 src={p.imagen_url.startsWith("http") ? p.imagen_url : `${API_URL}/${p.imagen_url.startsWith("/") ? p.imagen_url.slice(1) : p.imagen_url}`} 
+                                 alt="Referencia" 
+                                 className="max-h-[120px] object-contain"
+                               />
+                             </div>
+                           )}
                        </div>
                     </div>
                     
@@ -367,7 +388,7 @@ export default function AgregarPreguntasModal({ isOpen, onClose, id_evaluacion }
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                       {p.opciones.map((op) => (
+                       {p.opciones.map((op: OpcionRespuesta) => (
                          <div key={op.id_opcion} className={`p-5 rounded-2xl border transition-all duration-300 flex justify-between items-center group/opt relative
                             ${op.es_correcta 
                               ? "bg-emerald-50/40 border-emerald-200/60 shadow-sm" 
@@ -449,8 +470,40 @@ export default function AgregarPreguntasModal({ isOpen, onClose, id_evaluacion }
                 value={editPregunta ? editPregunta.texto_pregunta : nuevaPregunta.texto_pregunta}
                 onChange={(e) => editPregunta ? setEditPregunta({...editPregunta, texto_pregunta: e.target.value}) : setNuevaPregunta({...nuevaPregunta, texto_pregunta: e.target.value})}
                 placeholder="Escribe el enunciado técnico aquí..."
-                className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-sky-500/5 focus:border-sky-500 transition-all text-[13px] font-medium h-32 text-slate-700 placeholder:text-slate-300 resize-none shadow-sm"
+                className="w-full px-6 py-5 bg-slate-50/30 hover:bg-slate-50/50 focus:bg-white border border-slate-200 rounded-[2rem] focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all text-[15px] font-bold leading-relaxed text-slate-800 placeholder:text-slate-300 resize-none shadow-sm"
               />
+           </div>
+
+           {/* Campo Imagen de Pregunta */}
+           <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100 space-y-4">
+              <div className="flex items-center gap-3 mb-2">
+                 <IoCloudUploadOutline className="text-sky-500" size={18} />
+                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Imagen de Referencia (Opcional)</label>
+              </div>
+              {imagenPreview ? (
+                <div className="relative w-full max-h-[220px] overflow-hidden rounded-2xl border border-slate-200 flex items-center justify-center bg-white p-2">
+                  <img src={imagenPreview} alt="Vista previa" className="max-h-[200px] object-contain rounded-lg" />
+                  <button
+                    type="button"
+                    onClick={quitarImagen}
+                    className="absolute top-2 right-2 p-2 bg-rose-500 text-white rounded-full hover:bg-rose-600 shadow-md transition-all active:scale-95 z-20"
+                    title="Quitar Imagen"
+                  >
+                    <IoTrashOutline size={14} />
+                  </button>
+                </div>
+              ) : (
+                <div className="relative border-2 border-dashed border-slate-200 rounded-2xl p-6 bg-white hover:bg-sky-50/20 hover:border-sky-300 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer group">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImagenChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  <IoCloudUploadOutline size={24} className="text-slate-400 group-hover:text-sky-500 transition-colors" />
+                  <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider group-hover:text-sky-600 transition-colors">Seleccionar Imagen</span>
+                </div>
+              )}
            </div>
 
            <div className="grid grid-cols-2 gap-4">

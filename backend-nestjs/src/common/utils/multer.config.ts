@@ -17,7 +17,8 @@ export const multerOptions = {
       if (file.fieldname === 'imagen') folder = './uploads/cursos';
       else if (file.fieldname === 'avatar') folder = './uploads/perfiles';
       else if (file.fieldname === 'archivo') folder = './uploads/materiales';
-      
+      else if (file.fieldname === 'imagen_pregunta') folder = './uploads/preguntas';
+
       if (!fs.existsSync(folder)) {
         fs.mkdirSync(folder, { recursive: true });
       }
@@ -30,10 +31,20 @@ export const multerOptions = {
   }),
   fileFilter: (req: any, file: any, cb: any) => {
     // Permitir imágenes y documentos comunes para materiales
-    if (file.mimetype.match(/\/(jpg|jpeg|png|webp|pdf|msword|vnd.openxmlformats-officedocument.wordprocessingml.document|zip)$/)) {
+    if (
+      file.mimetype.match(
+        /\/(jpg|jpeg|png|webp|pdf|msword|vnd.openxmlformats-officedocument.wordprocessingml.document|zip)$/,
+      )
+    ) {
       cb(null, true);
     } else {
-      cb(new HttpException('Formato de archivo no soportado. Usa PDF, Imágenes o ZIP.', HttpStatus.BAD_REQUEST), false);
+      cb(
+        new HttpException(
+          'Formato de archivo no soportado. Usa PDF, Imágenes o ZIP.',
+          HttpStatus.BAD_REQUEST,
+        ),
+        false,
+      );
     }
   },
   limits: {

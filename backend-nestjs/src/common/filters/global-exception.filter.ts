@@ -1,4 +1,10 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { Request, Response } from 'express';
 
 @Catch()
@@ -17,14 +23,22 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const exceptionResponse = exception.getResponse();
       if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
         message = (exceptionResponse as any).message || exceptionResponse;
-        const { message: _m, statusCode: _s, error: _e, ...rest } = exceptionResponse as any;
+        const {
+          message: _m,
+          statusCode: _s,
+          error: _e,
+          ...rest
+        } = exceptionResponse as any;
         extraData = rest;
       } else {
-        message = exceptionResponse as string;
+        message = exceptionResponse;
       }
     } else if (exception instanceof Error) {
       // Registrar el error real en la consola del servidor (no enviarlo al cliente)
-      console.error(`[GlobalExceptionFilter] Error no manejado en ${request.url}:`, exception);
+      console.error(
+        `[GlobalExceptionFilter] Error no manejado en ${request.url}:`,
+        exception,
+      );
     }
 
     response.status(status).json({

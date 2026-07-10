@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Github, Chrome } from "lucide-react";
 import { API_URL, BASE_URL } from "../config/api";
+import { apiClient } from "../services/apiClient";
 import { motion, AnimatePresence } from "framer-motion";
 
 const API_BASE = API_URL;
@@ -10,22 +11,12 @@ type FetchJson = { ok: boolean; data: any };
 
 async function postJson(url: string, body: any): Promise<FetchJson> {
   try {
-    const r = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(body),
-      credentials: "include",
-    });
-    const ct = r.headers.get("content-type") || "";
-    const data = ct.includes("application/json")
-      ? await r.json()
-      : await r.text();
-    return { ok: r.ok, data };
-  } catch (e) {
-    return { ok: false, data: { error: "Error de red" } };
+    const relativeUrl = url.replace(API_BASE, "");
+    const response = await apiClient.post(relativeUrl, body);
+    return { ok: true, data: response.data };
+  } catch (e: any) {
+    const errorData = e?.response?.data || { error: e?.message || "Error de red" };
+    return { ok: false, data: errorData };
   }
 }
 
@@ -190,17 +181,9 @@ export default function LoginPage() {
       abortController.abort();
     }, 5000);
 
-    fetch(`${API_BASE}/auth/profile?t=${Date.now()}`, {
-      headers: {
-        Accept: "application/json",
-      },
-      credentials: "include",
+    apiClient.get(`/auth/profile?t=${Date.now()}`, {
       signal: abortController.signal,
     })
-      .then((r) => {
-        if (!r.ok) throw new Error("No hay sesión válida");
-        return r.json();
-      })
       .then(() => navigate("/", { replace: true }))
       .catch((err) => {
         console.debug("LoginPage auth check failed:", err);
@@ -221,17 +204,8 @@ export default function LoginPage() {
   };
 
   const preflightCsrf = async () => {
-    const response = await fetch(`${API_BASE}/auth/csrf-token`, {
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        Accept: 'application/json',
-      },
-    });
-    if (!response.ok) {
-      throw new Error('No se pudo obtener CSRF token');
-    }
-    return response.json();
+    const response = await apiClient.get(`/auth/csrf-token`);
+    return response.data;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -240,22 +214,14 @@ export default function LoginPage() {
     setLoading(true);
     try {
       //await preflightCsrf();
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ email, password }),
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || data.message || "Credenciales incorrectas");
-        return;
-      }
+      const res = await apiClient.post(`/auth/login`, { email, password });
+      const data = res.data;
       // localStorage.setItem("token", data.token); // ELIMINADO: Ahora usamos HttpOnly cookies
       localStorage.setItem("user", JSON.stringify(data.user)); // Guardamos info básica del usuario
       navigate("/", { replace: true });
     } catch (err: any) {
-      setError(err?.message || "Error de conexión con el servidor");
+      const errorMsg = err?.response?.data?.error || err?.response?.data?.message || err?.message || "Error de conexión con el servidor";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -286,20 +252,20 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-start relative overflow-hidden p-6 md:p-12 lg:p-24 font-sans">
-      {/* Background Image */}
-      <div className="absolute inset-0 z-0">
+    <div className="min-h-screen flex items-center justify-start relative overflow-y-auto py-8 md:py-12 px-6 md:px-12 lg:px-24 font-sans">
+      {/* Background Image (Fixed for premium parallax effect) */}
+      <div className="fixed inset-0 z-0">
         <img 
           src="/login.png" 
-          alt="Luffy Background"
-          className="w-full h-full object-cover opacity-90 scale-105"
+          alt="Developer workspace"
+          className="w-full h-full object-cover opacity-60 scale-105 pointer-events-none"
         />
-        <div className="absolute inset-0 bg-black/60" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent" />
+        <div className="absolute inset-0 bg-[#03070c]/50" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/20 to-transparent" />
       </div>
 
-      {/* Falling Snow Effect */}
-      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+      {/* Falling Snow Effect (Fixed) */}
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
         {[...Array(80)].map((_, i) => {
           const left = Math.random() * 100;
           const delay = Math.random() * 5;
@@ -336,8 +302,8 @@ export default function LoginPage() {
         })}
       </div>
 
-      {/* Dynamic Background Atmosphere (Orbs) */}
-      <div className="absolute inset-0 pointer-events-none z-0 mix-blend-screen">
+      {/* Dynamic Background Atmosphere (Orbs - Fixed) */}
+      <div className="fixed inset-0 pointer-events-none z-0 mix-blend-screen">
         <div className="absolute top-[10%] left-[20%] w-[500px] h-[500px] bg-sky-500/10 blur-[150px] rounded-full animate-pulse" />
         <div className="absolute bottom-[10%] right-[20%] w-[600px] h-[600px] bg-blue-700/10 blur-[150px] rounded-full animate-pulse animation-delay-1000" />
       </div>
@@ -349,7 +315,7 @@ export default function LoginPage() {
         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         className="relative w-full max-w-[540px] z-10 md:ml-12 lg:ml-24 xl:ml-40"
       >
-        <div className="bg-black/50 border border-white/5 shadow-2xl rounded-[2.5rem] p-6 sm:p-8">
+        <div className="bg-black/60 backdrop-blur-xl border border-white/10 shadow-2xl rounded-[2.5rem] p-6 sm:p-8">
           {/* Header */}
           <div className="text-center mb-5">
             <Link to="/" className="inline-block mb-4 hover:scale-105 transition-transform">
@@ -457,21 +423,21 @@ export default function LoginPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-               <button className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-white/[0.05] transition-all text-xs font-bold text-white group">
-                  <Chrome size={16} className="text-white/50 group-hover:text-white transition-colors" /> Google
+               <button className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/[0.03] border border-white/10 rounded-2xl hover:bg-white/[0.08] transition-all text-xs font-bold text-white group">
+                  <Chrome size={16} className="text-white/60 group-hover:text-white transition-colors" /> Google
                </button>
                <button 
                   type="button"
                   onClick={handleGithubLogin}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-white/[0.05] transition-all text-xs font-bold text-white group"
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/[0.03] border border-white/10 rounded-2xl hover:bg-white/[0.08] transition-all text-xs font-bold text-white group"
                 >
-                  <Github size={16} className="text-white/50 group-hover:text-white transition-colors" /> GitHub
+                  <Github size={16} className="text-white/60 group-hover:text-white transition-colors" /> GitHub
                 </button>
             </div>
           </div>
         </div>
 
-        <p className="text-center mt-5 text-white/40 text-sm font-medium">
+        <p className="text-center mt-5 text-slate-300 text-sm font-medium">
           ¿No tienes una cuenta?{" "}
           <Link to="/registro" className="text-sky-400 font-bold hover:text-sky-300 transition-colors">
             Regístrate aquí

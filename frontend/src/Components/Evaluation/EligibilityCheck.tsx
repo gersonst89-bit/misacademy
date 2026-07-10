@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { LoadingSpinner } from '../../reseñas/page';
+import { LoadingSpinner } from '../../resenas/page';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { evaluationService } from '../../services/evaluationService';

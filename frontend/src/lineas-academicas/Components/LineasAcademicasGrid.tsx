@@ -4,14 +4,15 @@ import LineaAcademicaCard from "./LineaAcademicaCard";
 
 interface Props {
   lineas: RutaAcademica[];
-  linea: LineaAcademica; // línea padre para construir el link
+  linea: LineaAcademica;
+  lineaNombre?: string;
 }
 
-const LineasAcademicasGrid: FC<Props> = ({ lineas, linea }) => {
+const LineasAcademicasGrid: FC<Props> = ({ lineas, linea, lineaNombre }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
       {lineas.map((ruta) => (
-        <LineaAcademicaCard key={ruta.id_ruta} ruta={ruta} linea={linea} />
+        <LineaAcademicaCard key={ruta.id_ruta} ruta={ruta} linea={linea} lineaNombre={lineaNombre || linea.nombre} />
       ))}
     </div>
   );

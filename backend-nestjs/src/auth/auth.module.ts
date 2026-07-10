@@ -16,9 +16,19 @@ import { Rol } from '../entities/rol.entity';
   imports: [
     TypeOrmModule.forFeature([Usuario, TokenUsuario, AuthenticationLog, Rol]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.register({
-      secret: process.env.JWT_SECRET || 'MIS_ACADEMY_JWT_SECRET_KEY_2025_VERY_SECURE',
-      signOptions: { expiresIn: process.env.JWT_EXPIRATION || '7d' } as any,
+    JwtModule.registerAsync({
+      useFactory: () => {
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+          throw new Error('JWT_SECRET env variable is required but not set');
+        }
+        return {
+          secret,
+          signOptions: {
+            expiresIn: (process.env.JWT_EXPIRATION || '15m') as any,
+          },
+        };
+      },
     }),
   ],
   controllers: [AuthController],

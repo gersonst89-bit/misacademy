@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_URL } from "../config/api";
+import { apiClient } from "../services/apiClient";
 import { Check, Copy, Info, Smartphone, Building2, QrCode } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -108,11 +109,9 @@ export default function Pago() {
   useEffect(() => {
     const fetchMetodosPago = async () => {
       try {
-        const res = await fetch(`${API_URL}/tipos-pagos`, {
-          credentials: "include",
-        });
-        const data = await res.json();
-        if (res.ok && data.status === "success") {
+        const res = await apiClient.get("/tipos-pagos");
+        const data = res.data;
+        if (data.status === "success") {
           const activos = data.tipos_pagos.filter(
             (tp: any) => tp.activo === true || tp.activo === 1
           );
@@ -132,14 +131,9 @@ export default function Pago() {
   useEffect(() => {
     const fetchCompras = async () => {
       try {
-        const res = await fetch(`${API_URL}/compras/historial`, {
-          headers: { Accept: "application/json" },
-          credentials: "include",
-        });
-        const data = await res.json();
-        if (res.ok) {
-          setCompras(data.compras || data.data || []);
-        }
+        const res = await apiClient.get("/compras/historial");
+        const data = res.data;
+        setCompras(data.compras || data.data || []);
       } catch (err) {
         console.error("Error al cargar historial:", err);
       }
@@ -223,21 +217,14 @@ export default function Pago() {
       formData.append("cursos", JSON.stringify(cursosParaPagar));
       formData.append("rutas", JSON.stringify(rutasParaPagar));
 
-      const res = await fetch(`${API_URL}/pagos`, {
-        method: "POST",
-        headers: { Accept: "application/json" },
-        body: formData,
-        credentials: "include",
+      const res = await apiClient.post("/pagos", formData).catch((err: any) => {
+        throw new Error(err?.response?.data?.mensaje || "Error al registrar el pago.");
       });
 
-      const data = await res.json();
+      const data = res.data;
 
-      if (res.status === 201 && data.status === "success") {
-        await fetch(`${API_URL}/carrito/vaciar`, {
-          method: "DELETE",
-          headers: { Accept: "application/json" },
-          credentials: "include",
-        });
+      if (data.status === "success") {
+        await apiClient.delete("/carrito/vaciar").catch(() => null);
         localStorage.removeItem("carritoData");
 
         setMostrarModal(true);

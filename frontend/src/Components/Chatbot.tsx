@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send, Bot, User as UserIcon, Sparkles } from "lucide-react";
-import { apiUrl } from "../config/api";
+import { apiClient } from "../services/apiClient";
 
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,17 +30,8 @@ export default function Chatbot() {
     setLoading(true);
 
     try {
-      const res = await fetch(apiUrl("/chatbot"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({ message: input }),
-      });
-
-      if (!res.ok) throw new Error("Error en el servidor");
-      const data = await res.json();
+      const res = await apiClient.post("/chatbot", { message: input });
+      const data = res.data;
 
       setMessages((prev) => [...prev, { role: "bot", text: data.reply }]);
     } catch (err) {

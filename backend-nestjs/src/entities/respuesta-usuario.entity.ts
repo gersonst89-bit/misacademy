@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { IntentoEvaluacion } from './intento-evaluacion.entity';
 import { Pregunta } from './pregunta.entity';
 import { OpcionRespuesta } from './opcion-respuesta.entity';

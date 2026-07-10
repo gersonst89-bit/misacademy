@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import type { Curso, Modulo, Leccion } from "../../types/models";
 import InputComponent from "../Components/InputComponent";
 import SearchableSelect from "../Components/SearchableSelect";
-import { API_URL } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 import AdminModal from "../Components/AdminModal";
 
 function getYoutubeId(url: string): string | null {
@@ -132,31 +132,26 @@ export const AddLeccionModal = ({
   useEffect(() => {
     if (!isOpen) return;
 
-
-
     const fetchCursos = async () => {
       let allCursos: Curso[] = [];
       let page = 1;
 
-      while (true) {
-        const res = await fetch(
-          `${API_URL}/admin/cursos?page=${page}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
+      try {
+        while (true) {
+          const res = await apiClient.get("/admin/cursos", {
+            params: { page }
+          });
 
-        if (!res.ok) break;
+          const data = res.data;
+          const items = data.data || [];
 
-        const data = await res.json();
-        const items = data.data || [];
+          if (items.length === 0) break;
 
-        if (items.length === 0) break;
-
-        allCursos = [...allCursos, ...items];
-        page++;
+          allCursos = [...allCursos, ...items];
+          page++;
+        }
+      } catch (error) {
+        console.error("Error cargando cursos:", error);
       }
 
       setCursos(allCursos);
@@ -169,16 +164,11 @@ export const AddLeccionModal = ({
         let totalPages = 1;
 
         do {
-          const res = await fetch(
-            `${API_URL}/admin/modulos?page=${pagina}`,
-            {
-              headers: {
-                "Content-Type": "application/json",
-              },
-            }
-          );
+          const res = await apiClient.get("/admin/modulos", {
+            params: { page: pagina }
+          });
 
-          const data = await res.json();
+          const data = res.data;
           todosLosModulos = [...todosLosModulos, ...(data.data || [])];
           totalPages = data.last_page || data.meta?.last_page || 1;
           pagina++;

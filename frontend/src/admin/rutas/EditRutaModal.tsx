@@ -5,7 +5,7 @@ import type { RutaAcademica } from "../../types/models";
 import InputComponent from "../Components/InputComponent";
 import AdminModal from "../Components/AdminModal";
 import SearchableSelect from "../Components/SearchableSelect";
-import { apiUrl } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 import { IoMapOutline, IoTimeOutline, IoCashOutline, IoLayersOutline, IoSaveOutline } from "react-icons/io5";
 
 interface LineaAcademica {
@@ -33,12 +33,8 @@ export function EditRutaModal({
   useEffect(() => {
     const fetchLineas = async () => {
       try {
-        const res = await fetch(apiUrl("/lineas-academicas"), {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        const data = await res.json();
+        const res = await apiClient.get("/lineas-academicas");
+        const data = res.data;
         const mapped = (data.data || []).map((l: any) => ({
           ...l,
           id_linea: l.id_linea || l.id_linea_academica

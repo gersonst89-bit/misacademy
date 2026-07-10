@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { InscripcionesController, AdminInscripcionesController } from './inscripciones.controller';
+import {
+  InscripcionesController,
+  AdminInscripcionesController,
+} from './inscripciones.controller';
 import { InscripcionesService } from './inscripciones.service';
 import { InscripcionesRepository } from './inscripciones.repository';
 import { Inscripcion } from '../entities';

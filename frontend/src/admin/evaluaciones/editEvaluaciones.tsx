@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import type { Curso } from "../../types/models";
 import InputComponent from "../Components/InputComponent";
-import { apiUrl } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 import AdminModal from "../Components/AdminModal";
 import SearchableSelect from "../Components/SearchableSelect";
 
@@ -53,8 +53,10 @@ export const EditEvaluacionModal: React.FC<Props> = ({
       try {
         let pagina = 1, ultima = 1, todos: Curso[] = [];
         do {
-          const r = await fetch(apiUrl(`/admin/cursos?page=${pagina}`), { credentials: "include" });
-          const d = await r.json();
+          const res = await apiClient.get("/admin/cursos", {
+            params: { page: pagina }
+          });
+          const d = res.data;
           todos = [...todos, ...(d.data || [])];
           ultima = d.last_page || 1;
           pagina++;

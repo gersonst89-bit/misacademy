@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import InputComponent from "../Components/InputComponent";
-import { API_URL } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 import AdminModal from "../Components/AdminModal";
 import { IoWalletOutline } from "react-icons/io5";
 
@@ -44,15 +44,9 @@ export default function EditarTipoPagoModal({ tipoPago, onClose, onSuccess }: Pr
         codigo_referencia: codigoReferencia.trim() || null,
       };
 
-      const response = await fetch(`${API_URL}/tipos-pagos/${tipoPago.id_tipo_pago}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      const response = await apiClient.put(`/tipos-pagos/${tipoPago.id_tipo_pago}`, payload);
 
-      const data = await response.json();
+      const data = response.data;
       if (data.status === "success") {
         onSuccess();
       } else {

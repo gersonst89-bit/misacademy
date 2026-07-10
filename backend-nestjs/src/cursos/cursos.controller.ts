@@ -1,48 +1,76 @@
-import { Controller, Get, Post, Put, Delete, Patch, Body, Param, Query, UseGuards, Req, UseInterceptors, UploadedFile, ParseIntPipe } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { multerOptions } from '../common/utils/multer.config';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Patch,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { CursosService } from './cursos.service';
-import { CreateCursoDto, UpdateCursoDto, CambiarEstadoDto } from './dto/cursos.dto';
+import {
+  CreateCursoDto,
+  UpdateCursoDto,
+  CambiarEstadoDto,
+} from './dto/cursos.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CursoInscripcionGuard } from '../common/guards/curso-inscripcion.guard';
 import { AdminGuard, AdminOrDocenteGuard } from '../common/guards/roles.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Usuario } from '../entities/usuario.entity';
-import { seedMain } from '../database/seeds/main.seed';
-import { seedStandalone } from '../database/seeds/standalone.seed';
-import { seedFixLines } from '../database/seeds/fix-lines.seed';
-import { seedTeachers } from '../database/seeds/teachers.seed';
 
 @Controller('cursos')
 export class CursosController {
   constructor(private readonly cursosService: CursosService) {}
 
   @Get()
-  findAll(@Query() query: any) { return this.cursosService.findAll(query); }
+  findAll(@Query() query: any) {
+    return this.cursosService.findAll(query);
+  }
 
   @Get('destacados')
-  getDestacados(@Query('limit') limit?: number) { return this.cursosService.getDestacados(limit); }
+  getDestacados(@Query('limit') limit?: number) {
+    return this.cursosService.getDestacados(limit);
+  }
 
   @Get('buscar')
-  buscar(@Query('q') q: string, @Query('page') page?: number, @Query('per_page') perPage?: number) {
+  buscar(
+    @Query('q') q: string,
+    @Query('page') page?: number,
+    @Query('per_page') perPage?: number,
+  ) {
     return this.cursosService.buscar(q, page, perPage);
   }
 
   @Get('slug/:slug')
-  findBySlug(@Param('slug') slug: string) { return this.cursosService.findBySlug(slug); }
+  findBySlug(@Param('slug') slug: string) {
+    return this.cursosService.findBySlug(slug);
+  }
 
   @Get(':id')
-  findById(@Param('id', ParseIntPipe) id: number) { return this.cursosService.findById(id); }
+  findById(@Param('id', ParseIntPipe) id: number) {
+    return this.cursosService.findById(id);
+  }
 
   @Get(':id/contenido')
   @UseGuards(JwtAuthGuard, CursoInscripcionGuard)
-  getContenido(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: Usuario) {
+  getContenido(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: Usuario,
+  ) {
     return this.cursosService.getContenido(id, user.id_usuario);
   }
 
   @Get(':id/progreso')
   @UseGuards(JwtAuthGuard, CursoInscripcionGuard)
-  getProgreso(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: Usuario) {
+  getProgreso(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: Usuario,
+  ) {
     return this.cursosService.getProgreso(id, user.id_usuario);
   }
 
@@ -60,59 +88,16 @@ export class CursosController {
 
   @Patch(':id/estado')
   @UseGuards(JwtAuthGuard, AdminOrDocenteGuard)
-  cambiarEstado(@Param('id', ParseIntPipe) id: number, @Body() dto: CambiarEstadoDto) {
+  cambiarEstado(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CambiarEstadoDto,
+  ) {
     return this.cursosService.cambiarEstado(id, dto);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, AdminGuard)
-  delete(@Param('id', ParseIntPipe) id: number) { return this.cursosService.delete(id); }
-
-
-}
-
-@Controller('mis-cursos')
-export class MisCursosController {
-  constructor(private readonly cursosService: CursosService) {}
-
-  @Get()
-  @UseGuards(JwtAuthGuard)
-  getMisCursos(@CurrentUser() user: Usuario) { return this.cursosService.getMisCursos(user.id_usuario); }
-}
-
-// Admin cursos controller
-@Controller('admin/cursos')
-@UseGuards(JwtAuthGuard, AdminOrDocenteGuard)
-export class AdminCursosController {
-  constructor(private readonly cursosService: CursosService) {}
-
-  @Get()
-  findAll(@Query() query: any) { return this.cursosService.findAll(query); }
-
-  @Post()
-  @UseInterceptors(FileInterceptor('imagen', multerOptions))
-  create(@Body() dto: CreateCursoDto, @CurrentUser() user: Usuario, @UploadedFile() file?: any) { 
-    if (file) {
-      dto.imagen = `storage/cursos/${file.filename}`;
-    }
-    return this.cursosService.create(dto, user.id_usuario); 
+  delete(@Param('id', ParseIntPipe) id: number) {
+    return this.cursosService.delete(id);
   }
-
-  @Get(':id')
-  findById(@Param('id', ParseIntPipe) id: number) { return this.cursosService.findById(id); }
-
-  @Put(':id')
-  @UseInterceptors(FileInterceptor('imagen', multerOptions))
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateCursoDto, @UploadedFile() file?: any) { 
-    if (file) {
-      dto.imagen = `storage/cursos/${file.filename}`;
-    }
-    return this.cursosService.update(id, dto); 
-  }
-
-  @Delete(':id')
-  delete(@Param('id', ParseIntPipe) id: number) { return this.cursosService.delete(id); }
-
-  @Patch(':id/estado')
-  cambiarEstado(@Param('id', ParseIntPipe) id: number, @Body() dto: CambiarEstadoDto) { return this.cursosService.cambiarEstado(id, dto); }
 }

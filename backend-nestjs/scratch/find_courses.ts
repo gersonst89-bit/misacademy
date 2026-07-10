@@ -1,11 +1,19 @@
 
 import { createConnection } from 'mysql2/promise';
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+
+dotenv.config({ path: path.join(__dirname, '../.env') });
+
+if (!process.env.DB_PASSWORD) {
+  throw new Error('La variable de entorno DB_PASSWORD es obligatoria. Por favor configure el archivo .env.');
+}
 
 async function main() {
   const connection = await createConnection({
     host: '127.0.0.1',
     user: 'root',
-    password: 'root123',
+    password: process.env.DB_PASSWORD,
     database: 'mis_academy',
     port: 3306
   });
@@ -22,3 +30,4 @@ async function main() {
 }
 
 main().catch(console.error);
+

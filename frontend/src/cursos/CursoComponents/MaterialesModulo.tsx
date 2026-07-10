@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { MdPictureAsPdf, MdInsertDriveFile, MdImage, MdArchive, MdTextSnippet, MdDescription, MdSlideshow, MdArrowBack, MdArrowForward } from "react-icons/md";
-import axios from "axios";
-import { API_URL } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 
 interface Material {
   id_material: number | string;
@@ -37,7 +36,7 @@ const MaterialesModulo: React.FC<Props> = ({ idModulo }) => {
   useEffect(() => {
     if (!idModulo) return;
     setLoading(true);
-    axios.get(`${API_URL}/materiales?estado=Publicado&id_modulo=${idModulo}&page=${page}`)
+    apiClient.get(`/materiales?estado=Publicado&id_modulo=${idModulo}&page=${page}`)
       .then(res => {
         // Adaptar los campos del response para el frontend
         const materiales: Material[] = (res.data.data || []).map((mat: any) => ({

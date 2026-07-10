@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FaStar } from "react-icons/fa";
 import type { Resena } from "../../types/models";
 import { API_URL } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 
 interface FormularioComentarioProps {
   cursoId: number;
@@ -54,22 +55,15 @@ const FormularioComentario: React.FC<FormularioComentarioProps> = ({
 
     setIsLoading(true);
     try {
-      const method = resena ? "PATCH" : "POST";
-      const url = resena
-        ? `${API_URL}/cursos/resenas/${resena.id_resena}`
-        : `${API_URL}/cursos/${cursoId}/resenas`;
+      const relativeUrl = resena
+        ? `/cursos/resenas/${resena.id_resena}`
+        : `/cursos/${cursoId}/resenas`;
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ calificacion, comentario }),
-      });
+      const response = await (resena
+        ? apiClient.patch(relativeUrl, { calificacion, comentario })
+        : apiClient.post(relativeUrl, { calificacion, comentario }));
 
-      if (!response.ok) throw new Error("Error al enviar la reseña");
-
-      const data = await response.json();
+      const data = response.data;
       onComentarioEnviado(data.resena || { calificacion, comentario });
 
       mostrarMensaje(

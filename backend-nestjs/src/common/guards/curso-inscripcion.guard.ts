@@ -21,10 +21,10 @@ export class CursoInscripcionGuard implements CanActivate {
     // 1. EL ADMIN SIEMPRE PASA
     try {
       const userRepo = this.dataSource.getRepository('Usuario');
-      const userWithRol = await userRepo.findOne({
+      const userWithRol = (await userRepo.findOne({
         where: { id_usuario: user.id_usuario },
-        relations: ['rol']
-      }) as any;
+        relations: ['rol'],
+      })) as any;
 
       const rolNombre = userWithRol?.rol?.nombre_rol || '';
       console.log(`[GUARD] Usuario: ${user.id_usuario}, Rol: ${rolNombre}`);
@@ -40,10 +40,16 @@ export class CursoInscripcionGuard implements CanActivate {
     }
 
     // 2. OBTENER ID DE CURSO (seguro)
-    const idCurso = request.params?.id || request.query?.id_curso || request.params?.id_curso || request.body?.id_curso;
-    
+    const idCurso =
+      request.params?.id ||
+      request.query?.id_curso ||
+      request.params?.id_curso ||
+      request.body?.id_curso;
+
     if (!idCurso) {
-      console.log('[GUARD] No hay ID de curso para validar, permitiendo acceso...');
+      console.log(
+        '[GUARD] No hay ID de curso para validar, permitiendo acceso...',
+      );
       return true;
     }
 
@@ -54,7 +60,7 @@ export class CursoInscripcionGuard implements CanActivate {
 
       const inscripcion = await this.dataSource.query(
         'SELECT id_inscripcion FROM inscripciones WHERE id_usuario = ? AND id_curso = ? LIMIT 1',
-        [user.id_usuario, numericId]
+        [user.id_usuario, numericId],
       );
 
       if (inscripcion && inscripcion.length > 0) {
@@ -63,7 +69,11 @@ export class CursoInscripcionGuard implements CanActivate {
 
       // EXCEPCIÓN: Si es para ver el temario, progreso o materiales básicos, permitimos el paso a cualquier usuario logueado
       const url = request.originalUrl || '';
-      if (url.includes('/contenido') || url.includes('/progreso') || url.includes('/materiales')) {
+      if (
+        url.includes('/contenido') ||
+        url.includes('/progreso') ||
+        url.includes('/materiales')
+      ) {
         return true;
       }
 
@@ -73,5 +83,4 @@ export class CursoInscripcionGuard implements CanActivate {
       return true; // En caso de error crítico de DB, preferimos dejar pasar a bloquear erróneamente
     }
   }
-
 }

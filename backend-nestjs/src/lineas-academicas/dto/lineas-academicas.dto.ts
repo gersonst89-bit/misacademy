@@ -7,15 +7,15 @@ import {
   IsArray,
 } from 'class-validator';
 export class CreateLineaDto {
-  @IsNotEmpty() @IsString() nombre: string;
+  @IsNotEmpty() @IsString() nombre!: string;
   @IsOptional() @IsString() descripcion?: string;
   @IsOptional() @IsString() imagen?: string;
   @IsOptional() @IsString() estado?: string;
 }
 export class UpdateLineaDto extends CreateLineaDto {}
 export class CreateRutaDto {
-  @IsNotEmpty() @IsNumber() id_linea_academica: number;
-  @IsNotEmpty() @IsString() nombre: string;
+  @IsNotEmpty() @IsNumber() id_linea_academica!: number;
+  @IsNotEmpty() @IsString() nombre!: string;
   @IsOptional() @IsString() descripcion?: string;
   @IsOptional() @IsString() imagen?: string;
   @IsOptional() @IsNumber() horas_totales?: number;

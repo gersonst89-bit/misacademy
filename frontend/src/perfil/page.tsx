@@ -18,6 +18,7 @@ import InputComponent from "../admin/Components/InputComponent";
 import SkillRadarChart from "./components/SkillRadarChart";
 import type { Usuario } from "../types/models";
 import { API_URL } from "../config/api";
+import { apiClient } from "../services/apiClient";
 
 const API_BASE = API_URL;
 
@@ -82,20 +83,13 @@ export default function PerfilPage() {
     const cargar = async () => {
       setCargando(true);
       try {
-        const r = await fetch(`${API_BASE}/auth/profile`, {
-          headers: {
-            Accept: "application/json",
-          },
-          credentials: "include",
-        });
-        if (r.ok) {
-          const data = await r.json();
-          const user = mapUsuario(data);
-          setUsuario(user);
-          const src = normalizeUrl(user.imagen_perfil as any);
-          setAvatarPreview(src || null);
-          setAvatarVersion(Date.now());
-        }
+        const r = await apiClient.get("/auth/profile");
+        const data = r.data;
+        const user = mapUsuario(data);
+        setUsuario(user);
+        const src = normalizeUrl(user.imagen_perfil as any);
+        setAvatarPreview(src || null);
+        setAvatarVersion(Date.now());
       } catch (err) {
         console.error("Error cargando perfil:", err);
       } finally {
@@ -130,18 +124,8 @@ export default function PerfilPage() {
       if (usuario.biografia) form.append("biografia", usuario.biografia);
       if (avatarFile) form.append("imagen_perfil", avatarFile);
 
-      const resp = await fetch(`${API_BASE}/perfil`, {
-        method: "PUT",
-        headers: {
-          Accept: "application/json",
-        },
-        credentials: "include",
-        body: form,
-      });
-
-      if (!resp.ok) throw new Error("Update failed");
-
-      const data = await resp.json();
+      const resp = await apiClient.put("/perfil", form);
+      const data = resp.data;
       const rawUser = data.usuario ?? data.user ?? data.data ?? data;
       if (rawUser) {
         const mapped = mapUsuario(rawUser);
@@ -165,19 +149,10 @@ export default function PerfilPage() {
     if (!usuario.email?.trim()) return;
     try {
       setSendingReset(true);
-      const r = await fetch(`${API_BASE}/auth/change-password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({ email: usuario.email }),
-      });
-      if (r.ok) setResetMsg("¡Enlace enviado! Revisa tu bandeja de entrada.");
-      else setResetMsg("No se pudo enviar el correo.");
+      const r = await apiClient.post("/auth/change-password", { email: usuario.email });
+      setResetMsg("¡Enlace enviado! Revisa tu bandeja de entrada.");
     } catch (e) {
-      setResetMsg("Error de conexión.");
+      setResetMsg("No se pudo enviar el correo o error de conexión.");
     } finally {
       setSendingReset(false);
     }
@@ -266,7 +241,7 @@ export default function PerfilPage() {
                 <h2 className="text-2xl font-black text-white tracking-tight leading-none mb-1">
                   {usuario.nombre} {usuario.apellido}
                 </h2>
-                <p className="text-sky-400/70 text-xs font-bold uppercase tracking-widest mb-6">{usuario.email}</p>
+                <p className="text-sky-400/70 text-xs font-bold lowercase tracking-widest mb-6">{usuario.email}</p>
 
                 <div className="w-full pt-6 border-t border-white/5 space-y-4 text-left">
                   <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-tighter">
@@ -300,7 +275,7 @@ export default function PerfilPage() {
                   ]} 
                 />
               </div>
-              <p className="text-[10px] text-center text-slate-500 italic mt-4">Actualizado automáticamente por tus logros.</p>
+              <p className="text-[10px] text-center text-slate-300 italic mt-4">Actualizado automáticamente por tus logros.</p>
             </div>
           </aside>
 

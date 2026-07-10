@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import type { Modulo, Curso } from "../../types/models";
 import InputComponent from "../Components/InputComponent";
-import { apiUrl, API_URL } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 import AdminModal from "../Components/AdminModal";
 import SearchableSelect from "../Components/SearchableSelect";
 
@@ -54,8 +54,10 @@ export const AddModuloModal: React.FC<Props> = ({ isOpen, onClose, onSave }) => 
         let pC = 1;
         let lastC = 1;
         do {
-          const res = await fetch(apiUrl(`/admin/cursos?page=${pC}`));
-          const data = await res.json();
+          const res = await apiClient.get(`/admin/cursos`, {
+            params: { page: pC }
+          });
+          const data = res.data;
           listaC = [...listaC, ...(data.data || [])];
           lastC = data.last_page || 1;
           pC++;
@@ -67,9 +69,10 @@ export const AddModuloModal: React.FC<Props> = ({ isOpen, onClose, onSave }) => 
         let pM = 1;
         let lastM = 1;
         do {
-          const res = await fetch(apiUrl(`/admin/modulos?page=${pM}`), {
+          const res = await apiClient.get(`/admin/modulos`, {
+            params: { page: pM }
           });
-          const data = await res.json();
+          const data = res.data;
           listaM = [...listaM, ...(data.data || [])];
           lastM = data.last_page || 1;
           pM++;

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import type { Modulo, Curso } from "../../types/models";
 import InputComponent from "../Components/InputComponent";
-import { apiUrl, API_URL } from "../../config/api";
+import { apiClient } from "../../services/apiClient";
 import AdminModal from "../Components/AdminModal";
 import SearchableSelect from "../Components/SearchableSelect";
 
@@ -43,8 +43,10 @@ export const EditModuloModal: React.FC<Props> = ({
     let page = 1;
     let lastPage = 1;
     do {
-      const res = await fetch(apiUrl(`/admin/cursos?page=${page}`));
-      const data = await res.json();
+      const res = await apiClient.get(`/admin/cursos`, {
+        params: { page }
+      });
+      const data = res.data;
       todos = [...todos, ...(data.data || [])];
       lastPage = data.last_page || 1;
       page++;
@@ -57,9 +59,10 @@ export const EditModuloModal: React.FC<Props> = ({
     let page = 1;
     let lastPage = 1;
     do {
-      const res = await fetch(apiUrl(`/admin/modulos?page=${page}`), {
+      const res = await apiClient.get(`/admin/modulos`, {
+        params: { page }
       });
-      const data = await res.json();
+      const data = res.data;
       todos = [...todos, ...(data.data || [])];
       lastPage = data.last_page || 1;
       page++;

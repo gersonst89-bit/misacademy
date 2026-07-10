@@ -1,1 +1,7 @@
-{}\nUnexpected socket close
+{
+  "code": "EAUTH",
+  "response": "535-5.7.8 Username and Password not accepted. For more information, go to\n535 5.7.8  https://support.google.com/mail/?p=BadCredentials 5a478bee46e88-3074dba9d43sm16467820eec.10 - gsmtp",
+  "responseCode": 535,
+  "command": "AUTH PLAIN"
+}\nInvalid login: 535-5.7.8 Username and Password not accepted. For more information, go to
+535 5.7.8  https://support.google.com/mail/?p=BadCredentials 5a478bee46e88-3074dba9d43sm16467820eec.10 - gsmtp

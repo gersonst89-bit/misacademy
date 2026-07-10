@@ -229,6 +229,7 @@ export interface Pago {
   detalles_transaccion: string | null;
   tipo_pago?: TipoPago;
   usuario?: Usuario;
+  detalles?: DetallePago[];
 }
 
 // 18. CarritoCompras
@@ -253,10 +254,14 @@ export interface CarritoItem {
 export interface DetallePago {
   id_detalle: number;
   id_pago: number;
-  id_curso: number;
+  id_curso?: number | null;
+  id_ruta?: number | null;
   precio_unitario: number;
-  descuento: number;
-  total: number;
+  descuento?: number | null;
+  subtotal?: number;
+  total?: number;
+  curso?: Curso | null;
+  ruta?: RutaAcademica | null;
 }
 
 // 21. Certificacion

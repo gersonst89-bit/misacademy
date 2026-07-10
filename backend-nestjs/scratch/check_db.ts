@@ -5,6 +5,10 @@ import { join } from 'path';
 
 dotenv.config({ path: join(__dirname, '../.env') });
 
+if (!process.env.DB_PASSWORD) {
+    throw new Error('La variable de entorno DB_PASSWORD es obligatoria. Por favor configure el archivo .env.');
+}
+
 async function check() {
     try {
         const connection = await createConnection({
@@ -12,7 +16,7 @@ async function check() {
             host: process.env.DB_HOST || 'localhost',
             port: parseInt(process.env.DB_PORT || '3306'),
             username: process.env.DB_USERNAME || 'root',
-            password: process.env.DB_PASSWORD || '',
+            password: process.env.DB_PASSWORD,
             database: process.env.DB_DATABASE || 'mis_academy',
             synchronize: false,
             logging: false,

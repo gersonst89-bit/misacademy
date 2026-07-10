@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import FeaturedCarousel from "./CursoComponents/BannerCurso";
 import CursoGrid from "./CursoComponents/CursoGrid";
 import { motion, AnimatePresence } from "framer-motion";
-import { apiUrl } from "../config/api";
+import { apiClient } from "../services/apiClient";
+import { BookOpen } from "lucide-react";
 
 const LoadingSpinner = () => (
   <div className="flex flex-col justify-center items-center h-screen bg-[#03070c]">
@@ -30,6 +31,7 @@ export default function CursosPage() {
   const [featuredCourses, setFeaturedCourses] = useState<any[]>([]);
 
   useEffect(() => {
+    const controller = new AbortController();
     const fetchData = async () => {
       try {
         let allCourses: any[] = [];
@@ -38,12 +40,8 @@ export default function CursosPage() {
 
         // Fetch all courses (needed for both grid and banner)
         do {
-          const res = await fetch(
-            apiUrl(`/cursos?page=${page}`),
-            { credentials: "include" }
-          );
-          if (!res.ok) break;
-          const data = await res.json();
+          const res = await apiClient.get(`/cursos?page=${page}`, { signal: controller.signal });
+          const data = res.data;
           const items = data.data || [];
           allCourses = [...allCourses, ...items];
           lastPage = data.last_page || 1;
@@ -59,13 +57,23 @@ export default function CursosPage() {
         setFeaturedCourses(featured);
         
         // Small extra delay for smooth transition
-        setTimeout(() => setLoading(false), 800);
-      } catch (error) {
+        setTimeout(() => {
+          if (!controller.signal.aborted) {
+            setLoading(false);
+          }
+        }, 800);
+      } catch (error: any) {
+        if (error?.name === "CanceledError" || error?.code === "ERR_CANCELED") {
+          return;
+        }
         console.error("Error cargando los datos:", error);
         setLoading(false);
       }
     };
     fetchData();
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   useEffect(() => {
