@@ -1,30 +1,26 @@
 # Node / Frontend
-node_modules/
+**/node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Builds — no subir artefactos compilados
-dist/
-*.zip
+# Builds
+**/dist/
+**/*.zip
 
-# Backend — NestJS
-backend-nestjs/.env
-backend-nestjs/.env.*
+# Env
+**/.env
+**/.env.*
 
-# Frontend
-frontend/.env
-frontend/.env.*
-
-# Archivos de log generados en runtime
-*.log
+# Logs
+**/*.log
 backend-nestjs/smtp-result.txt
 backend-nestjs/email-error.log
 
-# Chatbot — modelo entrenado (se regenera automáticamente)
+# Modelo
 backend-nestjs/model.nlp
 
-# Git interno (submodulos residuales)
+# Git interno
 frontend/FETCH_HEAD
 
 # Sistema operativo
