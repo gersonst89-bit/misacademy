@@ -272,4 +272,17 @@ button, a, [role="button"], input[type="button"], input[type="submit"] {
   box-shadow: 0 0 0 2px hsla(var(--primary), 0.2);
 }
 
+/* Forzar cursores nativos y visibles en elementos interactivos */
+input[type="text"], input[type="search"], input[type="email"], input[type="password"], textarea {
+  cursor: text !important;
+}
+
+select, select option {
+  cursor: default !important;
+}
+
+button, a, .cursor-pointer, [class*="cursor-pointer"], [role="button"] {
+  cursor: pointer !important;
+}
+
 

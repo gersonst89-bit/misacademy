@@ -4,6 +4,7 @@ import {
   Post,
   Put,
   Delete,
+  Patch,
   Body,
   Param,
   Query,
@@ -90,5 +91,23 @@ export class AdminMaterialesController {
 
   @Delete(':id') delete(@Param('id') id: number) {
     return this.svc.deleteMaterial(id);
+  }
+}
+
+@Controller('admin/reclamaciones')
+@UseGuards(JwtAuthGuard, AdminGuard)
+export class AdminReclamacionesController {
+  constructor(private readonly svc: AdminService) {}
+  @Get() findAll(@Query() q: any) {
+    return this.svc.findAllReclamaciones(q);
+  }
+  @Get(':id') findOne(@Param('id') id: number) {
+    return this.svc.findReclamacionById(id);
+  }
+  @Patch(':id') updateEstado(
+    @Param('id') id: number,
+    @Body('estado') estado: string,
+  ) {
+    return this.svc.updateReclamacionEstado(id, estado);
   }
 }

@@ -5,6 +5,7 @@ import { Usuario } from '../entities/usuario.entity';
 import { AuthenticationLog } from '../entities/authentication-log.entity';
 import { Material } from '../entities/material.entity';
 import { Pago } from '../entities/pago.entity';
+import { Reclamacion } from '../entities/reclamacion.entity';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -17,6 +18,8 @@ export class AdminRepository {
     @InjectRepository(Material)
     private readonly materialRepo: Repository<Material>,
     @InjectRepository(Pago) private readonly pagoRepo: Repository<Pago>,
+    @InjectRepository(Reclamacion)
+    private readonly reclamacionRepo: Repository<Reclamacion>,
   ) {}
 
   // Usuarios
@@ -127,5 +130,43 @@ export class AdminRepository {
   }
   async deleteMaterial(id: number) {
     await this.materialRepo.delete({ id_material: id });
+  }
+
+  // Reclamaciones
+  async findAllReclamaciones(filters: any = {}, page = 1, perPage = 15) {
+    const qb = this.reclamacionRepo.createQueryBuilder('r');
+    if (filters.search) {
+      qb.andWhere(
+        '(r.nombre_completo LIKE :s OR r.dni LIKE :s OR r.email LIKE :s OR r.asunto LIKE :s)',
+        { s: `%${filters.search}%` },
+      );
+    }
+    if (filters.estado)
+      qb.andWhere('r.estado = :estado', { estado: filters.estado });
+    if (filters.tipo_reclamo)
+      qb.andWhere('r.tipo_reclamo = :tipo', { tipo: filters.tipo_reclamo });
+    if (filters.fecha_inicio)
+      qb.andWhere('r.created_at >= :fi', { fi: filters.fecha_inicio });
+    if (filters.fecha_fin)
+      qb.andWhere('r.created_at <= :ff', { ff: `${filters.fecha_fin} 23:59:59` });
+    qb.orderBy('r.created_at', 'DESC');
+    const [data, total] = await qb
+      .skip((page - 1) * perPage)
+      .take(perPage)
+      .getManyAndCount();
+    return {
+      data,
+      total,
+      current_page: page,
+      per_page: perPage,
+      last_page: Math.ceil(total / perPage),
+    };
+  }
+  async findReclamacionById(id: number) {
+    return this.reclamacionRepo.findOne({ where: { id } });
+  }
+  async updateReclamacionEstado(id: number, estado: string) {
+    await this.reclamacionRepo.update(id, { estado });
+    return this.findReclamacionById(id);
   }
 }

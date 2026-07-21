@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AuthRepository } from './auth.repository';
@@ -17,15 +18,17 @@ import { Rol } from '../entities/rol.entity';
     TypeOrmModule.forFeature([Usuario, TokenUsuario, AuthenticationLog, Rol]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
-      useFactory: () => {
-        const secret = process.env.JWT_SECRET;
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const secret = config.get<string>('JWT_SECRET');
         if (!secret) {
           throw new Error('JWT_SECRET env variable is required but not set');
         }
+
         return {
           secret,
           signOptions: {
-            expiresIn: (process.env.JWT_EXPIRATION || '15m') as any,
+            expiresIn: (config.get<string>('JWT_EXPIRATION', '15m') as any),
           },
         };
       },

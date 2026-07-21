@@ -29,6 +29,9 @@ export class Reclamacion {
   @Column({ type: 'text' })
   descripcion!: string;
 
+  @Column({ length: 20, default: 'pendiente' })
+  estado!: string;
+
   @CreateDateColumn()
   created_at!: Date;
 

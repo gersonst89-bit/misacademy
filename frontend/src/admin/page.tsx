@@ -40,6 +40,7 @@ import Evaluaciones from "./evaluaciones/tabla";
 import { Modulos } from "./modulos/tabla";
 import { Materiales } from "./materiales/tabla";
 import Certificados from "./certificados/tabla";
+import ReclamacionesAdmin from "./reclamaciones/tabla";
 
 import { Configuracion } from "./configuracion/page";
 import { Notificaciones } from "./notificaciones/page";
@@ -100,6 +101,7 @@ export default function AdminLayout() {
       "usuarios",
       "pagos",
       "certificados",
+      "reclamaciones",
       "notificaciones",
       "lineas",
       "rutas",
@@ -198,6 +200,7 @@ export default function AdminLayout() {
       case "lecciones": return <Lecciones />;
       case "lineas": return <LineasAcademicas />;
       case "certificados": return <Certificados />;
+      case "reclamaciones": return <ReclamacionesAdmin />;
       case "pagos": return <PagosAdminPage />;
       case "evaluaciones": return <Evaluaciones />;
       case "modulos": return <Modulos />;
@@ -354,6 +357,13 @@ export default function AdminLayout() {
                   <button onClick={() => handleMenuClick("certificados")} className={menuItemClass("certificados")}>
                     <Award size={16} />
                     {showLabels && <span className="text-[10px] uppercase tracking-wider">Certificados</span>}
+                  </button>
+                )}
+
+                {!isBlockedForTeacher("reclamaciones") && (
+                  <button onClick={() => handleMenuClick("reclamaciones")} className={menuItemClass("reclamaciones")}>
+                    <BookOpen size={16} />
+                    {showLabels && <span className="text-[10px] uppercase tracking-wider">Reclamaciones</span>}
                   </button>
                 )}
 

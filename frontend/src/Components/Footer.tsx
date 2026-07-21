@@ -193,7 +193,7 @@ const Footer: React.FC = () => {
                 ¿Tienes dudas sobre nuestras rutas académicas? Escríbenos directamente.
               </p>
               <a
-                href="mailto:info@misacademy.com"
+                href="mailto:mattinnovasolution@hotmail.com"
                 className="btn-premium w-full py-4 text-xs tracking-widest uppercase"
               >
                 Enviar Correo

@@ -1,15 +1,23 @@
 import { Injectable } from '@nestjs/common';
-import { PassportStrategy } from '@nestjs/passport';
-import { Strategy } from 'passport-github2';
 import { ConfigService } from '@nestjs/config';
+import { PassportStrategy } from '@nestjs/passport';
+import { Strategy, Profile } from 'passport-github2';
 
 @Injectable()
 export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
-  constructor(configService: ConfigService) {
+  constructor(private readonly configService: ConfigService) {
+    const clientID = configService.get<string>('GITHUB_CLIENT_ID');
+    const clientSecret = configService.get<string>('GITHUB_CLIENT_SECRET');
+    const callbackURL = configService.get<string>('GITHUB_CALLBACK_URL');
+
+    if (!clientID || !clientSecret || !callbackURL) {
+      throw new Error('GitHub OAuth environment variables are not properly configured');
+    }
+
     super({
-      clientID: configService.get<string>('GITHUB_CLIENT_ID')!,
-      clientSecret: configService.get<string>('GITHUB_CLIENT_SECRET')!,
-      callbackURL: configService.get<string>('GITHUB_CALLBACK_URL')!,
+      clientID,
+      clientSecret,
+      callbackURL,
       scope: ['user:email'],
     });
   }
@@ -17,17 +25,14 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
   async validate(
     accessToken: string,
     refreshToken: string,
-    profile: any,
-    done: Function,
+    profile: Profile,
   ) {
-    const { displayName, username, emails, photos } = profile;
-    const user = {
-      email: emails[0].value,
-      nombre: displayName || username,
+    return {
+      email: profile.emails?.[0]?.value ?? null,
+      nombre: profile.displayName || profile.username || '',
       apellido: '',
-      imagen_perfil: photos[0].value,
+      imagen_perfil: profile.photos?.[0]?.value ?? null,
       accessToken,
     };
-    done(null, user);
   }
 }

@@ -1,0 +1,2 @@
+# cPanel Application Manager ya configura Passenger a nivel VirtualHost.
+# No se necesitan directivas de Passenger aquí.

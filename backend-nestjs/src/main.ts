@@ -1,9 +1,21 @@
+require('reflect-metadata');
+require('dotenv').config({
+  path: require('path').resolve(process.cwd(), '.env'),
+});
+
+// @ts-ignore
+if (typeof global !== 'undefined' && !global.crypto) {
+  try {
+    // @ts-ignore
+    global.crypto = require('crypto').webcrypto;
+  } catch (e) {}
+}
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { seedTiposPago } from './database/seeds/tipos-pago.seed';
-import { seedMasterStructure } from './database/seeds/master-structure.seed';
 import helmet from 'helmet';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import * as fs from 'fs';
@@ -14,7 +26,6 @@ import { Request, Response, NextFunction } from 'express';
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
-  // 🔍 Validar variables de entorno críticas
   const requiredEnvVars = [
     'DB_HOST',
     'DB_DATABASE',
@@ -28,6 +39,7 @@ async function bootstrap() {
     'MAIL_USERNAME',
     'MAIL_PASSWORD',
   ];
+
   const missingEnvVars = requiredEnvVars.filter((v) => !process.env[v]);
   if (missingEnvVars.length > 0) {
     throw new Error(
@@ -35,43 +47,54 @@ async function bootstrap() {
     );
   }
 
-  // 📁 Crear carpetas necesarias
   const uploadDirs = [
     join(process.cwd(), 'uploads'),
     join(process.cwd(), 'uploads', 'comprobantes'),
   ];
+
   uploadDirs.forEach((dir) => {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   });
 
-  // 🌍 CORS MANUAL — debe ir ANTES de helmet y cualquier otro middleware
-  // Crítico para Passenger/cPanel donde Apache puede interceptar OPTIONS
   const corsOriginsEnv = process.env.CORS_ORIGIN;
   const allowedOrigins = corsOriginsEnv
     ? corsOriginsEnv.split(',').map((o) => o.trim())
-    : ['http://localhost:5173', 'http://localhost:5174'];
+    : [
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'https://muebleriarivas.website',
+        'https://www.muebleriarivas.website',
+        'https://api.muebleriarivas.website',
+      ];
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { abortOnError: false });
 
   app.use((req: Request, res: Response, next: NextFunction) => {
     const origin = req.headers.origin as string;
+
     if (origin && allowedOrigins.includes(origin)) {
       res.header('Access-Control-Allow-Origin', origin);
       res.header('Access-Control-Allow-Credentials', 'true');
-      res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-      res.header('Access-Control-Allow-Headers', 'Content-Type,Accept,Authorization,X-Requested-With,X-CSRF-Token');
+      res.header(
+        'Access-Control-Allow-Methods',
+        'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+      );
+      res.header(
+        'Access-Control-Allow-Headers',
+        'Content-Type,Accept,Authorization,X-Requested-With,X-CSRF-Token',
+      );
       res.header('Access-Control-Max-Age', '86400');
     }
+
     if (req.method === 'OPTIONS') {
       return res.status(200).end();
     }
+
     next();
   });
 
-  // 🔥 IMPORTANTE para cookies en producción (Cloudflare / cPanel / proxy)
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
-  // 🔐 HELMET
   app.use(
     helmet({
       crossOriginResourcePolicy: false,
@@ -80,11 +103,8 @@ async function bootstrap() {
   );
 
   app.setGlobalPrefix('api');
-
-  // 🍪 Cookies
   app.use(cookieParser());
 
-  // 🚫 NO CACHE GLOBAL
   app.use((req: Request, res: Response, next: NextFunction) => {
     res.setHeader(
       'Cache-Control',
@@ -95,10 +115,8 @@ async function bootstrap() {
     next();
   });
 
-  // ⚠️ Filtro global de errores
   app.useGlobalFilters(new GlobalExceptionFilter());
 
-  // ✅ Validación
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -108,16 +126,13 @@ async function bootstrap() {
     }),
   );
 
-  // 🌱 Seeds
   const dataSource = app.get(DataSource);
   await seedTiposPago(dataSource);
-  // await seedMasterStructure(dataSource); // Comentado para evitar que borre/sobreescriba cambios (como precios) al reiniciar el backend
 
-  // 🚀 Server
   const port = process.env.PORT || process.env.APP_PORT || 8000;
   await app.listen(port);
 
-  logger.log(`🚀 MIS_ACADEMY running on port ${port}`);
+  logger.log(`MIS_ACADEMY running on port ${port}`);
 }
 
 bootstrap().catch((err) => {
@@ -125,4 +140,3 @@ bootstrap().catch((err) => {
   logger.error('Error during bootstrap:', err);
   process.exit(1);
 });
-

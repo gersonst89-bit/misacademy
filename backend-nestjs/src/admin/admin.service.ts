@@ -61,4 +61,15 @@ export class AdminService {
     await this.repo.deleteMaterial(id);
     return { message: 'Material eliminado' };
   }
+
+  // Reclamaciones
+  async findAllReclamaciones(q: any) {
+    return this.repo.findAllReclamaciones(q, q.page, q.per_page);
+  }
+  async findReclamacionById(id: number) {
+    return this.repo.findReclamacionById(id);
+  }
+  async updateReclamacionEstado(id: number, estado: string) {
+    return this.repo.updateReclamacionEstado(id, estado);
+  }
 }

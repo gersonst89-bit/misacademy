@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { AuthRepository } from './auth.repository';
 import { JwtService } from '@nestjs/jwt';
-import { MailerService } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';
 
 describe('AuthService', () => {
@@ -14,22 +13,36 @@ describe('AuthService', () => {
       findByEmail: jest.fn(),
       register: jest.fn(),
       createVerificationToken: jest.fn(),
+      createResetToken: jest.fn(),
+      findById: jest.fn(),
+      saveRefreshToken: jest.fn(),
+      findRefreshToken: jest.fn(),
+      updateToken: jest.fn(),
+      updateLogout: jest.fn(),
+      markTokenAsUsed: jest.fn(),
+      markEmailVerified: jest.fn(),
+      findByVerificationToken: jest.fn(),
+      findValidResetToken: jest.fn(),
+      updatePassword: jest.fn(),
+      createAuthLog: jest.fn(),
+      invalidateAllUserRefreshTokens: jest.fn(),
+      updateAvatar: jest.fn(),
     };
 
     const mockJwtService = {
       sign: jest.fn(),
       verify: jest.fn(),
-    };
-
-    const mockMailerService = {
-      sendMail: jest.fn(),
+      decode: jest.fn(),
     };
 
     const mockConfigService = {
-      get: jest.fn().mockImplementation((key) => {
+      get: jest.fn().mockImplementation((key: string, defaultValue?: any) => {
         if (key === 'JWT_EXPIRATION') return '15m';
         if (key === 'REFRESH_JWT_SECRET') return 'refresh-secret';
-        return null;
+        if (key === 'APP_URL_BASE') return 'http://localhost:5173';
+        if (key === 'API_URL_PUBLIC') return null;
+        if (key === 'APP_PORT') return '8000';
+        return defaultValue ?? null;
       }),
     };
 
@@ -38,7 +51,6 @@ describe('AuthService', () => {
         AuthService,
         { provide: AuthRepository, useValue: mockAuthRepository },
         { provide: JwtService, useValue: mockJwtService },
-        { provide: MailerService, useValue: mockMailerService },
         { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();

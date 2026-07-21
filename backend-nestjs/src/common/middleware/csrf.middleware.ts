@@ -25,7 +25,7 @@ export class CsrfMiddleware implements NestMiddleware {
       'auth/reset-password',
       'auth/verify',
       'chatbot',
-      'contacto', // Formulario público de contacto
+      'contacto', 
     ];
 
     const isExemptRoute = csrfExemptRoutes.some((route) => url.includes(route));

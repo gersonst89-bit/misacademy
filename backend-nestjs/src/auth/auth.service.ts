@@ -6,7 +6,6 @@ import {
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { MailerService } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { AuthRepository } from './auth.repository';
@@ -25,7 +24,6 @@ export class AuthService {
   constructor(
     private readonly authRepo: AuthRepository,
     private readonly jwtService: JwtService,
-    private readonly mailerService: MailerService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -57,7 +55,6 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto) {
-    // Check if email exists
     const existing = await this.authRepo.findByEmail(dto.email);
     if (existing) {
       throw new HttpException(
@@ -69,45 +66,43 @@ export class AuthService {
     const user = await this.authRepo.register(dto);
     const token = await this.authRepo.createVerificationToken(user.id_usuario);
 
-    // Send verification email
     const verifyUrl = `${this.apiBaseUrl}/auth/verify/${token}`;
-    try {
-      await this.mailerService.sendMail({
-        to: user.email,
-        subject: '✅ Verifica tu cuenta — MIS Academy',
-        html: `
-                    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; border-radius: 12px; overflow: hidden;">
-                        <div style="background: linear-gradient(135deg, #0ea5e9, #6366f1); padding: 32px 24px; text-align: center;">
-                            <h1 style="color: white; margin: 0; font-size: 24px;">🎓 MIS Academy</h1>
-                            <p style="color: rgba(255,255,255,0.9); margin-top: 8px;">Plataforma de Cursos Online</p>
-                        </div>
-                        <div style="padding: 32px 24px;">
-                            <h2 style="color: #0f172a; margin-top: 0;">¡Hola ${user.nombre}! 👋</h2>
-                            <p style="color: #475569; font-size: 16px; line-height: 1.6;">
-                                Gracias por registrarte en <strong>MIS Academy</strong>. Para activar tu cuenta y comenzar a aprender, haz clic en el siguiente botón:
-                            </p>
-                            <div style="text-align: center; margin: 32px 0;">
-                                <a href="${verifyUrl}" style="display: inline-block; background: linear-gradient(135deg, #0ea5e9, #6366f1); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                                    Verificar mi cuenta
-                                </a>
-                            </div>
-                            <p style="color: #94a3b8; font-size: 13px;">
-                                Si no puedes hacer clic en el botón, copia y pega este enlace en tu navegador:<br>
-                                <a href="${verifyUrl}" style="color: #0ea5e9; word-break: break-all;">${verifyUrl}</a>
-                            </p>
-                            <p style="color: #94a3b8; font-size: 13px;">Este enlace expira en 24 horas.</p>
-                        </div>
-                        <div style="background: #f1f5f9; padding: 16px 24px; text-align: center; color: #94a3b8; font-size: 12px;">
-                            © ${new Date().getFullYear()} MIS Academy — Todos los derechos reservados
-                        </div>
-                    </div>
-                `,
-      });
-      this.logger.log(`📧 Email de verificación enviado a: ${user.email}`);
-    } catch (err: any) {
-      this.logger.error(`❌ Error enviando email de verificación a ${user.email}: ${err.message}`, err.stack);
-      // No lanzamos error para no bloquear el registro
-    }
+
+    const verificationMail = {
+      to: user.email,
+      subject: '✅ Verifica tu cuenta — MIS Academy',
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; border-radius: 12px; overflow: hidden;">
+          <div style="background: linear-gradient(135deg, #0ea5e9, #6366f1); padding: 32px 24px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">🎓 MIS Academy</h1>
+            <p style="color: rgba(255,255,255,0.9); margin-top: 8px;">Plataforma de Cursos Online</p>
+          </div>
+          <div style="padding: 32px 24px;">
+            <h2 style="color: #0f172a; margin-top: 0;">¡Hola ${user.nombre}! 👋</h2>
+            <p style="color: #475569; font-size: 16px; line-height: 1.6;">
+              Gracias por registrarte en <strong>MIS Academy</strong>. Para activar tu cuenta y comenzar a aprender, haz clic en el siguiente botón:
+            </p>
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${verifyUrl}" style="display: inline-block; background: linear-gradient(135deg, #0ea5e9, #6366f1); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                Verificar mi cuenta
+              </a>
+            </div>
+            <p style="color: #94a3b8; font-size: 13px;">
+              Si no puedes hacer clic en el botón, copia y pega este enlace en tu navegador:<br>
+              <a href="${verifyUrl}" style="color: #0ea5e9; word-break: break-all;">${verifyUrl}</a>
+            </p>
+            <p style="color: #94a3b8; font-size: 13px;">Este enlace expira en 24 horas.</p>
+          </div>
+          <div style="background: #f1f5f9; padding: 16px 24px; text-align: center; color: #94a3b8; font-size: 12px;">
+            © ${new Date().getFullYear()} MIS Academy — Todos los derechos reservados
+          </div>
+        </div>
+      `,
+    };
+
+    this.logger.warn(
+      `Mailer desactivado temporalmente. Email de verificación preparado para: ${verificationMail.to}`,
+    );
 
     return {
       message: 'Usuario registrado. Revisa tu correo para verificar la cuenta.',
@@ -124,7 +119,6 @@ export class AuthService {
     const user = await this.authRepo.findByEmail(dto.email);
 
     if (!user || !(await bcrypt.compare(dto.password, user.password))) {
-      // Log failed attempt
       await this.authRepo.createAuthLog({
         authenticatable_type: 'Usuario',
         authenticatable_id: user?.id_usuario || undefined,
@@ -147,15 +141,12 @@ export class AuthService {
       );
     }
 
-    // Generate JWT
     const payload = { sub: user.id_usuario, email: user.email };
 
-    // 🔹 Access Token (corto)
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: this.jwtExpiration as any,
     });
 
-    // 🔹 Refresh Token (largo, secreto separado)
     const refreshToken = this.jwtService.sign(payload, {
       secret: this.refreshSecret,
       expiresIn: '7d',
@@ -173,8 +164,6 @@ export class AuthService {
       },
     };
   }
-
-
 
   async verify(token: string) {
     const appUrl = this.appUrl;
@@ -203,43 +192,42 @@ export class AuthService {
     if (user) {
       const token = await this.authRepo.createResetToken(user.id_usuario);
 
-      // Send reset password email
       const resetUrl = `${this.appUrl}/reset-password?token=${token}&email=${encodeURIComponent(user.email)}`;
-      try {
-        await this.mailerService.sendMail({
-          to: user.email,
-          subject: '🔐 Restablecer contraseña — MIS Academy',
-          html: `
-                        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; border-radius: 12px; overflow: hidden;">
-                            <div style="background: linear-gradient(135deg, #f59e0b, #ef4444); padding: 32px 24px; text-align: center;">
-                                <h1 style="color: white; margin: 0; font-size: 24px;">🔐 MIS Academy</h1>
-                                <p style="color: rgba(255,255,255,0.9); margin-top: 8px;">Restablecer contraseña</p>
-                            </div>
-                            <div style="padding: 32px 24px;">
-                                <h2 style="color: #0f172a; margin-top: 0;">Hola ${user.nombre},</h2>
-                                <p style="color: #475569; font-size: 16px; line-height: 1.6;">
-                                    Recibimos una solicitud para restablecer la contraseña de tu cuenta. Haz clic en el siguiente botón:
-                                </p>
-                                <div style="text-align: center; margin: 32px 0;">
-                                    <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                                        Restablecer contraseña
-                                    </a>
-                                </div>
-                                <p style="color: #94a3b8; font-size: 13px;">
-                                    Si no solicitaste este cambio, puedes ignorar este correo. Tu contraseña no será modificada.
-                                </p>
-                                <p style="color: #94a3b8; font-size: 13px;">Este enlace expira en 2 horas.</p>
-                            </div>
-                            <div style="background: #f1f5f9; padding: 16px 24px; text-align: center; color: #94a3b8; font-size: 12px;">
-                                © ${new Date().getFullYear()} MIS Academy — Todos los derechos reservados
-                            </div>
-                        </div>
-                    `,
-        });
-        this.logger.log(`📧 Email de reset enviado a: ${user.email}`);
-      } catch (err: any) {
-        this.logger.error('❌ Error enviando email de reset:', err.stack);
-      }
+
+      const resetMail = {
+        to: user.email,
+        subject: '🔐 Restablecer contraseña — MIS Academy',
+        html: `
+          <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; border-radius: 12px; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #f59e0b, #ef4444); padding: 32px 24px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 24px;">🔐 MIS Academy</h1>
+              <p style="color: rgba(255,255,255,0.9); margin-top: 8px;">Restablecer contraseña</p>
+            </div>
+            <div style="padding: 32px 24px;">
+              <h2 style="color: #0f172a; margin-top: 0;">Hola ${user.nombre},</h2>
+              <p style="color: #475569; font-size: 16px; line-height: 1.6;">
+                Recibimos una solicitud para restablecer la contraseña de tu cuenta. Haz clic en el siguiente botón:
+              </p>
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                  Restablecer contraseña
+                </a>
+              </div>
+              <p style="color: #94a3b8; font-size: 13px;">
+                Si no solicitaste este cambio, puedes ignorar este correo. Tu contraseña no será modificada.
+              </p>
+              <p style="color: #94a3b8; font-size: 13px;">Este enlace expira en 2 horas.</p>
+            </div>
+            <div style="background: #f1f5f9; padding: 16px 24px; text-align: center; color: #94a3b8; font-size: 12px;">
+              © ${new Date().getFullYear()} MIS Academy — Todos los derechos reservados
+            </div>
+          </div>
+        `,
+      };
+
+      this.logger.warn(
+        `Mailer desactivado temporalmente. Email de reset preparado para: ${resetMail.to}`,
+      );
     }
     return {
       message:
@@ -286,40 +274,39 @@ export class AuthService {
   async changePassword(user: Usuario) {
     const token = await this.authRepo.createResetToken(user.id_usuario);
 
-    // Send change password email
     const resetUrl = `${this.appUrl}/reset-password?token=${token}&email=${encodeURIComponent(user.email)}`;
-    try {
-      await this.mailerService.sendMail({
-        to: user.email,
-        subject: '🔑 Cambio de contraseña — MIS Academy',
-        html: `
-                    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; border-radius: 12px; overflow: hidden;">
-                        <div style="background: linear-gradient(135deg, #0ea5e9, #6366f1); padding: 32px 24px; text-align: center;">
-                            <h1 style="color: white; margin: 0; font-size: 24px;">🔑 MIS Academy</h1>
-                            <p style="color: rgba(255,255,255,0.9); margin-top: 8px;">Cambio de contraseña</p>
-                        </div>
-                        <div style="padding: 32px 24px;">
-                            <h2 style="color: #0f172a; margin-top: 0;">Hola ${user.nombre},</h2>
-                            <p style="color: #475569; font-size: 16px; line-height: 1.6;">
-                                Has solicitado cambiar tu contraseña. Haz clic en el siguiente botón para establecer una nueva:
-                            </p>
-                            <div style="text-align: center; margin: 32px 0;">
-                                <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #0ea5e9, #6366f1); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                                    Cambiar contraseña
-                                </a>
-                            </div>
-                            <p style="color: #94a3b8; font-size: 13px;">Este enlace expira en 2 horas.</p>
-                        </div>
-                        <div style="background: #f1f5f9; padding: 16px 24px; text-align: center; color: #94a3b8; font-size: 12px;">
-                            © ${new Date().getFullYear()} MIS Academy — Todos los derechos reservados
-                        </div>
-                    </div>
-                `,
-      });
-      this.logger.log(`📧 Email de cambio de contraseña enviado a: ${user.email}`);
-    } catch (err: any) {
-      this.logger.error('❌ Error enviando email de cambio de contraseña:', err.stack);
-    }
+
+    const changePasswordMail = {
+      to: user.email,
+      subject: '🔑 Cambio de contraseña — MIS Academy',
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; border-radius: 12px; overflow: hidden;">
+          <div style="background: linear-gradient(135deg, #0ea5e9, #6366f1); padding: 32px 24px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">🔑 MIS Academy</h1>
+            <p style="color: rgba(255,255,255,0.9); margin-top: 8px;">Cambio de contraseña</p>
+          </div>
+          <div style="padding: 32px 24px;">
+            <h2 style="color: #0f172a; margin-top: 0;">Hola ${user.nombre},</h2>
+            <p style="color: #475569; font-size: 16px; line-height: 1.6;">
+              Has solicitado cambiar tu contraseña. Haz clic en el siguiente botón para establecer una nueva:
+            </p>
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #0ea5e9, #6366f1); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                Cambiar contraseña
+              </a>
+            </div>
+            <p style="color: #94a3b8; font-size: 13px;">Este enlace expira en 2 horas.</p>
+          </div>
+          <div style="background: #f1f5f9; padding: 16px 24px; text-align: center; color: #94a3b8; font-size: 12px;">
+            © ${new Date().getFullYear()} MIS Academy — Todos los derechos reservados
+          </div>
+        </div>
+      `,
+    };
+
+    this.logger.warn(
+      `Mailer desactivado temporalmente. Email de cambio de contraseña preparado para: ${changePasswordMail.to}`,
+    );
 
     return {
       success: true,
@@ -327,6 +314,7 @@ export class AuthService {
         'Se ha enviado un correo con instrucciones para cambiar tu contraseña.',
     };
   }
+
   async githubLogin(req: any) {
     if (!req.user) {
       throw new HttpException('No user from github', HttpStatus.BAD_REQUEST);
@@ -351,21 +339,17 @@ export class AuthService {
       }
     }
 
-    // 🔥 PAYLOAD
     const payload = { sub: user.id_usuario, email: user.email };
 
-    // 🔹 Access Token
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: this.jwtExpiration as any,
     });
 
-    // 🔹 Refresh Token (secreto separado)
     const refreshToken = this.jwtService.sign(payload, {
       secret: this.refreshSecret,
       expiresIn: '7d',
     });
 
-    // 🔥 GUARDAR EN BD (CLAVE)
     await this.authRepo.saveRefreshToken(user.id_usuario, refreshToken);
 
     return {
@@ -378,8 +362,8 @@ export class AuthService {
       },
     };
   }
+
   async refresh(refreshToken: string) {
-    // Verificar firma del refresh token con su secreto exclusivo
     try {
       this.jwtService.verify(refreshToken, { secret: this.refreshSecret });
     } catch {
@@ -388,10 +372,6 @@ export class AuthService {
 
     const tokenInDb = await this.authRepo.findRefreshToken(refreshToken);
 
-    // Detección de reuso de token (Token Reuse Detection):
-    // Si el token existe en base de datos pero ya fue marcado como "usado",
-    // esto es un indicador de que el token fue comprometido y reutilizado.
-    // Como medida preventiva extrema, revocamos todos los tokens de refresco del usuario.
     if (tokenInDb && tokenInDb.usado) {
       await this.authRepo.invalidateAllUserRefreshTokens(tokenInDb.id_usuario);
       throw new UnauthorizedException('Compromised session. Please login again.');
@@ -410,8 +390,6 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    // Rotación del refresh token:
-    // 1. Marcar el refresh token actual como usado
     tokenInDb.usado = true;
     await this.authRepo.updateToken(tokenInDb);
 
@@ -420,7 +398,6 @@ export class AuthService {
       email: user.email,
     };
 
-    // 2. Generar nuevos tokens
     const newAccessToken = this.jwtService.sign(payload, {
       expiresIn: this.jwtExpiration as any,
     });
@@ -430,7 +407,6 @@ export class AuthService {
       expiresIn: '7d',
     });
 
-    // 3. Guardar el nuevo refresh token en BD
     await this.authRepo.saveRefreshToken(user.id_usuario, newRefreshToken);
 
     return {
@@ -468,4 +444,3 @@ export class AuthService {
     return this.jwtService.decode(token);
   }
 }
-
