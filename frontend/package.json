@@ -3,13 +3,14 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build && node prerender.cjs",
-    "build:prod": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
+"scripts": {
+  "dev": "vite",
+  "build": "tsc -b && vite build",
+  "build:prod": "vite build",
+  "prerender": "node prerender.cjs",
+  "lint": "eslint .",
+  "preview": "vite preview"
+},
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
