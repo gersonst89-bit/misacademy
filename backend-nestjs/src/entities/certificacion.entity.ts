@@ -13,7 +13,7 @@ export class Certificacion {
   @PrimaryGeneratedColumn({ name: 'id_certificacion' })
   id_certificacion!: number;
 
-  @Column()
+  @Column({ nullable: true })
   id_usuario!: number;
 
   @Column({ nullable: true })
@@ -31,20 +31,34 @@ export class Certificacion {
   @Column({ length: 50, default: 'Certificado de Aprobación' })
   tipo_certificado!: string;
 
-  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
-  calificacion_final!: number;
+  @Column({
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
+  calificacion_final!: number | null;
 
   @Column({ type: 'text', nullable: true })
   descripcion!: string;
 
-  @Column({ type: 'int', nullable: true })
-  horas!: number;
+  @Column({
+    type: 'int',
+    nullable: true,
+  })
+  horas!: number | null;
 
-  @Column({ type: 'timestamp', nullable: true })
-  fecha_inicio!: Date;
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+  })
+  fecha_inicio!: Date | null;
 
-  @Column({ type: 'timestamp', nullable: true })
-  fecha_fin!: Date;
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+  })
+  fecha_fin!: Date | null;
 
   @Column({ length: 255, nullable: true })
   email_destinatario!: string;
@@ -74,4 +88,7 @@ export class Certificacion {
   @ManyToOne(() => Curso)
   @JoinColumn({ name: 'id_curso' })
   curso!: Curso;
+
+  @Column({ length: 20, nullable: true })
+  dni_estudiante!: string;
 }

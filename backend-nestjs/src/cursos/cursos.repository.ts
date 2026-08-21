@@ -200,20 +200,37 @@ export class CursosRepository {
   }
 
   async create(data: CreateCursoDto): Promise<Curso> {
+    const { rutas, ...datosCurso } = data;
+
     const curso = this.cursoRepo.create({
-      ...data,
+      ...datosCurso,
       fecha_creacion: new Date(),
       fecha_actualizacion: new Date(),
     });
-    return this.cursoRepo.save(curso as any);
+
+    const cursoGuardado = await this.cursoRepo.save(curso);
+
+    if (Array.isArray(rutas)) {
+      await this.assignRutas(cursoGuardado.id_curso, rutas);
+    }
+
+    return this.cursoRepo.findOne({
+      where: {
+        id_curso: cursoGuardado.id_curso,
+      },
+      relations: {
+        rutas: true,
+        docente: true,
+      },
+    }) as Promise<Curso>;
   }
 
   async update(id: number, data: UpdateCursoDto): Promise<Curso | null> {
     const { rutas, ...updateData } = data;
-    await this.cursoRepo.update(
-      { id_curso: id },
-      { ...updateData, fecha_actualizacion: new Date() } as any,
-    );
+    await this.cursoRepo.update({ id_curso: id }, {
+      ...updateData,
+      fecha_actualizacion: new Date(),
+    } as any);
     return this.findById(id);
   }
 
@@ -325,7 +342,9 @@ export class CursosRepository {
               progreso: l.estado_progreso
                 ? {
                     estado: l.estado_progreso,
-                    porcentaje: l.porcentaje_completado ? Number(l.porcentaje_completado) : 0,
+                    porcentaje: l.porcentaje_completado
+                      ? Number(l.porcentaje_completado)
+                      : 0,
                   }
                 : null,
             })),

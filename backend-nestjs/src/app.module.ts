@@ -3,12 +3,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { ServeStaticModule } from '@nestjs/serve-static';
 import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor';
 import { CsrfMiddleware } from './common/middleware/csrf.middleware';
-import { join } from 'path';
-
-import * as entities from './entities';
 
 import { AuthModule } from './auth/auth.module';
 import { CursosModule } from './cursos/cursos.module';
@@ -30,10 +26,16 @@ import { ChatbotModule } from './chatbot/chatbot.module';
 import { MaterialesModule } from './materiales/materiales.module';
 import { StorageModule } from './storage/storage.module';
 
+import { AuditLog } from './entities/audit-log.entity';
+import { NotificacionesModule } from './notificaciones/notificaciones.module';
+import { HealthController } from './health.controller';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      ignoreEnvFile: true,
+      cache: true,
     }),
 
     ThrottlerModule.forRoot([
@@ -48,23 +50,18 @@ import { StorageModule } from './storage/storage.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         type: 'mysql' as const,
-        host: config.get<string>('DB_HOST', '127.0.0.1'),
+        host: config.get<string>('DB_HOST'),
         port: Number(config.get<number>('DB_PORT', 3306)),
-        username: config.get<string>('DB_USERNAME', 'root'),
-        password: config.get<string>('DB_PASSWORD', ''),
-        database: config.get<string>('DB_DATABASE', 'mis_academy'),
-        entities: Object.values(entities),
-        synchronize: config.get<string>('APP_ENV') === 'development',
-        logging: config.get<string>('APP_ENV') === 'development',
+        username: config.get<string>('DB_USERNAME'),
+        password: config.get<string>('DB_PASSWORD'),
+        database: config.get<string>('DB_DATABASE'),
+        autoLoadEntities: true,
+        synchronize: false,
+        logging: true,
       }),
     }),
 
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', '..', 'frontend', 'dist'),
-      exclude: ['/api', '/api/*path'],
-    }),
-
-    TypeOrmModule.forFeature([entities.AuditLog]),
+    TypeOrmModule.forFeature([AuditLog]),
 
     AuthModule,
     CursosModule,
@@ -85,8 +82,9 @@ import { StorageModule } from './storage/storage.module';
     ChatbotModule,
     MaterialesModule,
     StorageModule,
+    NotificacionesModule,
   ],
-  controllers: [],
+  controllers: [HealthController],
   providers: [
     {
       provide: APP_GUARD,

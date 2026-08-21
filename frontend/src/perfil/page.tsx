@@ -68,7 +68,7 @@ export default function PerfilPage() {
     nombre: data.nombre ?? data.first_name ?? "",
     apellido: data.apellido ?? data.last_name ?? "",
     email: data.email ?? "",
-    dni: "" as any,
+    dni: data.dni ?? "",
     id_rol: Number(data.id_rol ?? data.rol_id ?? 2),
     estado: data.estado ?? "Activo",
     imagen_perfil: data.imagen_perfil ?? data.avatar ?? null,
@@ -121,6 +121,7 @@ export default function PerfilPage() {
       form.append("nombre", usuario.nombre);
       form.append("apellido", usuario.apellido ?? "");
       form.append("email", usuario.email ?? "");
+      if (usuario.dni) form.append("dni", usuario.dni as string);
       if (usuario.biografia) form.append("biografia", usuario.biografia);
       if (avatarFile) form.append("imagen_perfil", avatarFile);
 
@@ -316,6 +317,22 @@ export default function PerfilPage() {
                       onChange={(e) => setUsuario({ ...usuario, apellido: e.target.value })}
                     />
                   </div>
+                </div>
+
+                {/* DNI Field */}
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-500 ml-1">DNI / Documento de Identidad</label>
+                  <div className="relative">
+                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 text-lg font-black select-none">🪪</span>
+                    <input 
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-5 py-4 text-white focus:border-sky-500/50 focus:bg-white/[0.08] outline-none transition-all placeholder:text-slate-600 font-medium"
+                      placeholder="Ej. 12345678"
+                      value={(usuario.dni as string) || ""}
+                      onChange={(e) => setUsuario({ ...usuario, dni: e.target.value as any })}
+                      maxLength={20}
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-500 ml-2 italic">Necesario para validar tus certificados por DNI.</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">

@@ -50,10 +50,10 @@ export class AdminOrDocenteGuard implements CanActivate {
     if (
       !user ||
       !rol ||
-      (rol !== 'administrador' && rol !== 'docente' && rol !== 'instructor')
+      (rol !== 'administrador' && rol !== 'docente')
     ) {
       throw new ForbiddenException(
-        'No autorizado. Se requiere rol de Administrador, Docente o Instructor.',
+        'No autorizado. Se requiere rol de Administrador o Docente',
       );
     }
     return true;

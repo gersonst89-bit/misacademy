@@ -49,7 +49,7 @@ const getLineaAccent = (nombre: string) => {
       arrow: "group-hover:bg-emerald-500 group-hover:border-emerald-400",
       title: "group-hover:text-emerald-400",
       icon: <GraduationCap size={14} />,
-      label: "MIS TEACHER",
+      label: "OPERADOR DE MAQUINARIA PESADA ",
       overlay: "bg-emerald-500/20",
     };
   if (n.includes("business") || n.includes("negocio") || n.includes("empresa"))

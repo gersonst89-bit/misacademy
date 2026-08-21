@@ -82,7 +82,6 @@ export interface Curso {
   rutas: (number | { id_ruta: number; nombre?: string; orden?: number })[];
 }
 
-
 // 6. RutaAcademica
 export interface RutaAcademica {
   id_ruta: number;
@@ -214,7 +213,6 @@ export interface TipoPago {
   codigo_referencia?: string | null;
 }
 
-
 // 17. Pago
 export interface Pago {
   id_pago: number;
@@ -268,41 +266,46 @@ export interface DetallePago {
 interface CertificacionBase {
   id_certificacion: number;
   codigo_certificado: string;
-  tipo_certificado: "empresa" | "adicional";
+  tipo_certificado: 'empresa' | 'Certificado de Aprobación' | 'adicional';
   fecha_emision: string | null;
 }
 
-export interface CertificacionEmpresa extends CertificacionBase {
-  tipo_certificado: "empresa";
+export interface CertificacionEmpresa
+  extends CertificacionBase {
+  tipo_certificado:
+    | 'empresa'
+    | 'Certificado de Aprobación';
+
   id_usuario: number;
   id_curso: number;
-  calificacion_final: number;
+  calificacion_final: number | null;
   url_certificado: string | null;
-  nombre_estudiante?: never;
-  nombre_curso?: never;
-  fecha_inicio?: never;
-  fecha_fin?: never;
-  total_horas?: never;
-  email_destinatario?: never;
+  fecha_inicio: string | null;
+  fecha_fin: string | null;
+  usuario_dni?: string;
+  nombre_estudiante?: string;
+  nombre_curso?: string;
+  total_horas?: number;
+  email_destinatario?: string;
 }
 
-export interface CertificacionAdicional extends CertificacionBase {
-  tipo_certificado: "adicional";
-  id_usuario?: never;
+export interface CertificacionAdicional
+  extends CertificacionBase {
+  tipo_certificado: 'adicional';
+  id_usuario?: number;
   id_curso?: never;
-  calificacion_final?: never;
+  calificacion_final?: number | null;
   url_certificado?: never;
-
   nombre_estudiante: string;
   nombre_curso: string;
   fecha_inicio: string;
   fecha_fin: string;
   total_horas: number;
   email_destinatario: string;
+  dni_estudiante?: string;
 }
 
 export type Certificacion = CertificacionEmpresa | CertificacionAdicional;
-
 
 // 22. Resena
 export interface Resena {
@@ -319,7 +322,6 @@ export interface Resena {
     imagen_perfil?: string | null;
   };
 }
-
 
 // 23. ComentarioLeccion
 export interface ComentarioLeccion {

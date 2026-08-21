@@ -134,39 +134,86 @@ export class AdminRepository {
 
   // Reclamaciones
   async findAllReclamaciones(filters: any = {}, page = 1, perPage = 15) {
+    const pageNumber = Math.max(Number(page) || 1, 1);
+    const perPageNumber = Math.min(Math.max(Number(perPage) || 15, 1), 100);
+
     const qb = this.reclamacionRepo.createQueryBuilder('r');
-    if (filters.search) {
+
+    const search = String(filters.search || '').trim();
+
+    if (search) {
       qb.andWhere(
-        '(r.nombre_completo LIKE :s OR r.dni LIKE :s OR r.email LIKE :s OR r.asunto LIKE :s)',
-        { s: `%${filters.search}%` },
+        `(
+        r.nombre_completo LIKE :search
+        OR r.dni LIKE :search
+        OR r.email LIKE :search
+        OR r.asunto LIKE :search
+      )`,
+        {
+          search: `%${search}%`,
+        },
       );
     }
-    if (filters.estado)
-      qb.andWhere('r.estado = :estado', { estado: filters.estado });
-    if (filters.tipo_reclamo)
-      qb.andWhere('r.tipo_reclamo = :tipo', { tipo: filters.tipo_reclamo });
-    if (filters.fecha_inicio)
-      qb.andWhere('r.created_at >= :fi', { fi: filters.fecha_inicio });
-    if (filters.fecha_fin)
-      qb.andWhere('r.created_at <= :ff', { ff: `${filters.fecha_fin} 23:59:59` });
+
+    if (filters.estado) {
+      qb.andWhere('r.estado = :estado', {
+        estado: String(filters.estado),
+      });
+    }
+
+    if (filters.tipo_reclamo) {
+      qb.andWhere('r.tipo_reclamo = :tipo_reclamo', {
+        tipo_reclamo: String(filters.tipo_reclamo),
+      });
+    }
+
+    if (filters.fecha_inicio) {
+      qb.andWhere('r.created_at >= :fecha_inicio', {
+        fecha_inicio: filters.fecha_inicio,
+      });
+    }
+
+    if (filters.fecha_fin) {
+      qb.andWhere('r.created_at <= :fecha_fin', {
+        fecha_fin: `${filters.fecha_fin} 23:59:59`,
+      });
+    }
+
     qb.orderBy('r.created_at', 'DESC');
+
     const [data, total] = await qb
-      .skip((page - 1) * perPage)
-      .take(perPage)
+      .skip((pageNumber - 1) * perPageNumber)
+      .take(perPageNumber)
       .getManyAndCount();
+
     return {
       data,
       total,
-      current_page: page,
-      per_page: perPage,
-      last_page: Math.ceil(total / perPage),
+      current_page: pageNumber,
+      per_page: perPageNumber,
+      last_page: Math.ceil(total / perPageNumber),
     };
   }
+
   async findReclamacionById(id: number) {
-    return this.reclamacionRepo.findOne({ where: { id } });
+    return this.reclamacionRepo.findOne({
+      where: { id },
+    });
   }
+
   async updateReclamacionEstado(id: number, estado: string) {
-    await this.reclamacionRepo.update(id, { estado });
-    return this.findReclamacionById(id);
+    const reclamacion = await this.reclamacionRepo.findOne({
+      where: { id },
+    });
+
+    if (!reclamacion) {
+      throw new Error('Reclamación no encontrada');
+    }
+
+    reclamacion.estado = estado;
+
+    await this.reclamacionRepo.save(reclamacion);
+
+    return reclamacion;
   }
 }

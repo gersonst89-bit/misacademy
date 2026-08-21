@@ -10,18 +10,6 @@ interface LineaAcademica {
   estado: string;
 }
 
-interface SocialLink {
-  name: string;
-  href: string;
-  icon: React.ReactNode;
-}
-
-interface FooterPag {
-  name: string;
-  to: string;
-  image?: string;
-}
-
 const Footer: React.FC = () => {
   const [lineas, setLineas] = useState<LineaAcademica[]>([]);
 
@@ -41,27 +29,11 @@ const Footer: React.FC = () => {
     fetchLineas();
   }, []);
 
-  const socialLinks: SocialLink[] = [
-    {
-      name: "Facebook",
-      href: "https://web.facebook.com/mattinnovasolution",
-      icon: <FaFacebook className="w-5 h-5" />,
-    },
-    {
-      name: "Instagram",
-      href: "https://www.instagram.com/mattinnovasolution/",
-      icon: <FaInstagram className="w-5 h-5" />,
-    },
-    {
-      name: "LinkedIn",
-      href: "https://www.linkedin.com/company/mattinnovasolution/",
-      icon: <FaLinkedin className="w-5 h-5" />,
-    },
-    {
-      name: "YouTube",
-      href: "https://www.youtube.com/@mattinnovasolution",
-      icon: <FaYoutube className="w-5 h-5" />,
-    },
+  const socialLinks = [
+    { name: "Facebook", href: "https://web.facebook.com/mattinnovasolution", icon: FaFacebook },
+    { name: "Instagram", href: "https://www.instagram.com/mattinnovasolution/", icon: FaInstagram },
+    { name: "LinkedIn", href: "https://www.linkedin.com/company/mattinnovasolution/", icon: FaLinkedin },
+    { name: "YouTube", href: "https://www.youtube.com/@mattinnovasolution", icon: FaYoutube },
   ];
 
   const slugify = (s: string) =>
@@ -74,24 +46,25 @@ const Footer: React.FC = () => {
       .replace(/[^a-z0-9-]/g, "");
 
   return (
-    <footer className="relative bg-transparent border-t border-white/5 pt-24 pb-12 overflow-hidden">
+    <footer className="relative bg-transparent border-t border-white/5 pt-16 pb-8 overflow-hidden">
       {/* Atmósfera de fondo */}
       <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute bottom-0 left-0 w-full h-[500px] bg-gradient-to-t from-sky-500/5 to-transparent" />
-        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-sky-500/10 blur-[120px] rounded-full" />
-        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-600/10 blur-[120px] rounded-full" />
+        <div className="absolute bottom-0 left-0 w-full h-[300px] bg-gradient-to-t from-sky-500/5 to-transparent" />
+        <div className="absolute -bottom-16 -left-16 w-64 h-64 bg-sky-500/10 blur-[100px] rounded-full" />
+        <div className="absolute -bottom-16 -right-16 w-64 h-64 bg-blue-600/10 blur-[100px] rounded-full" />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-16 mb-20">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-16 mb-16">
           
+          {/* Columna 1: Marca */}
           <div className="lg:col-span-4">
-            <Link to="/" className="inline-block mb-8 group">
-              <h3 className="text-4xl font-black text-white tracking-tighter italic">
-                MIS <span className="text-gradient-sky drop-shadow-[0_0_10px_rgba(14,165,233,0.3)]">ACADEMY</span>
+            <Link to="/" className="inline-block mb-6 group">
+              <h3 className="text-3xl md:text-4xl font-black text-white tracking-tight">
+                MIS <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400 drop-shadow-[0_0_20px_rgba(14,165,233,0.3)]">ACADEMY</span>
               </h3>
             </Link>
-            <p className="text-slate-400 leading-relaxed mb-10 text-base font-medium max-w-sm">
+            <p className="font-cuerpo text-slate-300 leading-relaxed mb-8 text-sm md:text-base max-w-sm">
               Plataforma educativa de{" "}
               <a
                 href="https://www.mattinnovasolution.com/"
@@ -104,37 +77,39 @@ const Footer: React.FC = () => {
               , diseñada para personas que desean aprender y especializarse en áreas tecnológicas.
             </p>
 
-            <div className="flex gap-4">
-              {socialLinks.map((social) => (
-                <a
-                  key={social.name}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-11 h-11 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center hover:bg-sky-500 hover:border-sky-400 hover:text-white transition-all duration-500 group"
-                  aria-label={social.name}
-                >
-                  <div className="group-hover:scale-110 transition-transform">
-                    {social.icon}
-                  </div>
-                </a>
-              ))}
+            <div className="flex gap-3">
+              {socialLinks.map((social) => {
+                const Icon = social.icon;
+                return (
+                  <a
+                    key={social.name}
+                    href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-10 h-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center hover:bg-sky-500 hover:border-sky-400 hover:text-white transition-all duration-300 group"
+                    aria-label={social.name}
+                  >
+                    <Icon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  </a>
+                );
+              })}
             </div>
           </div>
 
+          {/* Columna 2: Especialidades */}
           <div className="lg:col-span-2">
-            <h4 className="text-xs uppercase font-bold text-white/70 tracking-[0.2em] mb-6">
+            <h4 className="font-titulo text-[10px] font-black tracking-[0.2em] text-white/50 uppercase mb-5">
               Especialidades
             </h4>
-            <ul className="grid gap-5">
+            <ul className="space-y-3 font-cuerpo">
               {lineas.length === 0 ? (
-                <li key="footer-loading-lineas" className="text-slate-600 text-sm italic">Cargando...</li>
+                <li className="text-slate-500 text-sm italic">Cargando...</li>
               ) : (
                 lineas.map((linea, index) => (
                   <li key={linea.id_linea || `footer-linea-${index}`}>
                     <Link
                       to={`/lineas-academicas/${slugify(linea.nombre)}`}
-                      className="text-slate-400 hover:text-sky-400 hover:translate-x-1 transition-all duration-300 text-sm font-bold flex items-center gap-2 group"
+                      className="text-slate-300 hover:text-sky-400 hover:translate-x-1 transition-all duration-300 text-sm font-medium flex items-center gap-2 group"
                     >
                       {linea.nombre}
                       <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-all -translate-y-0.5 translate-x-0.5" />
@@ -145,74 +120,84 @@ const Footer: React.FC = () => {
             </ul>
           </div>
 
+          {/* Columna 3: Recursos */}
           <div className="lg:col-span-3">
-            <h4 className="text-xs uppercase font-bold text-white/70 tracking-[0.2em] mb-6">
+            <h4 className="font-titulo text-[10px] font-black tracking-[0.2em] text-white/50 uppercase mb-5">
               Recursos
             </h4>
-            <ul className="grid gap-5">
+            <ul className="space-y-3 font-cuerpo">
               <li>
-                <Link to="/cursos" className="text-slate-400 hover:text-sky-400 hover:translate-x-1 transition-all duration-300 text-sm font-bold flex items-center gap-2 group whitespace-nowrap">
+                <Link
+                  to="/cursos"
+                  className="text-slate-300 hover:text-sky-400 hover:translate-x-1 transition-all duration-300 text-sm font-medium flex items-center gap-2 group"
+                >
                   Explorar Cursos
                   <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-all -translate-y-0.5 translate-x-0.5" />
                 </Link>
               </li>
               <li>
-                <Link to="/consulta" className="text-slate-400 hover:text-sky-400 hover:translate-x-1 transition-all duration-300 text-sm font-bold flex items-center gap-2 group whitespace-nowrap">
+                <Link
+                  to="/consulta"
+                  className="text-slate-300 hover:text-sky-400 hover:translate-x-1 transition-all duration-300 text-sm font-medium flex items-center gap-2 group"
+                >
                   Validar Certificado
                   <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-all -translate-y-0.5 translate-x-0.5" />
                 </Link>
               </li>
               <li>
-                <Link to="/terminos" className="text-slate-400 hover:text-sky-400 hover:translate-x-1 transition-all duration-300 text-sm font-bold flex items-center gap-2 group whitespace-nowrap">
+                <Link
+                  to="/terminos"
+                  className="text-slate-300 hover:text-sky-400 hover:translate-x-1 transition-all duration-300 text-sm font-medium flex items-center gap-2 group"
+                >
                   Términos Legales
                   <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-all -translate-y-0.5 translate-x-0.5" />
                 </Link>
               </li>
-              <li>
-                <Link to="/reclamaciones">
+              <li className="pt-2">
+                <Link to="/reclamaciones" className="block transition-transform hover:scale-105">
                   <img
                     src="/libro.jpg"
                     alt="Libro de Reclamaciones"
-                    className="w-28 rounded-lg opacity-80 hover:opacity-100 hover:scale-105 transition-all duration-300 shadow-md shadow-black/30"
+                    className="w-24 rounded-lg opacity-70 hover:opacity-100 transition-all duration-300 shadow-md shadow-black/30"
                   />
                 </Link>
               </li>
             </ul>
           </div>
 
+          {/* Columna 4: Contacto (Nuevo diseño minimalista y elegante) */}
           <div className="lg:col-span-3">
-            <div className="p-8 glass-card rounded-[2.5rem] border-white/10 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-                 <Mail size={80} />
-              </div>
-              <h4 className="text-xl font-black text-white mb-4 flex items-center gap-2">
-                <Sparkles size={20} className="text-sky-400" />
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles size={18} className="text-sky-400 shrink-0" />
+              <h4 className="font-titulo text-xl font-black text-white">
                 Hablemos
               </h4>
-              <p className="text-sm text-slate-400 mb-6 font-medium">
-                ¿Tienes dudas sobre nuestras rutas académicas? Escríbenos directamente.
-              </p>
-              <a
-                href="mailto:mattinnovasolution@hotmail.com"
-                className="btn-premium w-full py-4 text-xs tracking-widest uppercase"
-              >
-                Enviar Correo
-              </a>
             </div>
+            <p className="font-cuerpo text-sm text-slate-300 mb-6 leading-relaxed max-w-sm">
+              ¿Tienes dudas sobre nuestras rutas académicas? Escríbenos directamente.
+            </p>
+            <a
+              href="mailto:mattinnovasolution@hotmail.com"
+              className="inline-flex items-center justify-center gap-2 py-3 px-6 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-white text-xs font-bold tracking-wider uppercase transition-all hover:scale-105 hover:shadow-lg hover:shadow-sky-500/20 active:scale-95"
+            >
+              <Mail size={14} />
+              <span>Enviar Correo</span>
+            </a>
           </div>
         </div>
 
-        <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex items-center gap-4">
+        {/* Parte inferior */}
+        <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-3">
             <a
               href="https://www.mattinnovasolution.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center hover:bg-white/10 transition-colors"
+              className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors"
             >
-              <img src="/logomatt.png" alt="Logo" className="h-6 opacity-50 hover:opacity-100 transition-opacity" />
+              <img src="/logomatt.png" alt="Logo" className="h-5 opacity-50 hover:opacity-100 transition-opacity" />
             </a>
-            <div className="text-slate-500 text-[10px] uppercase font-black tracking-[0.1em]">
+            <span className="font-cuerpo text-slate-500 text-[10px] font-black tracking-[0.1em]">
               © 2025 MIS ACADEMY —{" "}
               <a
                 href="https://www.mattinnovasolution.com/"
@@ -222,11 +207,13 @@ const Footer: React.FC = () => {
               >
                 MATT INNOVA SOLUTION.
               </a>
-            </div>
+            </span>
           </div>
-          
-          <div className="flex items-center gap-6">
-            <span className="text-[10px] text-slate-600 font-black tracking-widest uppercase">Building the Digital Era</span>
+
+          <div className="flex items-center gap-4">
+            <span className="text-[10px] text-slate-600 font-black tracking-widest uppercase">
+              Building the Digital Era
+            </span>
             <div className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
           </div>
         </div>

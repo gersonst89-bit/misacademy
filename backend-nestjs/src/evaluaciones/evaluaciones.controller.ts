@@ -61,44 +61,56 @@ export class EvaluacionesController {
 
   @Get('evaluation-sessions/:sessionId/resume')
   @UseGuards(JwtAuthGuard)
-  resume(@Param('sessionId') id: number) {
-    return this.svc.resumeSession(id);
+  resume(@Param('sessionId') id: number, @CurrentUser() u: Usuario) {
+    return this.svc.resumeSession(id, u.id_usuario);
   }
 
   @Post('evaluation-sessions/:sessionId/answers')
   @UseGuards(JwtAuthGuard)
-  saveAnswer(@Param('sessionId') id: number, @Body() dto: SaveAnswerDto) {
-    return this.svc.saveAnswer(id, dto);
+  saveAnswer(
+    @Param('sessionId') id: number,
+    @Body() dto: SaveAnswerDto,
+    @CurrentUser() u: Usuario,
+  ) {
+    return this.svc.saveAnswer(id, dto, u.id_usuario);
   }
 
   @Post('evaluation-sessions/:sessionId/answers/batch')
   @UseGuards(JwtAuthGuard)
-  saveBatch(@Param('sessionId') id: number, @Body('answers') answers: any[]) {
-    return this.svc.saveAnswersBatch(id, answers);
+  saveBatch(
+    @Param('sessionId') id: number,
+    @Body('answers') answers: SaveAnswerDto[],
+    @CurrentUser() u: Usuario,
+  ) {
+    return this.svc.saveAnswersBatch(id, answers, u.id_usuario);
   }
 
   @Post('evaluation-sessions/:sessionId/heartbeat')
   @UseGuards(JwtAuthGuard)
-  heartbeat(@Param('sessionId') id: number) {
-    return { status: 'ok', session_id: id };
+  heartbeat(@Param('sessionId') id: number, @CurrentUser() u: Usuario) {
+    return this.svc.verifySessionOwnership(id, u.id_usuario);
   }
 
   @Post('evaluation-sessions/:sessionId/events')
   @UseGuards(JwtAuthGuard)
-  events(@Param('sessionId') id: number) {
-    return { status: 'ok' };
+  events(@Param('sessionId') id: number, @CurrentUser() u: Usuario) {
+    return this.svc.verifySessionOwnership(id, u.id_usuario);
   }
 
   @Post('evaluation-sessions/:sessionId/submit')
   @UseGuards(JwtAuthGuard)
-  submit(@Param('sessionId') id: number, @Body() dto: SubmitEvaluacionDto) {
-    return this.svc.submit(id, dto);
+  submit(
+    @Param('sessionId') id: number,
+    @Body() dto: SubmitEvaluacionDto,
+    @CurrentUser() u: Usuario,
+  ) {
+    return this.svc.submit(id, dto, u.id_usuario);
   }
 
   @Get('evaluaciones/intentos/:intentoId')
   @UseGuards(JwtAuthGuard)
-  getIntento(@Param('intentoId') id: number) {
-    return this.svc.getIntento(id);
+  getIntento(@Param('intentoId') id: number, @CurrentUser() u: Usuario) {
+    return this.svc.getIntento(id, u.id_usuario);
   }
 
   @Get('evaluaciones/curso/:cursoId')
@@ -123,4 +135,3 @@ export class OpcionesPublicController {
     return this.svc.findOpciones(id);
   }
 }
-

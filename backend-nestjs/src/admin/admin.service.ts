@@ -64,12 +64,27 @@ export class AdminService {
 
   // Reclamaciones
   async findAllReclamaciones(q: any) {
-    return this.repo.findAllReclamaciones(q, q.page, q.per_page);
+    const page = Math.max(Number(q.page) || 1, 1);
+
+    const perPage = Math.min(Math.max(Number(q.per_page) || 15, 1), 100);
+
+    return this.repo.findAllReclamaciones(q, page, perPage);
   }
+
   async findReclamacionById(id: number) {
     return this.repo.findReclamacionById(id);
   }
+
   async updateReclamacionEstado(id: number, estado: string) {
+    const estadosPermitidos = ['pendiente', 'en_revision', 'resuelto'];
+
+    if (!estadosPermitidos.includes(estado)) {
+      throw new HttpException(
+        'Estado de reclamación no válido',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     return this.repo.updateReclamacionEstado(id, estado);
   }
 }

@@ -1,16 +1,12 @@
-"use client";
+'use client';
 
-import { useEffect, useState, useRef } from "react";
-import {
-  IoSearchOutline,
-  IoEyeOutline,
-  IoFilterOutline,
-} from "react-icons/io5";
-import { FaChevronDown } from "react-icons/fa";
-import { BookOpen } from "lucide-react";
-import { CustomDatePicker } from "../Components/CustomDatePicker";
-import DetalleReclamacionModal from "./DetalleReclamacionModal";
-import { apiClient } from "../../services/apiClient";
+import { useEffect, useState, useRef } from 'react';
+import { IoSearchOutline, IoEyeOutline, IoFilterOutline } from 'react-icons/io5';
+import { FaChevronDown } from 'react-icons/fa';
+import { BookOpen } from 'lucide-react';
+import { CustomDatePicker } from '../Components/CustomDatePicker';
+import DetalleReclamacionModal from './DetalleReclamacionModal';
+import { apiClient } from '../../services/apiClient';
 
 interface Reclamacion {
   id: number;
@@ -26,21 +22,15 @@ interface Reclamacion {
 }
 
 /* ─── Filtro Estado Dropdown ─── */
-function FiltroEstado({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
+function FiltroEstado({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   const estados = [
-    { value: "", label: "Todos", color: "text-sky-600", bg: "bg-sky-50" },
-    { value: "pendiente", label: "Pendiente", color: "text-amber-600", bg: "bg-amber-50" },
-    { value: "en_revision", label: "En Revisión", color: "text-sky-600", bg: "bg-sky-50" },
-    { value: "resuelto", label: "Resuelto", color: "text-emerald-600", bg: "bg-emerald-50" },
+    { value: '', label: 'Todos', color: 'text-sky-600', bg: 'bg-sky-50' },
+    { value: 'pendiente', label: 'Pendiente', color: 'text-amber-600', bg: 'bg-amber-50' },
+    { value: 'en_revision', label: 'En Revisión', color: 'text-sky-600', bg: 'bg-sky-50' },
+    { value: 'resuelto', label: 'Resuelto', color: 'text-emerald-600', bg: 'bg-emerald-50' },
   ];
 
   const current = estados.find((e) => e.value === value) || estados[0];
@@ -50,8 +40,8 @@ function FiltroEstado({
       if (!ref.current) return;
       if (!ref.current.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
   return (
@@ -63,13 +53,13 @@ function FiltroEstado({
       >
         <div
           className={`w-1.5 h-1.5 rounded-full ${
-            value === "resuelto"
-              ? "bg-emerald-500 animate-pulse"
-              : value === "en_revision"
-              ? "bg-sky-500"
-              : value === "pendiente"
-              ? "bg-amber-500"
-              : "bg-slate-400"
+            value === 'resuelto'
+              ? 'bg-emerald-500 animate-pulse'
+              : value === 'en_revision'
+                ? 'bg-sky-500'
+                : value === 'pendiente'
+                  ? 'bg-amber-500'
+                  : 'bg-slate-400'
           }`}
         />
         <span className="text-[10px] font-black uppercase tracking-widest text-slate-700 group-hover:text-sky-600 transition-colors whitespace-nowrap">
@@ -77,7 +67,7 @@ function FiltroEstado({
         </span>
         <FaChevronDown
           className={`text-slate-400 transition-transform duration-300 ${
-            open ? "rotate-180 text-sky-500" : ""
+            open ? 'rotate-180 text-sky-500' : ''
           }`}
           size={10}
         />
@@ -96,19 +86,19 @@ function FiltroEstado({
                 ${
                   value === e.value
                     ? `${e.bg} ${e.color} shadow-sm`
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                 }
               `}
             >
               <div
                 className={`w-1.5 h-1.5 rounded-full ${
-                  e.value === "resuelto"
-                    ? "bg-emerald-500"
-                    : e.value === "en_revision"
-                    ? "bg-sky-500"
-                    : e.value === "pendiente"
-                    ? "bg-amber-500"
-                    : "bg-slate-400"
+                  e.value === 'resuelto'
+                    ? 'bg-emerald-500'
+                    : e.value === 'en_revision'
+                      ? 'bg-sky-500'
+                      : e.value === 'pendiente'
+                        ? 'bg-amber-500'
+                        : 'bg-slate-400'
                 }`}
               />
               {e.label}
@@ -121,21 +111,15 @@ function FiltroEstado({
 }
 
 /* ─── Filtro Tipo Reclamo Dropdown ─── */
-function FiltroTipo({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
+function FiltroTipo({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   const tipos = [
-    { value: "", label: "Todos los tipos" },
-    { value: "Producto/Servicio", label: "Producto/Servicio" },
-    { value: "Pago", label: "Pago" },
-    { value: "Otros", label: "Otros" },
+    { value: '', label: 'Todos los tipos' },
+    { value: 'Producto/Servicio', label: 'Producto/Servicio' },
+    { value: 'Pago', label: 'Pago' },
+    { value: 'Otros', label: 'Otros' },
   ];
 
   const current = tipos.find((t) => t.value === value) || tipos[0];
@@ -145,8 +129,8 @@ function FiltroTipo({
       if (!ref.current) return;
       if (!ref.current.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
   return (
@@ -162,7 +146,7 @@ function FiltroTipo({
         </span>
         <FaChevronDown
           className={`text-slate-400 transition-transform duration-300 ${
-            open ? "rotate-180 text-sky-500" : ""
+            open ? 'rotate-180 text-sky-500' : ''
           }`}
           size={10}
         />
@@ -180,8 +164,8 @@ function FiltroTipo({
               className={`w-full text-left px-4 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all mb-1
                 ${
                   value === t.value
-                    ? "bg-sky-50 text-sky-600 shadow-sm"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    ? 'bg-sky-50 text-sky-600 shadow-sm'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                 }
               `}
             >
@@ -198,19 +182,21 @@ function FiltroTipo({
 function EstadoBadge({ estado }: { estado: string }) {
   const config: Record<string, { color: string; dot: string; label: string }> = {
     pendiente: {
-      color: "bg-amber-500/10 text-amber-600 border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.1)]",
-      dot: "bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.8)]",
-      label: "Pendiente",
+      color:
+        'bg-amber-500/10 text-amber-600 border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.1)]',
+      dot: 'bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.8)]',
+      label: 'Pendiente',
     },
     en_revision: {
-      color: "bg-sky-500/10 text-sky-600 border-sky-500/20 shadow-[0_0_20px_rgba(14,165,233,0.1)]",
-      dot: "bg-sky-500 animate-pulse shadow-[0_0_8px_rgba(14,165,233,0.8)]",
-      label: "En Revisión",
+      color: 'bg-sky-500/10 text-sky-600 border-sky-500/20 shadow-[0_0_20px_rgba(14,165,233,0.1)]',
+      dot: 'bg-sky-500 animate-pulse shadow-[0_0_8px_rgba(14,165,233,0.8)]',
+      label: 'En Revisión',
     },
     resuelto: {
-      color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.1)]",
-      dot: "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]",
-      label: "Resuelto",
+      color:
+        'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.1)]',
+      dot: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]',
+      label: 'Resuelto',
     },
   };
 
@@ -230,11 +216,11 @@ function EstadoBadge({ estado }: { estado: string }) {
 export default function ReclamacionesAdmin() {
   const [reclamaciones, setReclamaciones] = useState<Reclamacion[]>([]);
   const [loading, setLoading] = useState(true);
-  const [estadoFiltro, setEstadoFiltro] = useState("");
-  const [tipoFiltro, setTipoFiltro] = useState("");
-  const [busqueda, setBusqueda] = useState("");
-  const [fechaInicio, setFechaInicio] = useState("");
-  const [fechaFin, setFechaFin] = useState("");
+  const [estadoFiltro, setEstadoFiltro] = useState('');
+  const [tipoFiltro, setTipoFiltro] = useState('');
+  const [busqueda, setBusqueda] = useState('');
+  const [fechaInicio, setFechaInicio] = useState('');
+  const [fechaFin, setFechaFin] = useState('');
   const [seleccionada, setSeleccionada] = useState<Reclamacion | null>(null);
   const [pagina, setPagina] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
@@ -244,26 +230,29 @@ export default function ReclamacionesAdmin() {
     obtenerReclamaciones();
   }, [pagina, estadoFiltro, tipoFiltro, fechaInicio, fechaFin]);
 
-  const obtenerReclamaciones = async () => {
+  const obtenerReclamaciones = async (paginaConsulta = pagina) => {
     try {
       setLoading(true);
-      const response = await apiClient.get("/admin/reclamaciones", {
+
+      const response = await apiClient.get('/admin/reclamaciones', {
         params: {
-          page: pagina,
+          page: paginaConsulta,
           per_page: 15,
-          estado: estadoFiltro || undefined,
-          tipo_reclamo: tipoFiltro || undefined,
-          search: busqueda || undefined,
-          fecha_inicio: fechaInicio || undefined,
-          fecha_fin: fechaFin || undefined,
+          ...(estadoFiltro && { estado: estadoFiltro }),
+          ...(tipoFiltro && { tipo_reclamo: tipoFiltro }),
+          ...(busqueda.trim() && { search: busqueda.trim() }),
+          ...(fechaInicio && { fecha_inicio: fechaInicio }),
+          ...(fechaFin && { fecha_fin: fechaFin }),
         },
       });
+
       const data = response.data;
+
       setReclamaciones(data.data || []);
       setTotalPaginas(data.last_page || 1);
       setTotalRegistros(data.total || 0);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error('Error reclamaciones:', err.response?.data || err);
       setReclamaciones([]);
     } finally {
       setLoading(false);
@@ -272,10 +261,10 @@ export default function ReclamacionesAdmin() {
 
   const handleBuscar = () => {
     setPagina(1);
-    obtenerReclamaciones();
+    obtenerReclamaciones(1);
   };
 
-  const pendientes = reclamaciones.filter((r) => r.estado === "pendiente").length;
+  const pendientes = reclamaciones.filter((r) => r.estado === 'pendiente').length;
 
   return (
     <div className="space-y-8 animate-fadeIn">
@@ -337,11 +326,7 @@ export default function ReclamacionesAdmin() {
         </div>
 
         <div className="w-full">
-          <CustomDatePicker
-            value={fechaFin}
-            onChange={setFechaFin}
-            placeholder="Fecha Fin"
-          />
+          <CustomDatePicker value={fechaFin} onChange={setFechaFin} placeholder="Fecha Fin" />
         </div>
 
         <div className="relative">
@@ -353,7 +338,7 @@ export default function ReclamacionesAdmin() {
             type="text"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleBuscar()}
+            onKeyDown={(e) => e.key === 'Enter' && handleBuscar()}
             placeholder="Nombre, DNI..."
             className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[11px] font-bold text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
           />
@@ -426,7 +411,7 @@ export default function ReclamacionesAdmin() {
                   >
                     <td className="px-6 py-5">
                       <span className="text-[13px] font-black text-slate-900 group-hover:text-sky-600 transition-colors tracking-tight">
-                        REC-{String(rec.id).padStart(5, "0")}
+                        REC-{String(rec.id).padStart(5, '0')}
                       </span>
                     </td>
                     <td className="px-6 py-5">
@@ -459,10 +444,10 @@ export default function ReclamacionesAdmin() {
                     </td>
                     <td className="px-6 py-5">
                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.15em]">
-                        {new Date(rec.created_at).toLocaleDateString("es-ES", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
+                        {new Date(rec.created_at).toLocaleDateString('es-ES', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
                         })}
                       </span>
                     </td>
@@ -509,13 +494,13 @@ export default function ReclamacionesAdmin() {
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col">
                     <span className="text-[14px] font-black text-slate-900 leading-tight">
-                      REC-{String(rec.id).padStart(5, "0")}
+                      REC-{String(rec.id).padStart(5, '0')}
                     </span>
                     <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                      {new Date(rec.created_at).toLocaleDateString("es-ES", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
+                      {new Date(rec.created_at).toLocaleDateString('es-ES', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
                       })}
                     </span>
                   </div>
@@ -537,8 +522,8 @@ export default function ReclamacionesAdmin() {
                 </div>
 
                 <div className="text-xs text-slate-500 font-medium leading-relaxed line-clamp-2">
-                  <span className="font-black text-slate-700">{rec.asunto}</span>{" "}
-                  — {rec.descripcion}
+                  <span className="font-black text-slate-700">{rec.asunto}</span> —{' '}
+                  {rec.descripcion}
                 </div>
 
                 <div className="flex items-center justify-center">
@@ -559,9 +544,7 @@ export default function ReclamacionesAdmin() {
           <div className="flex flex-col md:flex-row items-center gap-3 text-center md:text-left">
             <div className="bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                Página{" "}
-                <span className="text-sky-600">{pagina}</span> de{" "}
-                {totalPaginas}
+                Página <span className="text-sky-600">{pagina}</span> de {totalPaginas}
               </span>
             </div>
             <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">

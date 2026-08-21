@@ -69,7 +69,7 @@ export class CursosService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
-    try {
+    try {   
       const curso = await queryRunner.manager.save(
         queryRunner.manager.create(Curso, {
           ...cursoData,

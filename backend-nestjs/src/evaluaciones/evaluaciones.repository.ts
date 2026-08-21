@@ -47,7 +47,10 @@ export class EvaluacionesRepository implements OnApplicationBootstrap {
         this.logger.log('Creada columna imagen_url en la tabla preguntas.');
       }
     } catch (err: any) {
-      this.logger.error('Error al verificar/crear columna imagen_url:', err.message);
+      this.logger.error(
+        'Error al verificar/crear columna imagen_url:',
+        err.message,
+      );
     }
   }
 
@@ -108,7 +111,7 @@ export class EvaluacionesRepository implements OnApplicationBootstrap {
     }
     return this.evalRepo.find({ where: { id_curso: cursoId } });
   }
-  
+
   async createEval(data: CreateEvaluacionDto) {
     return this.evalRepo.save(
       this.evalRepo.create({
@@ -296,7 +299,9 @@ export class EvaluacionesRepository implements OnApplicationBootstrap {
         .andWhere('p.estado = :est', { est: 'Completado' })
         .getCount();
 
-      this.logger.debug(`[EVAL-CHECK] Curso: ${cursoId}, Usuario: ${userId}, Progreso: ${completadas}/${totalLecciones}, isMaster: ${isMaster}`);
+      this.logger.debug(
+        `[EVAL-CHECK] Curso: ${cursoId}, Usuario: ${userId}, Progreso: ${completadas}/${totalLecciones}, isMaster: ${isMaster}`,
+      );
 
       if (completadas < totalLecciones) {
         return {
@@ -352,8 +357,9 @@ export class EvaluacionesRepository implements OnApplicationBootstrap {
 
     const lastAttempt = intentosConPorcentaje[0] || null;
     const bestAttempt =
-      [...intentosConPorcentaje].sort((a, b) => b.porcentaje - a.porcentaje)[0] ||
-      null;
+      [...intentosConPorcentaje].sort(
+        (a, b) => b.porcentaje - a.porcentaje,
+      )[0] || null;
     const hasPassed =
       bestAttempt &&
       bestAttempt.porcentaje >= Number(eval_.puntaje_aprobatorio);
@@ -543,13 +549,19 @@ export class EvaluacionesRepository implements OnApplicationBootstrap {
 
     return { intento, preguntas, evaluacion: eval_ };
   }
-
-  // Resume session
-  async resumeSession(intentoId: number) {
-    const intento = await this.intentoRepo.findOne({
-      where: { id_intento: intentoId },
+  private async findOwnedAttempt(intentoId: number, userId: number) {
+    return this.intentoRepo.findOne({
+      where: {
+        id_intento: intentoId,
+        id_usuario: userId,
+      },
       relations: ['evaluacion'],
     });
+  }
+  // Resume session
+  async resumeSession(intentoId: number, userId: number) {
+    const intento = await this.findOwnedAttempt(intentoId, userId);
+
     if (!intento || intento.estado !== 'En Progreso') return null;
 
     // Verificar si el tiempo límite ya expiró
@@ -601,19 +613,61 @@ export class EvaluacionesRepository implements OnApplicationBootstrap {
   }
 
   // Save answer
-  async saveAnswer(intentoId: number, data: SaveAnswerDto) {
+  // Save answer
+  // Save answer
+  async saveAnswer(intentoId: number, data: SaveAnswerDto, userId: number) {
+    const intento = await this.findOwnedAttempt(intentoId, userId);
+
+    if (!intento || intento.estado !== 'En Progreso') {
+      return null;
+    }
+
     const idPregunta = data.id_pregunta ?? data.questionId;
+
     const idOpcion = data.id_opcion ?? data.selectedOptions?.[0];
 
     if (!idPregunta) {
-      throw new Error('id_pregunta or questionId is required to save an answer');
+      throw new Error(
+        'id_pregunta or questionId is required to save an answer',
+      );
+    }
+
+    // Verificar que la pregunta pertenezca a la evaluación
+    const pregunta = await this.preguntaRepo.findOne({
+      where: {
+        id_pregunta: idPregunta,
+        id_evaluacion: intento.id_evaluacion,
+      },
+    });
+
+    if (!pregunta) {
+      return null;
+    }
+
+    // Verificar que la opción pertenezca a la pregunta
+    if (idOpcion !== undefined && idOpcion !== null) {
+      const opcion = await this.opcionRepo.findOne({
+        where: {
+          id_opcion: idOpcion,
+          id_pregunta: idPregunta,
+        },
+      });
+
+      if (!opcion) {
+        return null;
+      }
     }
 
     let resp = await this.respuestaRepo.findOne({
-      where: { id_intento: intentoId, id_pregunta: idPregunta },
+      where: {
+        id_intento: intentoId,
+        id_pregunta: idPregunta,
+      },
     });
+
     if (resp) {
       resp.id_opcion = idOpcion ?? resp.id_opcion;
+
       resp.respuesta_texto = data.respuesta_texto || resp.respuesta_texto;
     } else {
       resp = this.respuestaRepo.create({
@@ -623,35 +677,61 @@ export class EvaluacionesRepository implements OnApplicationBootstrap {
         respuesta_texto: data.respuesta_texto,
       }) as any;
     }
+
     return this.respuestaRepo.save(resp as any);
   }
 
   // Save answers batch
-  async saveAnswersBatch(intentoId: number, answers: SaveAnswerDto[]) {
-    const results = [];
-    for (const a of answers) {
-      results.push(await this.saveAnswer(intentoId, a));
+  // Save answers batch
+  // Save answers batch
+  async saveAnswersBatch(
+    intentoId: number,
+    answers: SaveAnswerDto[],
+    userId: number,
+  ) {
+    const intento = await this.findOwnedAttempt(intentoId, userId);
+
+    if (!intento || intento.estado !== 'En Progreso') {
+      return null;
     }
+
+    const results = [];
+
+    for (const answer of answers) {
+      results.push(await this.saveAnswer(intentoId, answer, userId));
+    }
+
     return results;
   }
 
   // Submit evaluation
-  async submitEvaluacion(intentoId: number, data: SubmitEvaluacionDto) {
-    const intento = await this.intentoRepo.findOne({
-      where: { id_intento: intentoId },
-      relations: ['evaluacion'],
-    });
-    if (!intento) return null;
+  // Submit evaluation
+  async submitEvaluacion(
+    intentoId: number,
+    data: SubmitEvaluacionDto,
+    userId: number,
+  ) {
+    const intento = await this.findOwnedAttempt(intentoId, userId);
+
+    if (!intento || intento.estado !== 'En Progreso') {
+      return null;
+    }
 
     // Save final answers if provided
     if (data.finalAnswers?.length) {
-      for (const a of data.finalAnswers) {
-        await this.saveAnswer(intentoId, {
-          id_pregunta: a.questionId,
-          id_opcion: a.selectedOptions?.[0], // Tomamos la primera opción para selección única
-        });
+      for (const answer of data.finalAnswers) {
+        await this.saveAnswer(
+          intentoId,
+          {
+            id_pregunta: answer.questionId,
+            id_opcion: answer.selectedOptions?.[0],
+          },
+          userId,
+        );
       }
     }
+
+    // Desde aquí conserva exactamente tu lógica actual:
 
     // Calculate score
     const respuestas = await this.respuestaRepo.find({
@@ -662,15 +742,24 @@ export class EvaluacionesRepository implements OnApplicationBootstrap {
 
     for (const resp of respuestas) {
       const pregunta = await this.preguntaRepo.findOne({
-        where: { id_pregunta: resp.id_pregunta },
+        where: {
+          id_pregunta: resp.id_pregunta,
+          id_evaluacion: intento.id_evaluacion,
+        },
       });
+
       if (!pregunta) continue;
+
       puntajeTotal += Number(pregunta.puntaje);
 
       if (resp.id_opcion) {
         const opcion = await this.opcionRepo.findOne({
-          where: { id_opcion: resp.id_opcion },
+          where: {
+            id_opcion: resp.id_opcion,
+            id_pregunta: resp.id_pregunta,
+          },
         });
+
         if (opcion?.es_correcta) {
           puntajeObtenido += Number(pregunta.puntaje);
           resp.puntos_obtenidos = Number(pregunta.puntaje);
@@ -700,19 +789,19 @@ export class EvaluacionesRepository implements OnApplicationBootstrap {
     if (aprobado) {
       try {
         const cursoId = intento.evaluacion.id_curso;
-        const userId = intento.id_usuario;
+        const estudianteId = intento.id_usuario;
 
         // Verificar si ya existe un certificado para este curso y usuario
         const existe = await this.evalRepo.manager
           .getRepository('Certificacion')
           .findOne({
-            where: { id_usuario: userId, id_curso: cursoId },
+            where: { id_usuario: estudianteId, id_curso: cursoId },
           });
 
         if (!existe) {
           const usuario = await this.evalRepo.manager
             .getRepository('Usuario')
-            .findOne({ where: { id_usuario: userId } });
+            .findOne({ where: { id_usuario: estudianteId } });
           const nombreEstudiante = usuario
             ? `${usuario.nombre} ${usuario.apellido}`
             : 'Estudiante';
@@ -721,27 +810,34 @@ export class EvaluacionesRepository implements OnApplicationBootstrap {
             'CERT-' + crypto.randomBytes(6).toString('hex').toUpperCase();
 
           await this.evalRepo.manager.getRepository('Certificacion').save({
-            id_usuario: userId,
+            id_usuario: estudianteId,
             id_curso: cursoId,
             nombre_estudiante: nombreEstudiante,
             codigo_certificado: codigo,
-            calificacion_final: porcentaje,
+            calificacion_final: porcentaje / 5,
             tipo_certificado: 'Certificado de Aprobación',
             fecha_emision: new Date(),
             estado: 'Activo',
             created_at: new Date(),
           });
           this.logger.log(
-            `[CERTIFICACION] Generada para usuario ${userId} en curso ${cursoId} con nota ${porcentaje}`,
+            `[CERTIFICACION] Generada para usuario ${estudianteId} en curso ${cursoId} con nota ${porcentaje / 5}/20`,
           );
         } else {
-          if (porcentaje > existe.calificacion_final) {
-            existe.calificacion_final = porcentaje;
+          const notaSobre20 = porcentaje / 5;
+
+          if (
+            existe.calificacion_final === null ||
+            existe.calificacion_final === undefined ||
+            Number(existe.calificacion_final) > 20 ||
+            notaSobre20 > Number(existe.calificacion_final)
+          ) {
+            existe.calificacion_final = notaSobre20;
             await this.evalRepo.manager
               .getRepository('Certificacion')
               .save(existe);
             this.logger.log(
-              `[CERTIFICACION] Calificación actualizada para usuario ${userId} en curso ${cursoId} a ${porcentaje}`,
+              `[CERTIFICACION] Calificación actualizada para usuario ${estudianteId} en curso ${cursoId} a ${notaSobre20}/20`,
             );
           }
         }
@@ -757,10 +853,11 @@ export class EvaluacionesRepository implements OnApplicationBootstrap {
       ...intento,
       puntos_obtenidos: intento.puntaje_obtenido,
       puntos_maximos: intento.puntaje_total,
-      porcentaje: porcentaje,
+      porcentaje,
       calificacion: Math.round(porcentaje),
+      calificacion_sobre_20: Number((porcentaje / 5).toFixed(2)),
       puntaje_requerido: intento.evaluacion.puntaje_aprobatorio,
-      aprobado: aprobado,
+      aprobado,
       estado_texto: aprobado ? 'Aprobado' : 'Reprobado',
       intentos_permitidos: intento.evaluacion.intentos_permitidos,
       intentos_realizados: intento.numero_intento,
@@ -768,27 +865,33 @@ export class EvaluacionesRepository implements OnApplicationBootstrap {
   }
 
   // Get attempt results
-  async getIntento(intentoId: number) {
-    const intento = await this.intentoRepo.findOne({
-      where: { id_intento: intentoId },
-      relations: ['evaluacion'],
-    });
-    if (!intento) return null;
+  // Get attempt results
+  async getIntento(intentoId: number, userId: number) {
+    const intento = await this.findOwnedAttempt(intentoId, userId);
+
+    if (!intento) {
+      return null;
+    }
+
     const respuestas = await this.respuestaRepo.find({
       where: { id_intento: intentoId },
       relations: ['pregunta', 'opcion'],
     });
+
     const porcentaje =
       intento.puntaje_total > 0
-        ? (Number(intento.puntaje_obtenido) / Number(intento.puntaje_total)) * 100
+        ? (Number(intento.puntaje_obtenido) / Number(intento.puntaje_total)) *
+          100
         : 0;
+
     return {
       ...intento,
       respuestas,
       puntos_obtenidos: intento.puntaje_obtenido,
       puntos_maximos: intento.puntaje_total,
-      porcentaje: porcentaje,
+      porcentaje,
       calificacion: Math.round(porcentaje),
+      calificacion_sobre_20: Number((porcentaje / 5).toFixed(2)),
       intentos_permitidos: intento.evaluacion?.intentos_permitidos,
       intentos_realizados: intento.numero_intento,
     };

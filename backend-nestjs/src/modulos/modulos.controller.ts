@@ -8,19 +8,27 @@ import {
   Param,
   Query,
   UseGuards,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
+
 import { ModulosService } from './modulos.service';
 import { CreateModuloDto, UpdateModuloDto } from './dto/modulos.dto';
+
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { AdminOrDocenteGuard } from '../common/guards/roles.guard';
 
 @Controller('modulos')
 export class ModulosController {
   constructor(private readonly modulosService: ModulosService) {}
-  @Get('curso/:cursoId') findByCurso(@Param('cursoId') cursoId: number) {
+
+  @Get('curso/:cursoId')
+  findByCurso(@Param('cursoId', ParseIntPipe) cursoId: number) {
     return this.modulosService.findByCurso(cursoId).then((data) => ({ data }));
   }
-  @Get(':id') findById(@Param('id') id: number) {
+
+  @Get(':id')
+  findById(@Param('id', ParseIntPipe) id: number) {
     return this.modulosService.findById(id);
   }
 }
@@ -29,26 +37,47 @@ export class ModulosController {
 @UseGuards(JwtAuthGuard, AdminOrDocenteGuard)
 export class AdminModulosController {
   constructor(private readonly modulosService: ModulosService) {}
+
   @Get()
   findAll(
-    @Query('page') page?: number,
-    @Query('per_page') perPage?: number,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe)
+    page: number,
+
+    @Query('per_page', new DefaultValuePipe(20), ParseIntPipe)
+    perPage: number,
+
     @Query('q') query?: string,
-    @Query('id_curso') id_curso?: number,
+    @Query('id_curso') idCurso?: string,
     @Query('estado') estado?: string,
   ) {
-    return this.modulosService.findAll(page, perPage, query, id_curso, estado);
+    const parsedCursoId = idCurso ? Number(idCurso) : undefined;
+
+    return this.modulosService.findAll(
+      page,
+      perPage,
+      query,
+      parsedCursoId,
+      estado,
+    );
   }
-  @Post() create(@Body() dto: CreateModuloDto) {
+
+  @Post()
+  create(@Body() dto: CreateModuloDto) {
     return this.modulosService.create(dto);
   }
-  @Get(':id') findById(@Param('id') id: number) {
+
+  @Get(':id')
+  findById(@Param('id', ParseIntPipe) id: number) {
     return this.modulosService.findById(id);
   }
-  @Put(':id') update(@Param('id') id: number, @Body() dto: UpdateModuloDto) {
+
+  @Put(':id')
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateModuloDto) {
     return this.modulosService.update(id, dto);
   }
-  @Delete(':id') delete(@Param('id') id: number) {
+
+  @Delete(':id')
+  delete(@Param('id', ParseIntPipe) id: number) {
     return this.modulosService.delete(id);
   }
 }

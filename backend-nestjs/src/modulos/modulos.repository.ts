@@ -77,7 +77,21 @@ export class ModulosRepository {
     await this.moduloRepo.delete({ id_modulo: id });
   }
   async findAll(page = 1, perPage = 20, filters: any = {}) {
+    const parsedPage = Number(page);
+    const parsedPerPage = Number(perPage);
+
+    const safePage =
+      Number.isFinite(parsedPage) && parsedPage >= 1
+        ? Math.floor(parsedPage)
+        : 1;
+
+    const safePerPage =
+      Number.isFinite(parsedPerPage) && parsedPerPage >= 1
+        ? Math.min(Math.floor(parsedPerPage), 200)
+        : 20;
+
     const qb = this.moduloRepo.createQueryBuilder('m');
+
     qb.leftJoinAndSelect('m.curso', 'c');
 
     if (filters.query) {
@@ -87,26 +101,30 @@ export class ModulosRepository {
     }
 
     if (filters.id_curso) {
-      qb.andWhere('m.id_curso = :cur', { cur: filters.id_curso });
+      qb.andWhere('m.id_curso = :cur', {
+        cur: filters.id_curso,
+      });
     }
 
     if (filters.estado) {
-      qb.andWhere('m.estado = :est', { est: filters.estado });
+      qb.andWhere('m.estado = :est', {
+        est: filters.estado,
+      });
     }
 
     qb.orderBy('m.orden', 'ASC');
 
     const [data, total] = await qb
-      .skip((page - 1) * perPage)
-      .take(perPage)
+      .skip((safePage - 1) * safePerPage)
+      .take(safePerPage)
       .getManyAndCount();
 
     return {
       data,
       total,
-      current_page: page,
-      per_page: perPage,
-      last_page: Math.ceil(total / perPage),
+      current_page: safePage,
+      per_page: safePerPage,
+      last_page: Math.ceil(total / safePerPage),
     };
   }
 }

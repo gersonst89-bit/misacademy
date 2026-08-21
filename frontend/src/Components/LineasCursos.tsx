@@ -118,7 +118,7 @@ const LineasCursos: React.FC = () => {
   };
 
   return (
-    <section className="pt-24 pb-12 text-white relative overflow-hidden bg-[#03070c]">
+    <section className="pt-24 pb-12 text-white relative overflow-hidden bg-[#03070c] lineas-cursos-rustica">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/4 right-0 w-[450px] h-[450px] bg-blue-500/7 rounded-full blur-[130px] -z-10 animate-pulse" />
         <div className="absolute bottom-1/4 left-0 w-[400px] h-[400px] bg-sky-400/6 rounded-full blur-[120px] -z-10" />
@@ -182,7 +182,7 @@ const LineasCursos: React.FC = () => {
                   </h3>
 
                   <div className="flex-1 flex flex-col mt-4">
-                    <p className="text-slate-400 text-center leading-relaxed text-sm mb-8 font-light italic line-clamp-3">
+                    <p className="text-slate-400 text-center leading-relaxed text-sm mb-8 font-light">
                       "{linea.descripcion}"
                     </p>
 

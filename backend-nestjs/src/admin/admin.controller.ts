@@ -11,6 +11,7 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerOptions } from '../common/utils/multer.config';
@@ -98,14 +99,20 @@ export class AdminMaterialesController {
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class AdminReclamacionesController {
   constructor(private readonly svc: AdminService) {}
-  @Get() findAll(@Query() q: any) {
+
+  @Get()
+  findAll(@Query() q: any) {
     return this.svc.findAllReclamaciones(q);
   }
-  @Get(':id') findOne(@Param('id') id: number) {
+
+  @Get(':id')
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.svc.findReclamacionById(id);
   }
-  @Patch(':id') updateEstado(
-    @Param('id') id: number,
+
+  @Patch(':id')
+  updateEstado(
+    @Param('id', ParseIntPipe) id: number,
     @Body('estado') estado: string,
   ) {
     return this.svc.updateReclamacionEstado(id, estado);

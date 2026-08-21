@@ -73,7 +73,7 @@ function createSlug(title) {
 async function getCourseSlugs() {
   const slugs = new Set();
 
-  const API_BASE = 'https://api.muebleriarivas.website/api';
+  const API_BASE = 'https://api.misacademyonline.com/api';
 
   // 1. Try to fetch from the live production API (handling pagination)
   try {

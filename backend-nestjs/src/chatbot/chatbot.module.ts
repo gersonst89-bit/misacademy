@@ -8,5 +8,6 @@ import { Curso, LineaAcademica, RutaAcademica } from '../entities';
   imports: [TypeOrmModule.forFeature([Curso, LineaAcademica, RutaAcademica])],
   controllers: [ChatbotController],
   providers: [ChatbotService],
+  exports: [ChatbotService],
 })
 export class ChatbotModule {}

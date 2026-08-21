@@ -29,7 +29,18 @@ export default function ProtectedRoute({
         }
         setLoading(false);
       })
-      .catch(() => {
+      .catch((err) => {
+        const isNetworkError = !err?.response;
+
+        if (isNetworkError) {
+          // Problema de conexión, no de autenticación: no tocamos la sesión.
+          // Si había un usuario local, se mantiene el acceso optimista.
+          console.warn("ProtectedRoute: error de red al validar sesión, manteniendo acceso local.", err);
+          setLoading(false);
+          return;
+        }
+
+        // Rechazo explícito del servidor (401/403 tras fallar el refresh)
         setAllowed(false);
         localStorage.removeItem("user");
         setLoading(false);

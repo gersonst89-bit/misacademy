@@ -105,28 +105,65 @@ export class EvaluacionesService {
       );
     return result;
   }
-  async resumeSession(intentoId: number) {
-    const result = await this.evalRepo.resumeSession(intentoId);
-    if (!result)
+  async resumeSession(intentoId: number, userId: number) {
+    await this.verifySessionOwnership(intentoId, userId);
+
+    const result = await this.evalRepo.resumeSession(intentoId, userId);
+
+    if (!result) {
       throw new HttpException('Sesión no encontrada', HttpStatus.NOT_FOUND);
+    }
+
     return result;
   }
-  async saveAnswer(intentoId: number, dto: SaveAnswerDto) {
-    return this.evalRepo.saveAnswer(intentoId, dto);
+
+  async saveAnswer(intentoId: number, dto: SaveAnswerDto, userId: number) {
+    await this.verifySessionOwnership(intentoId, userId);
+
+    return this.evalRepo.saveAnswer(intentoId, dto, userId);
   }
-  async saveAnswersBatch(intentoId: number, answers: any[]) {
-    return this.evalRepo.saveAnswersBatch(intentoId, answers);
+
+  async saveAnswersBatch(
+    intentoId: number,
+    answers: SaveAnswerDto[],
+    userId: number,
+  ) {
+    await this.verifySessionOwnership(intentoId, userId);
+
+    return this.evalRepo.saveAnswersBatch(intentoId, answers, userId);
   }
-  async submit(intentoId: number, dto: SubmitEvaluacionDto) {
-    const result = await this.evalRepo.submitEvaluacion(intentoId, dto);
-    if (!result)
+
+  async submit(intentoId: number, dto: SubmitEvaluacionDto, userId: number) {
+    await this.verifySessionOwnership(intentoId, userId);
+
+    const result = await this.evalRepo.submitEvaluacion(intentoId, dto, userId);
+
+    if (!result) {
       throw new HttpException('Intento no encontrado', HttpStatus.NOT_FOUND);
+    }
+
     return result;
   }
-  async getIntento(intentoId: number) {
-    const result = await this.evalRepo.getIntento(intentoId);
-    if (!result)
+
+  async getIntento(intentoId: number, userId: number) {
+    await this.verifySessionOwnership(intentoId, userId);
+
+    const result = await this.evalRepo.getIntento(intentoId, userId);
+
+    if (!result) {
       throw new HttpException('Intento no encontrado', HttpStatus.NOT_FOUND);
+    }
+
     return result;
+  }
+
+  async verifySessionOwnership(intentoId: number, userId: number) {
+    const intento = await this.evalRepo.getIntento(intentoId, userId);
+
+    if (!intento || Number(intento.id_usuario) !== Number(userId)) {
+      throw new HttpException('Intento no encontrado', HttpStatus.NOT_FOUND);
+    }
+
+    return { status: 'ok' };
   }
 }

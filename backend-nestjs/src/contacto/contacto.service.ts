@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-// import { MailerService } from '@nestjs-modules/mailer';
+import { ConfigService } from '@nestjs/config';
+import * as nodemailer from 'nodemailer';
 import { Contacto } from '../entities/contacto.entity';
 import { Reclamacion } from '../entities/reclamacion.entity';
 
@@ -9,13 +10,28 @@ import { Reclamacion } from '../entities/reclamacion.entity';
 export class ContactoService {
   private readonly logger = new Logger(ContactoService.name);
 
+  private transporter: nodemailer.Transporter;
+
   constructor(
     @InjectRepository(Contacto)
     private readonly contactoRepo: Repository<Contacto>,
     @InjectRepository(Reclamacion)
     private readonly reclamacionRepo: Repository<Reclamacion>,
-    // private readonly mailerService: MailerService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.transporter = nodemailer.createTransport({
+      host: this.configService.get<string>('MAIL_HOST', 'smtp.gmail.com'),
+      port: Number(this.configService.get('MAIL_PORT', 465)),
+      secure: Number(this.configService.get('MAIL_PORT', 465)) === 465,
+      tls: {
+        rejectUnauthorized: false,
+      },
+      auth: {
+        user: this.configService.get<string>('MAIL_USERNAME'),
+        pass: this.configService.get<string>('MAIL_PASSWORD'),
+      },
+    });
+  }
 
   async createContacto(data: any) {
     const contacto = (await this.contactoRepo.save(
@@ -30,7 +46,7 @@ export class ContactoService {
       : new Date().toLocaleString('es-PE', { timeZone: 'America/Lima' });
 
     const contactoMail = {
-      to: 'mattinnovasolution@hotmail.com',
+      to: 'contacto@mattinnovasolution.com',
       subject: `📧 Nuevo Mensaje de Contacto — ${contacto.nombre} ${contacto.apellido}`,
       html: `
         <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0b0f19; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); overflow: hidden; color: #f8fafc;">
@@ -71,9 +87,15 @@ export class ContactoService {
       `,
     };
 
-    this.logger.warn(
-      `Mailer temporalmente desactivado. Correo de contacto preparado para ${contactoMail.to} con asunto: ${contactoMail.subject}`,
-    );
+    try {
+      await this.transporter.sendMail({
+        from: `"${this.configService.get<string>('MAIL_FROM_NAME', 'MIS Academy')}" <${this.configService.get<string>('MAIL_FROM_ADDRESS')}>`,
+        ...contactoMail,
+      });
+      this.logger.log(`Correo de contacto enviado a: ${contactoMail.to}`);
+    } catch (error) {
+      this.logger.error(`Error enviando correo de contacto a ${contactoMail.to}:`, error);
+    }
 
     return contacto;
   }
@@ -142,9 +164,15 @@ export class ContactoService {
       `,
     };
 
-    this.logger.warn(
-      `Mailer temporalmente desactivado. Correo de reclamación preparado para ${reclamacionMail.to} con asunto: ${reclamacionMail.subject}`,
-    );
+    try {
+      await this.transporter.sendMail({
+        from: `"${this.configService.get<string>('MAIL_FROM_NAME', 'MIS Academy')}" <${this.configService.get<string>('MAIL_FROM_ADDRESS')}>`,
+        ...reclamacionMail,
+      });
+      this.logger.log(`Correo de reclamación enviado a: ${reclamacionMail.to}`);
+    } catch (error) {
+      this.logger.error(`Error enviando correo de reclamación a ${reclamacionMail.to}:`, error);
+    }
 
     return reclamacion;
   }

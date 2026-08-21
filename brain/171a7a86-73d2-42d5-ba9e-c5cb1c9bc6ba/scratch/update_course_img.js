@@ -26,3 +26,4 @@ async function updateCourse() {
 }
 
 updateCourse().catch(console.error);
+

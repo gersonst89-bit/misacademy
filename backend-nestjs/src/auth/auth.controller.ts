@@ -8,6 +8,7 @@ import {
   Res,
   UseGuards,
   UnauthorizedException,
+  HttpException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
@@ -46,6 +47,38 @@ export class AuthController {
       cookieOptions.domain = domain;
     }
     return cookieOptions;
+  }
+
+  private clearAuthCookies(res: Response) {
+    const options = this.getCookieOptions();
+
+    // Borra cookies creadas con dominio
+    res.clearCookie('auth_token', {
+      ...options,
+      maxAge: 0,
+      expires: new Date(0),
+    });
+
+    res.clearCookie('refresh_token', {
+      ...options,
+      maxAge: 0,
+      expires: new Date(0),
+    });
+
+    // Borra también posibles cookies antiguas sin domain
+    const { domain, ...hostOnlyOptions } = options;
+
+    res.clearCookie('auth_token', {
+      ...hostOnlyOptions,
+      maxAge: 0,
+      expires: new Date(0),
+    });
+
+    res.clearCookie('refresh_token', {
+      ...hostOnlyOptions,
+      maxAge: 0,
+      expires: new Date(0),
+    });
   }
 
   // ========================
@@ -103,40 +136,30 @@ export class AuthController {
     const accessToken = req.cookies?.['auth_token'];
 
     let userId: number | undefined;
+
     if (accessToken) {
       try {
         const payload = this.authService.decodeToken(accessToken);
-        if (payload && payload.sub) {
+
+        if (payload?.sub) {
           userId = Number(payload.sub);
         }
       } catch {
-        // Ignorar errores al decodificar
+        // El token puede estar expirado; igualmente continuamos con el logout.
       }
     }
 
-    // Invalida el refresh token y registra el logout en BD si es posible
     try {
       await this.authService.logout(userId, refreshToken);
     } catch {
-      // No bloqueamos el logout si falla la BD
+      // Aunque falle la BD, igualmente debemos borrar las cookies.
     }
 
-    const baseOptions = this.getCookieOptions();
+    this.clearAuthCookies(res);
 
-    // ✅ clearCookie debe llevar los mismos atributos + maxAge=0
-    // para forzar la eliminación sin importar si la cookie tenía maxAge o no
-    res.clearCookie('auth_token', {
-      ...baseOptions,
-      maxAge: 0,
-      expires: new Date(0),
+    return res.status(200).json({
+      message: 'Sesión cerrada correctamente.',
     });
-    res.clearCookie('refresh_token', {
-      ...baseOptions,
-      maxAge: 0,
-      expires: new Date(0),
-    });
-
-    return res.status(200).json({ message: 'Sesión cerrada correctamente.' });
   }
 
   // ========================
@@ -216,12 +239,10 @@ export class AuthController {
     return res.redirect(`${frontendUrl}/perfil`);
   }
 
-  // ========================
-  // REFRESH (ROTACIÓN SEGURA)
-  // ========================
+  // REFRESH TOKEN
   @Post('refresh')
   async refresh(@Req() req: Request, @Res() res: Response) {
-    const refreshToken = req.cookies['refresh_token'];
+    const refreshToken = req.cookies?.['refresh_token'];
 
     if (!refreshToken) {
       throw new UnauthorizedException('No refresh token');
@@ -238,25 +259,37 @@ export class AuthController {
         maxAge: 15 * 60 * 1000,
       });
 
-      // ✅ Rotar y guardar el nuevo refresh token en cookie (7d)
+      // Mantener el refresh token vigente y renovar solo el access token
       res.cookie('refresh_token', result.refreshToken, {
         ...cookieOptions,
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
       return res.json({ success: true });
-    } catch (error) {
-      const baseOptions = this.getCookieOptions();
-      res.clearCookie('auth_token', {
-        ...baseOptions,
-        maxAge: 0,
-        expires: new Date(0),
-      });
-      res.clearCookie('refresh_token', {
-        ...baseOptions,
-        maxAge: 0,
-        expires: new Date(0),
-      });
+    } catch (error: any) {
+      const status =
+        error instanceof HttpException
+          ? error.getStatus()
+          : error?.status || error?.response?.status;
+
+      // Solo cerrar sesión si el backend confirma que el refresh
+      // es inválido, expiró o fue comprometido.
+      if (status === 401) {
+        const baseOptions = this.getCookieOptions();
+
+        res.clearCookie('auth_token', {
+          ...baseOptions,
+          maxAge: 0,
+          expires: new Date(0),
+        });
+
+        res.clearCookie('refresh_token', {
+          ...baseOptions,
+          maxAge: 0,
+          expires: new Date(0),
+        });
+      }
+
       throw error;
     }
   }

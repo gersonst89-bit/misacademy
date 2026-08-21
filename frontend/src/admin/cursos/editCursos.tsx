@@ -239,6 +239,24 @@ export const EditCursoModal: React.FC<EditCursoModalProps> = ({
             <InputComponent label="Imagen de Portada (URL)" value={imagen} onChange={(e) => setImagen(e.target.value)} placeholder="URL de la imagen" />
             <InputComponent label="Video Promocional (URL)" value={video} onChange={(e) => setVideo(e.target.value)} placeholder="URL del video" />
           </div>
+
+          <TextareaComponent 
+            label="Lo que aprenderás (separar ítems por comas)" 
+            maxLength={1000} 
+            value={loQueAprenderas} 
+            onChange={(e) => setLoQueAprenderas(e.target.value)} 
+            placeholder="Ej: Dominar Power BI desde cero, Crear dashboards interactivos, Automatizar reportes" 
+            className="h-28"
+          />
+
+          <TextareaComponent 
+            label="Requisitos Previos (separar ítems por comas)" 
+            maxLength={1000} 
+            value={requisitos} 
+            onChange={(e) => setRequisitos(e.target.value)} 
+            placeholder="Ej: Conocimientos básicos de Excel, Computadora con Windows 10 u 11" 
+            className="h-28"
+          />
         </div>
 
         {/* Section 3: Specs and Pricing */}

@@ -10,6 +10,7 @@ import {
   UseGuards,
   HttpException,
   HttpStatus,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { CertificacionesService } from './certificaciones.service';
 import { CreateCertificacionDto } from './dto/certificaciones.dto';
@@ -17,6 +18,8 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { AdminGuard } from '../common/guards/roles.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Usuario } from '../entities/usuario.entity';
+import { Res } from '@nestjs/common';
+import { Response } from 'express';
 
 @Controller('certificaciones')
 export class CertificacionesController {
@@ -60,7 +63,9 @@ export class CertificacionesController {
     return this.svc.obtenerOCrear(u.id_usuario, id_curso);
   }
 
-  @Get(':id') @UseGuards(JwtAuthGuard) findById(@Param('id') id: number) {
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  findById(@Param('id', ParseIntPipe) id: number) {
     return this.svc.findById(id);
   }
 }
@@ -69,19 +74,59 @@ export class CertificacionesController {
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class AdminCertificacionesController {
   constructor(private readonly svc: CertificacionesService) {}
-  @Get() findAll(@Query('page') p?: number) {
-    return this.svc.findAll(p);
+
+  @Get('programas')
+  findProgramas() {
+    return this.svc.findProgramas();
   }
-  @Post() create(@Body() dto: CreateCertificacionDto) {
-    return this.svc.create(dto);
+
+  @Get()
+  findAll(
+    @Query('page') page?: string,
+    @Query('perPage') perPage?: string,
+    @Query('tipo_certificado') tipoCertificado?: string,
+    @Query('programa') programa?: string,
+    @Query('cursoId') cursoId?: string,
+  ) {
+    return this.svc.findAll(
+      page ? Number(page) : 1,
+      perPage ? Number(perPage) : 20,
+      tipoCertificado,
+      programa,
+      cursoId ? Number(cursoId) : undefined,
+    );
   }
-  @Get(':id') findById(@Param('id') id: number) {
+
+  @Post()
+  async create(
+    @Body() dto: CreateCertificacionDto,
+    @CurrentUser() user: Usuario,
+  ) {
+    return this.svc.create(dto, user.id_usuario);
+  }
+  @Get(':id')
+  findById(@Param('id', ParseIntPipe) id: number) {
     return this.svc.findById(id);
   }
-  @Put(':id') update(@Param('id') id: number, @Body() dto: any) {
+  @Put(':id')
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: any) {
     return this.svc.update(id, dto);
   }
-  @Delete(':id') delete(@Param('id') id: number) {
+
+  @Delete(':id')
+  delete(@Param('id', ParseIntPipe) id: number) {
     return this.svc.delete(id);
+  }
+
+  @Get('qr/:codigo')
+  async obtenerQr(@Param('codigo') codigo: string, @Res() res: Response) {
+    const qr = await this.svc.obtenerQr(codigo);
+
+    res.set({
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=86400',
+    });
+
+    res.send(qr);
   }
 }

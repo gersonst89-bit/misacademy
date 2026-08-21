@@ -1,99 +1,13 @@
-require('reflect-metadata');
-require('dotenv').config({
-  path: require('path').resolve(process.cwd(), '.env'),
-});
-
-// @ts-ignore
-if (typeof global !== 'undefined' && !global.crypto) {
-  try {
-    // @ts-ignore
-    global.crypto = require('crypto').webcrypto;
-  } catch (e) {}
-}
-
+import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe, Logger } from '@nestjs/common';
-import { DataSource } from 'typeorm';
-import { seedTiposPago } from './database/seeds/tipos-pago.seed';
-import helmet from 'helmet';
-import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
-import * as fs from 'fs';
-import { join } from 'path';
+import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
-import { Request, Response, NextFunction } from 'express';
+import { appendFileSync } from 'fs';
+import helmet from 'helmet';
 
 async function bootstrap() {
-  const logger = new Logger('Bootstrap');
-
-  const requiredEnvVars = [
-    'DB_HOST',
-    'DB_DATABASE',
-    'DB_USERNAME',
-    'JWT_SECRET',
-    'REFRESH_JWT_SECRET',
-    'VIDEO_ENCRYPTION_KEY',
-    'VIDEO_JWT_SECRET',
-    'MAIL_HOST',
-    'MAIL_PORT',
-    'MAIL_USERNAME',
-    'MAIL_PASSWORD',
-  ];
-
-  const missingEnvVars = requiredEnvVars.filter((v) => !process.env[v]);
-  if (missingEnvVars.length > 0) {
-    throw new Error(
-      `Faltan variables de entorno críticas necesarias para arrancar el servidor: ${missingEnvVars.join(', ')}`,
-    );
-  }
-
-  const uploadDirs = [
-    join(process.cwd(), 'uploads'),
-    join(process.cwd(), 'uploads', 'comprobantes'),
-  ];
-
-  uploadDirs.forEach((dir) => {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  });
-
-  const corsOriginsEnv = process.env.CORS_ORIGIN;
-  const allowedOrigins = corsOriginsEnv
-    ? corsOriginsEnv.split(',').map((o) => o.trim())
-    : [
-        'http://localhost:5173',
-        'http://localhost:5174',
-        'https://muebleriarivas.website',
-        'https://www.muebleriarivas.website',
-        'https://api.muebleriarivas.website',
-      ];
-
-  const app = await NestFactory.create(AppModule, { abortOnError: false });
-
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    const origin = req.headers.origin as string;
-
-    if (origin && allowedOrigins.includes(origin)) {
-      res.header('Access-Control-Allow-Origin', origin);
-      res.header('Access-Control-Allow-Credentials', 'true');
-      res.header(
-        'Access-Control-Allow-Methods',
-        'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-      );
-      res.header(
-        'Access-Control-Allow-Headers',
-        'Content-Type,Accept,Authorization,X-Requested-With,X-CSRF-Token',
-      );
-      res.header('Access-Control-Max-Age', '86400');
-    }
-
-    if (req.method === 'OPTIONS') {
-      return res.status(200).end();
-    }
-
-    next();
-  });
-
-  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+  const app = await NestFactory.create(AppModule);
 
   app.use(
     helmet({
@@ -102,20 +16,25 @@ async function bootstrap() {
     }),
   );
 
-  app.setGlobalPrefix('api');
-  app.use(cookieParser());
-
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    res.setHeader(
-      'Cache-Control',
-      'no-store, no-cache, must-revalidate, proxy-revalidate',
-    );
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    next();
+  app.enableCors({
+    origin: [
+      'https://misacademyonline.com',
+      'https://www.misacademyonline.com',
+      'http://localhost:5173',
+    ],
+    credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'X-Requested-With',
+      'X-CSRF-Token',
+    ],
   });
 
-  app.useGlobalFilters(new GlobalExceptionFilter());
+  app.setGlobalPrefix('api');
+  app.use(cookieParser());
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -126,17 +45,49 @@ async function bootstrap() {
     }),
   );
 
-  const dataSource = app.get(DataSource);
-  await seedTiposPago(dataSource);
-
-  const port = process.env.PORT || process.env.APP_PORT || 8000;
-  await app.listen(port);
-
-  logger.log(`MIS_ACADEMY running on port ${port}`);
+  const port = Number(process.env.APP_PORT || process.env.PORT || 3000);
+  await app.listen(port, '0.0.0.0');
 }
 
-bootstrap().catch((err) => {
-  const logger = new Logger('Bootstrap');
-  logger.error('Error during bootstrap:', err);
+const startupLog = './startup-error.log';
+
+function writeStartupError(error: unknown) {
+  const detail =
+    error instanceof Error
+      ? `${error.name}: ${error.message}\n${error.stack}`
+      : JSON.stringify(error, null, 2);
+
+  const message = `
+===== STARTUP ERROR ${new Date().toISOString()} =====
+${detail}
+===============================================
+
+`;
+
+  try {
+    appendFileSync(startupLog, message);
+  } catch (fileError) {
+    console.error('No se pudo escribir startup-error.log', fileError);
+  }
+
+  console.error(message);
+}
+
+process.on('uncaughtException', (error) => {
+  writeStartupError(error);
   process.exit(1);
 });
+
+process.on('unhandledRejection', (error) => {
+  writeStartupError(error);
+  process.exit(1);
+});
+
+bootstrap().catch((error) => {
+  writeStartupError(error);
+  process.exit(1);
+});
+
+
+
+
