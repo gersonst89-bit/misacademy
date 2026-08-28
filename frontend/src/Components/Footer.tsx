@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { FaFacebook, FaInstagram, FaLinkedin, FaYoutube } from "react-icons/fa";
-import { apiClient } from "../services/apiClient";
-import { Link } from "react-router-dom";
-import { Mail, ArrowUpRight, Sparkles } from "lucide-react";
+import React, { useEffect, useState } from 'react';
+import { FaFacebook, FaInstagram, FaLinkedin, FaYoutube } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
+import { Mail, ArrowUpRight, Sparkles } from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchLineas } from '../store/academicSlice';
 
 interface LineaAcademica {
   id_linea: number;
@@ -11,39 +12,32 @@ interface LineaAcademica {
 }
 
 const Footer: React.FC = () => {
-  const [lineas, setLineas] = useState<LineaAcademica[]>([]);
+  const dispatch = useDispatch<any>();
+  const { lineas } = useSelector((state: any) => state.academic);
 
   useEffect(() => {
-    const fetchLineas = async () => {
-      try {
-        const res = await apiClient.get("/lineas-academicas");
-        const data = res.data;
-        const lineasPublicadas = (data?.data || []).filter(
-          (linea: LineaAcademica) => linea.estado === "Publicado"
-        );
-        setLineas(lineasPublicadas);
-      } catch (error) {
-        console.error("Error al cargar líneas académicas:", error);
-      }
-    };
-    fetchLineas();
-  }, []);
+    dispatch(fetchLineas());
+  }, [dispatch]);
 
   const socialLinks = [
-    { name: "Facebook", href: "https://web.facebook.com/mattinnovasolution", icon: FaFacebook },
-    { name: "Instagram", href: "https://www.instagram.com/mattinnovasolution/", icon: FaInstagram },
-    { name: "LinkedIn", href: "https://www.linkedin.com/company/mattinnovasolution/", icon: FaLinkedin },
-    { name: "YouTube", href: "https://www.youtube.com/@mattinnovasolution", icon: FaYoutube },
+    { name: 'Facebook', href: 'https://web.facebook.com/mattinnovasolution', icon: FaFacebook },
+    { name: 'Instagram', href: 'https://www.instagram.com/mattinnovasolution/', icon: FaInstagram },
+    {
+      name: 'LinkedIn',
+      href: 'https://www.linkedin.com/company/mattinnovasolution/',
+      icon: FaLinkedin,
+    },
+    { name: 'YouTube', href: 'https://www.youtube.com/@mattinnovasolution', icon: FaYoutube },
   ];
 
   const slugify = (s: string) =>
-    (s || "")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
+    (s || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .trim()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "");
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
 
   return (
     <footer className="relative bg-transparent border-t border-white/5 pt-16 pb-8 overflow-hidden">
@@ -56,16 +50,18 @@ const Footer: React.FC = () => {
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-16 mb-16">
-          
           {/* Columna 1: Marca */}
           <div className="lg:col-span-4">
             <Link to="/" className="inline-block mb-6 group">
               <h3 className="text-3xl md:text-4xl font-black text-white tracking-tight">
-                MIS <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400 drop-shadow-[0_0_20px_rgba(14,165,233,0.3)]">ACADEMY</span>
+                MIS{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400 drop-shadow-[0_0_20px_rgba(14,165,233,0.3)]">
+                  ACADEMY
+                </span>
               </h3>
             </Link>
             <p className="font-cuerpo text-slate-300 leading-relaxed mb-8 text-sm md:text-base max-w-sm">
-              Plataforma educativa de{" "}
+              Plataforma educativa de{' '}
               <a
                 href="https://www.mattinnovasolution.com/"
                 target="_blank"
@@ -105,14 +101,17 @@ const Footer: React.FC = () => {
               {lineas.length === 0 ? (
                 <li className="text-slate-500 text-sm italic">Cargando...</li>
               ) : (
-                lineas.map((linea, index) => (
+                lineas.map((linea: LineaAcademica, index: number) => (
                   <li key={linea.id_linea || `footer-linea-${index}`}>
                     <Link
                       to={`/lineas-academicas/${slugify(linea.nombre)}`}
                       className="text-slate-300 hover:text-sky-400 hover:translate-x-1 transition-all duration-300 text-sm font-medium flex items-center gap-2 group"
                     >
                       {linea.nombre}
-                      <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-all -translate-y-0.5 translate-x-0.5" />
+                      <ArrowUpRight
+                        size={14}
+                        className="opacity-0 group-hover:opacity-100 transition-all -translate-y-0.5 translate-x-0.5"
+                      />
                     </Link>
                   </li>
                 ))
@@ -132,7 +131,10 @@ const Footer: React.FC = () => {
                   className="text-slate-300 hover:text-sky-400 hover:translate-x-1 transition-all duration-300 text-sm font-medium flex items-center gap-2 group"
                 >
                   Explorar Cursos
-                  <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-all -translate-y-0.5 translate-x-0.5" />
+                  <ArrowUpRight
+                    size={14}
+                    className="opacity-0 group-hover:opacity-100 transition-all -translate-y-0.5 translate-x-0.5"
+                  />
                 </Link>
               </li>
               <li>
@@ -141,7 +143,10 @@ const Footer: React.FC = () => {
                   className="text-slate-300 hover:text-sky-400 hover:translate-x-1 transition-all duration-300 text-sm font-medium flex items-center gap-2 group"
                 >
                   Validar Certificado
-                  <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-all -translate-y-0.5 translate-x-0.5" />
+                  <ArrowUpRight
+                    size={14}
+                    className="opacity-0 group-hover:opacity-100 transition-all -translate-y-0.5 translate-x-0.5"
+                  />
                 </Link>
               </li>
               <li>
@@ -150,7 +155,10 @@ const Footer: React.FC = () => {
                   className="text-slate-300 hover:text-sky-400 hover:translate-x-1 transition-all duration-300 text-sm font-medium flex items-center gap-2 group"
                 >
                   Términos Legales
-                  <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-all -translate-y-0.5 translate-x-0.5" />
+                  <ArrowUpRight
+                    size={14}
+                    className="opacity-0 group-hover:opacity-100 transition-all -translate-y-0.5 translate-x-0.5"
+                  />
                 </Link>
               </li>
               <li className="pt-2">
@@ -169,9 +177,7 @@ const Footer: React.FC = () => {
           <div className="lg:col-span-3">
             <div className="flex items-center gap-2 mb-2">
               <Sparkles size={18} className="text-sky-400 shrink-0" />
-              <h4 className="font-titulo text-xl font-black text-white">
-                Hablemos
-              </h4>
+              <h4 className="font-titulo text-xl font-black text-white">Hablemos</h4>
             </div>
             <p className="font-cuerpo text-sm text-slate-300 mb-6 leading-relaxed max-w-sm">
               ¿Tienes dudas sobre nuestras rutas académicas? Escríbenos directamente.
@@ -195,10 +201,14 @@ const Footer: React.FC = () => {
               rel="noopener noreferrer"
               className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors"
             >
-              <img src="/logomatt.png" alt="Logo" className="h-5 opacity-50 hover:opacity-100 transition-opacity" />
+              <img
+                src="/images/logomatt.webp"
+                alt="Logo"
+                className="h-5 opacity-50 hover:opacity-100 transition-opacity"
+              />
             </a>
             <span className="font-cuerpo text-slate-500 text-[10px] font-black tracking-[0.1em]">
-              © 2025 MIS ACADEMY —{" "}
+              © 2025 MIS ACADEMY —{' '}
               <a
                 href="https://www.mattinnovasolution.com/"
                 target="_blank"

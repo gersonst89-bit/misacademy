@@ -7,6 +7,13 @@ import { appendFileSync } from 'fs';
 import helmet from 'helmet';
 
 async function bootstrap() {
+  const logPath = process.cwd() + '/node-version.log';
+
+  try {
+    appendFileSync(logPath, `Node.js version: ${process.version}\n`);
+  } catch (error) {
+    console.error('No se pudo escribir node-version.log:', error);
+  }
   const app = await NestFactory.create(AppModule);
 
   app.use(
@@ -50,7 +57,7 @@ async function bootstrap() {
 }
 
 const startupLog = './startup-error.log';
-
+appendFileSync(startupLog, `Node.js version: ${process.version}\n`);
 function writeStartupError(error: unknown) {
   const detail =
     error instanceof Error
@@ -87,7 +94,3 @@ bootstrap().catch((error) => {
   writeStartupError(error);
   process.exit(1);
 });
-
-
-
-

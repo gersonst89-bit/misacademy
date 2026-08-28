@@ -117,10 +117,10 @@ export default function Terminos() {
             <p className="leading-relaxed text-gray-400">
               Para cualquier consulta relacionada con estos términos, contáctanos en{" "}
               <a
-                href="mailto:mattinnovasolution@hotmail.com"
+                href="contacto@misacademyonline.com"
                 className="text-sky-400 hover:text-sky-300 font-bold transition-colors"
               >
-                mattinnovasolution@hotmail.com
+                contacto@misacademyonline.com
               </a>.
             </p>
           </section>

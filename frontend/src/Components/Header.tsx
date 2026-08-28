@@ -159,7 +159,7 @@ function Header() {
                 className="group flex items-center transition-transform duration-500 hover:scale-105"
               >
                 <img
-                  src="/logomatt.png"
+                  src="/images/logomatt.webp"
                   alt="MIS ACADEMY"
                   className="h-10 md:h-14 relative z-10 drop-shadow-[0_0_20px_rgba(14,165,233,0.4)] group-hover:drop-shadow-[0_0_35px_rgba(14,165,233,0.75)] transition-all duration-500"
                 />
@@ -171,8 +171,7 @@ function Header() {
               {[
                 { name: 'Inicio', icon: <Home size={16} />, path: '/' },
                 { name: 'Cursos', icon: <RouteIcon size={16} />, path: '/cursos' },
-                { name: 'Líneas', icon: <BookOpen size={16} />, path: '/lineas' },
-                { name: 'Instructores', icon: <Search size={16} />, path: '/instructores' },
+                { name: 'Líneas', icon: <BookOpen size={16} />, path: '/lineas-academicas' },
                 { name: 'Consulta', icon: <Search size={16} />, path: '/consulta' },
               ].map((item) => {
                 const isActive = location.pathname === item.path;
@@ -349,7 +348,7 @@ function Header() {
                           {linea.nombre}
                         </p>
                         <p className="text-[10px] text-slate-500 font-medium mt-1">
-                          Ver rutas de aprendizaje
+                          Ver rutas académicas
                         </p>
                       </div>
                     </Link>

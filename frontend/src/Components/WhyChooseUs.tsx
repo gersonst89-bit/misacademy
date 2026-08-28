@@ -149,7 +149,7 @@ const WhyChooseUs: React.FC = () => {
           >
             ¿Por qué elegir{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-blue-300 to-indigo-400">
-              ACADEMIA TAYAMAQ?
+              MIS ACADEMY?
             </span>
           </motion.h2>
 

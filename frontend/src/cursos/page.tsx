@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+
 import FeaturedCarousel from './CursoComponents/BannerCurso';
 import CursoGrid from './CursoComponents/CursoGrid';
+
 import { apiClient } from '../services/apiClient';
 
 export default function CursosPage() {
@@ -8,57 +10,45 @@ export default function CursosPage() {
   const [courses, setCourses] = useState<any[]>([]);
   const [featuredCourses, setFeaturedCourses] = useState<any[]>([]);
   const [featuredReady, setFeaturedReady] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     const controller = new AbortController();
 
-    const isFeatured = (course: any) =>
-      (course.destacado === 1 || course.destacado === true || course.destacado === '1') &&
-      course.estado === 'Publicado';
-
     const fetchData = async () => {
       try {
-        const firstResponse = await apiClient.get('/cursos?page=1', {
-          signal: controller.signal,
-        });
+        setLoading(true);
 
-        const firstData = firstResponse.data;
-        const firstItems = firstData.data || [];
-        const totalPages = firstData.last_page || 1;
-
-        setCourses(firstItems);
-        setFeaturedCourses(firstItems.filter(isFeatured));
-
-        if (totalPages <= 1) {
-          setFeaturedReady(true);
-          setLoading(false);
-          return;
-        }
-
-        const remainingResponses = await Promise.all(
-          Array.from({ length: totalPages - 1 }, (_, index) =>
-            apiClient.get(`/cursos?page=${index + 2}`, {
-              signal: controller.signal,
-            }),
-          ),
-        );
+        const [coursesResponse, featuredResponse] = await Promise.all([
+          apiClient.get('/cursos?page=1', {
+            signal: controller.signal,
+          }),
+          apiClient.get('/cursos/destacados?limit=8', {
+            signal: controller.signal,
+          }),
+        ]);
 
         if (controller.signal.aborted) {
           return;
         }
 
-        const remainingCourses = remainingResponses.flatMap((response) => response.data.data || []);
+        const coursesData = coursesResponse.data;
+        const firstItems = coursesData.data || [];
 
-        const allCourses = [...firstItems, ...remainingCourses];
+        setCourses(firstItems);
+        setTotalPages(coursesData.last_page || 1);
 
-        setCourses(allCourses);
-        setFeaturedCourses(allCourses.filter(isFeatured));
+        const featuredData = featuredResponse.data;
+        const featuredItems = featuredData.data || featuredData || [];
+
+        setFeaturedCourses(featuredItems);
         setFeaturedReady(true);
         setLoading(false);
       } catch (error: any) {
         if (error?.name !== 'CanceledError' && error?.code !== 'ERR_CANCELED') {
           console.error('Error cargando cursos:', error);
         }
+
         setFeaturedReady(true);
         setLoading(false);
       }
@@ -87,7 +77,7 @@ export default function CursosPage() {
         <FeaturedCarousel initialData={featuredCourses} />
       )}
 
-      {featuredReady && <CursoGrid initialData={courses} />}
+      {featuredReady && <CursoGrid initialData={courses} initialTotalPages={totalPages} />}
     </div>
   );
 }

@@ -319,7 +319,7 @@ export default function LoginPage() {
           {/* Header */}
           <div className="text-center mb-5">
             <Link to="/" className="inline-block mb-4 hover:scale-105 transition-transform">
-              <img src="/logomatt.png" alt="Logo" className="h-14 brightness-0 invert opacity-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]" />
+              <img src="/images/logomatt.webp" alt="Logo" className="h-14 brightness-0 invert opacity-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]" />
             </Link>
             <h1 className="text-3xl font-black font-['Outfit'] text-white uppercase tracking-tight mb-3">
               Iniciar Sesión

@@ -1,6 +1,6 @@
-import { motion, useMotionValue, useTransform } from "framer-motion";
-import { ArrowRight } from "lucide-react";
-import { useEffect } from "react";
+import { motion, useMotionValue, useTransform } from 'framer-motion';
+import { ArrowRight } from 'lucide-react';
+import { useEffect } from 'react';
 
 function Hero() {
   const mouseX = useMotionValue(0);
@@ -21,15 +21,21 @@ function Hero() {
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
+      element.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
   return (
-    <section className="relative min-h-screen w-full flex items-center justify-center text-white overflow-hidden bg-[#050a15] px-6">
+    <section className="relative min-h-screen w-full flex items-start justify-center text-white overflow-hidden bg-[#050a15] px-6 pt-8 pb-16 md:pt-12 md:pb-20">
       {/* Único glow central, sin partículas */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-yP-1/2 w-[800px] h-[800px] bg-sky-500/8 blur-[150px] rounded-full animate-pulse" style={{ animationDuration: '6s' }} />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-500/6 blur-[120px] rounded-full animate-pulse" style={{ animationDuration: '8s', animationDelay: '2s' }} />
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-yP-1/2 w-[800px] h-[800px] bg-sky-500/8 blur-[150px] rounded-full animate-pulse"
+        style={{ animationDuration: '6s' }}
+      />
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-500/6 blur-[120px] rounded-full animate-pulse"
+        style={{ animationDuration: '8s', animationDelay: '2s' }}
+      />
 
       <div className="relative z-10 max-w-7xl mx-auto text-center">
         {/* Badge limpio */}
@@ -59,24 +65,22 @@ function Hero() {
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             className="mb-14 flex flex-col items-center"
           >
-            <motion.span 
-              initial={{ opacity: 0, letterSpacing: "0.2em" }}
-              animate={{ opacity: 1, letterSpacing: "0.8em" }}
+            <motion.span
+              initial={{ opacity: 0, letterSpacing: '0.2em' }}
+              animate={{ opacity: 1, letterSpacing: '0.8em' }}
               transition={{ delay: 0.3, duration: 0.8 }}
               className="text-sky-300 text-sm md:text-xl font-black mb-4 ml-[0.8em] tracking-[0.8em] drop-shadow-[0_0_20px_rgba(125,211,252,0.3)]"
             >
-              ACADEMIA
+              MIS
             </motion.span>
 
             <h1 className="text-[clamp(3.5rem,16vw,10rem)] font-black tracking-tighter leading-[0.85]">
-              <span className="shimmer-text inline-block">
-                TAYA MAQ
-              </span>
+              <span className="shimmer-text inline-block">ACADEMY</span>
             </h1>
 
             <motion.div
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: "120px", opacity: 1 }}
+              animate={{ width: '120px', opacity: 1 }}
               transition={{ delay: 0.8, duration: 1.2 }}
               className="h-[2px] bg-gradient-to-r from-transparent via-sky-400 to-transparent mt-8 rounded-full shadow-[0_0_20px_rgba(14,165,233,0.5)]"
             />
@@ -97,13 +101,13 @@ function Hero() {
             </span>
           </p>
           <p className="text-base md:text-lg text-slate-300 max-w-xl mx-auto leading-relaxed">
-            Especialízate en IA, Desarrollo y Negocios con rutas de aprendizaje 
-            diseñadas para liderar la nueva era digital.
+            Especialízate en IA, Desarrollo y Negocios con rutas de aprendizaje diseñadas para
+            liderar la nueva era digital.
           </p>
         </motion.div>
 
         {/* Botones */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, duration: 0.7 }}
@@ -116,11 +120,12 @@ function Hero() {
             className="group relative px-10 py-5 bg-sky-600 text-white text-xs font-bold tracking-[0.2em] uppercase rounded-full shadow-[0_0_30px_-8px_rgba(14,165,233,0.4)] hover:shadow-[0_0_50px_-8px_rgba(14,165,233,0.6)] transition-shadow overflow-hidden"
           >
             <span className="relative z-10 flex items-center gap-2">
-              Explorar Cursos <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              Explorar Cursos{' '}
+              <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
             </span>
             <div className="absolute inset-0 bg-gradient-to-r from-sky-500 to-sky-400 opacity-0 group-hover:opacity-100 transition-opacity" />
           </motion.button>
-          
+
           <motion.button
             whileHover={{ scale: 1.03, y: -3 }}
             whileTap={{ scale: 0.97 }}

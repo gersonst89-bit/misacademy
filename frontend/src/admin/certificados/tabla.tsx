@@ -160,6 +160,17 @@ export function Certificados() {
   const [total, setTotal] = useState(0);
   const [lastPage, setLastPage] = useState(1);
 
+  const [busquedaDebounced, setBusquedaDebounced] = useState(busqueda);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setBusquedaDebounced(busqueda.trim());
+      setPage(1);
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [busqueda]);
+
   const cursoById = useMemo(() => {
     const m = new Map<number, string>();
     cursos.forEach((c) => m.set(c.id_curso, c.nombre));
@@ -295,6 +306,7 @@ export function Certificados() {
         params: {
           page,
           perPage: 20,
+          ...(busquedaDebounced ? { busqueda: busquedaDebounced } : {}),
 
           ...(tipoFiltro ? { tipo_certificado: tipoFiltro } : {}),
 
@@ -320,7 +332,7 @@ export function Certificados() {
 
   useEffect(() => {
     fetchData();
-  }, [page, tipoFiltro, programaFiltro]);
+  }, [page, tipoFiltro, programaFiltro, busquedaDebounced]);
 
   useEffect(() => {
     setProgramaFiltro('');
@@ -336,18 +348,7 @@ export function Certificados() {
     }
   }, [opcionesPrograma, programaFiltro]);
 
-  const filtrados = useMemo(() => {
-    const t = busqueda.toLowerCase().trim();
-
-    if (!t) return items;
-
-    return items.filter(
-      (c) =>
-        c.codigo_certificado?.toLowerCase().includes(t) ||
-        c.curso_nombre?.toLowerCase().includes(t) ||
-        c.usuario_nombre?.toLowerCase().includes(t),
-    );
-  }, [busqueda, items]);
+  const filtrados = items;
 
   const handleVerInfo = (c: CertificacionPlus) => {
     setSelected(c);
@@ -387,10 +388,7 @@ export function Certificados() {
           <input
             type="text"
             value={busqueda}
-            onChange={(e) => {
-              setBusqueda(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar por código, alumno o curso..."
             className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all shadow-sm text-slate-900 font-medium"
           />

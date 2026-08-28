@@ -57,7 +57,7 @@ import { HealthController } from './health.controller';
         database: config.get<string>('DB_DATABASE'),
         autoLoadEntities: true,
         synchronize: false,
-        logging: true,
+        logging: false,
       }),
     }),
 

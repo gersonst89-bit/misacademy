@@ -48,6 +48,10 @@ export class AdminCursosController {
     }
     return this.cursosService.create(dto, user.id_usuario);
   }
+  @Get('menu')
+  getMenu() {
+    return this.cursosService.getMenu();
+  }
 
   @Get(':id')
   findById(@Param('id', ParseIntPipe) id: number) {

@@ -1,12 +1,18 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import type { RutaAcademica } from "../../types/models";
-import InputComponent from "../Components/InputComponent";
-import AdminModal from "../Components/AdminModal";
-import SearchableSelect from "../Components/SearchableSelect";
-import { apiClient } from "../../services/apiClient";
-import { IoMapOutline, IoTimeOutline, IoCashOutline, IoLayersOutline, IoSaveOutline } from "react-icons/io5";
+import React, { useState, useEffect } from 'react';
+import type { RutaAcademica } from '../../types/models';
+import InputComponent from '../Components/InputComponent';
+import AdminModal from '../Components/AdminModal';
+import SearchableSelect from '../Components/SearchableSelect';
+import { apiClient } from '../../services/apiClient';
+import {
+  IoMapOutline,
+  IoTimeOutline,
+  IoCashOutline,
+  IoLayersOutline,
+  IoSaveOutline,
+} from 'react-icons/io5';
 
 interface LineaAcademica {
   id_linea: number;
@@ -20,12 +26,7 @@ interface EditRutaModalProps {
   onSave: (rutaActualizada: RutaAcademica) => Promise<boolean>;
 }
 
-export function EditRutaModal({
-  isOpen,
-  onClose,
-  ruta,
-  onSave,
-}: EditRutaModalProps) {
+export function EditRutaModal({ isOpen, onClose, ruta, onSave }: EditRutaModalProps) {
   const [formData, setFormData] = useState<RutaAcademica>(ruta);
   const [lineas, setLineas] = useState<LineaAcademica[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -33,15 +34,16 @@ export function EditRutaModal({
   useEffect(() => {
     const fetchLineas = async () => {
       try {
-        const res = await apiClient.get("/lineas-academicas");
-        const data = res.data;
-        const mapped = (data.data || []).map((l: any) => ({
+        const res = await apiClient.get('/lineas-academicas/menu');
+
+        const mapped = (res.data || []).map((l: any) => ({
           ...l,
-          id_linea: l.id_linea || l.id_linea_academica
+          id_linea: l.id_linea || l.id_linea_academica,
         }));
+
         setLineas(mapped);
       } catch (error) {
-        console.error("Error cargando líneas académicas:", error);
+        console.error('Error cargando líneas académicas:', error);
       }
     };
 
@@ -58,7 +60,11 @@ export function EditRutaModal({
 
   const handleSubmit = async () => {
     if (formData.id_linea_academica === 0) {
-      alert("Selecciona una línea académica antes de guardar.");
+      alert('Selecciona una línea académica antes de guardar.');
+      return;
+    }
+    if (!formData.nivel?.trim()) {
+      alert('Selecciona un nivel de dificultad antes de guardar.');
       return;
     }
     setIsSaving(true);
@@ -82,14 +88,17 @@ export function EditRutaModal({
           <div className="flex items-center gap-2 text-slate-400 font-extrabold text-[10px] uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100/50 w-full md:w-auto justify-center md:justify-start md:mr-auto">
             Editando Ruta Académica
           </div>
-          <button 
-            onClick={handleSubmit} 
+          <button
+            onClick={handleSubmit}
             disabled={isSaving}
             className="w-full md:w-auto bg-gradient-to-br from-[#0E1C2B] to-[#1a3a5a] text-white px-10 py-4 rounded-2xl font-black tracking-tight hover:shadow-2xl hover:shadow-slate-900/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 border border-white/5 text-sm"
           >
-            <IoSaveOutline size={18} /> {isSaving ? "Cargando..." : "Guardar Cambios"}
+            <IoSaveOutline size={18} /> {isSaving ? 'Cargando...' : 'Guardar Cambios'}
           </button>
-          <button onClick={onClose} className="w-full md:w-auto px-6 py-3 rounded-2xl font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all text-sm">
+          <button
+            onClick={onClose}
+            className="w-full md:w-auto px-6 py-3 rounded-2xl font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all text-sm"
+          >
             Cancelar
           </button>
         </>
@@ -103,28 +112,46 @@ export function EditRutaModal({
               <IoMapOutline size={18} />
             </div>
             <div className="flex flex-col">
-              <h3 className="text-[9px] font-black uppercase tracking-[0.25em] text-sky-600/70">Módulo 01</h3>
-              <span className="text-[13px] font-black text-slate-900 tracking-tight">Estructura de la Ruta</span>
+              <h3 className="text-[9px] font-black uppercase tracking-[0.25em] text-sky-600/70">
+                Módulo 01
+              </h3>
+              <span className="text-[13px] font-black text-slate-900 tracking-tight">
+                Estructura de la Ruta
+              </span>
             </div>
           </div>
- 
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InputComponent label="Nombre de la Ruta" name="nombre" value={formData.nombre} onChange={handleChange} placeholder="Ej: Especialista en Excel" />
-            
-            <SearchableSelect 
+            <InputComponent
+              label="Nombre de la Ruta"
+              name="nombre"
+              value={formData.nombre}
+              onChange={handleChange}
+              placeholder="Ej: Especialista en Excel"
+            />
+
+            <SearchableSelect
               label="Línea Académica"
-              value={formData.id_linea_academica || ""}
+              value={formData.id_linea_academica || ''}
               onChange={(v) => setFormData({ ...formData, id_linea_academica: Number(v) })}
-              options={lineas.map(l => ({ value: l.id_linea, label: l.nombre }))}
+              options={lineas.map((l) => ({ value: l.id_linea, label: l.nombre }))}
               placeholder="Selecciona línea..."
             />
- 
+
             <div className="md:col-span-2">
               <div className="flex flex-col gap-2 w-full group">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 group-focus-within:text-sky-500 transition-colors">
                   Nivel de Dificultad
                 </label>
-                <select name="nivel" value={formData.nivel} onChange={handleChange} className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all text-slate-900 font-medium">
+                <select
+                  name="nivel"
+                  value={formData.nivel ?? ''}
+                  onChange={handleChange}
+                  className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all text-slate-900 font-medium"
+                >
+                  <option value="" disabled>
+                    Selecciona un nivel
+                  </option>
                   <option value="Principiante">Principiante</option>
                   <option value="Intermedio">Intermedio</option>
                   <option value="Avanzado">Avanzado</option>
@@ -141,18 +168,36 @@ export function EditRutaModal({
               <IoLayersOutline size={18} />
             </div>
             <div className="flex flex-col">
-              <h3 className="text-[9px] font-black uppercase tracking-[0.25em] text-emerald-600/70">Módulo 02</h3>
-              <span className="text-[13px] font-black text-slate-900 tracking-tight">Contenido y Medios</span>
+              <h3 className="text-[9px] font-black uppercase tracking-[0.25em] text-emerald-600/70">
+                Módulo 02
+              </h3>
+              <span className="text-[13px] font-black text-slate-900 tracking-tight">
+                Contenido y Medios
+              </span>
             </div>
           </div>
- 
+
           <div className="space-y-4">
             <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Descripción de la Ruta</label>
-              <textarea name="descripcion" value={formData.descripcion || ""} onChange={handleChange} className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all text-slate-900 font-medium h-24 resize-none" placeholder="Describe el objetivo de esta ruta..." />
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
+                Descripción de la Ruta
+              </label>
+              <textarea
+                name="descripcion"
+                value={formData.descripcion || ''}
+                onChange={handleChange}
+                className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all text-slate-900 font-medium h-24 resize-none"
+                placeholder="Describe el objetivo de esta ruta..."
+              />
             </div>
- 
-            <InputComponent label="Imagen de Portada (URL)" name="imagen" value={formData.imagen || ""} onChange={handleChange} placeholder="URL de la imagen" />
+
+            <InputComponent
+              label="Imagen de Portada (URL)"
+              name="imagen"
+              value={formData.imagen || ''}
+              onChange={handleChange}
+              placeholder="URL de la imagen"
+            />
           </div>
         </div>
 
@@ -163,14 +208,32 @@ export function EditRutaModal({
               <IoTimeOutline size={18} />
             </div>
             <div className="flex flex-col">
-              <h3 className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600/70">Módulo 03</h3>
-              <span className="text-[13px] font-black text-slate-900 tracking-tight">Especificaciones</span>
+              <h3 className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600/70">
+                Módulo 03
+              </h3>
+              <span className="text-[13px] font-black text-slate-900 tracking-tight">
+                Especificaciones
+              </span>
             </div>
           </div>
- 
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InputComponent label="Horas Totales" name="horas_totales" type="number" value={formData.horas_totales} onChange={handleChange} placeholder="Ej: 120" />
-            <InputComponent label="Precio de la Ruta (S/)" name="precio" type="number" value={formData.precio} onChange={handleChange} placeholder="Ej: 450.00" />
+            <InputComponent
+              label="Horas Totales"
+              name="horas_totales"
+              type="number"
+              value={formData.horas_totales}
+              onChange={handleChange}
+              placeholder="Ej: 120"
+            />
+            <InputComponent
+              label="Precio de la Ruta (S/)"
+              name="precio"
+              type="number"
+              value={formData.precio}
+              onChange={handleChange}
+              placeholder="Ej: 450.00"
+            />
           </div>
         </div>
       </div>

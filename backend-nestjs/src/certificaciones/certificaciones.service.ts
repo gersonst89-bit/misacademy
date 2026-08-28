@@ -16,8 +16,16 @@ export class CertificacionesService {
     tipoCertificado?: string,
     programa?: string,
     cursoId?: number,
+    busqueda?: string,
   ) {
-    return this.repo.findAll(page, perPage, tipoCertificado, programa, cursoId);
+    return this.repo.findAll(
+      page,
+      perPage,
+      tipoCertificado,
+      programa,
+      cursoId,
+      busqueda,
+    );
   }
   async findProgramas() {
     return this.repo.findProgramas();

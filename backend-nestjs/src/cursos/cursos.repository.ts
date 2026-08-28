@@ -18,6 +18,7 @@ export interface CursoFilters {
   precio_min?: number;
   precio_max?: number;
   destacado?: boolean;
+  id_linea_academica?: number;
 }
 
 @Injectable()
@@ -72,6 +73,11 @@ export class CursosRepository {
       qb.andWhere('c.precio <= :pmax', { pmax: filters.precio_max });
     if (filters.destacado !== undefined)
       qb.andWhere('c.destacado = :dest', { dest: filters.destacado });
+    if (filters.id_linea_academica) {
+      qb.andWhere('r.id_linea_academica = :idLinea', {
+        idLinea: filters.id_linea_academica,
+      });
+    }
 
     const [data, total] = await qb
       .skip((page - 1) * perPage)
@@ -90,6 +96,15 @@ export class CursosRepository {
     return this.cursoRepo.findOne({
       where: { id_curso: id },
       relations: ['docente'],
+    });
+  }
+
+  async findMenu() {
+    return this.cursoRepo.find({
+      select: ['id_curso', 'nombre'],
+      order: {
+        nombre: 'ASC',
+      },
     });
   }
 

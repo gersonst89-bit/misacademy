@@ -21,6 +21,10 @@ export class CursosService {
     return this.cursosRepo.findAll(query, page, perPage);
   }
 
+  async getMenu() {
+    return this.cursosRepo.findMenu();
+  }
+
   async findById(id: number) {
     const curso = await this.cursosRepo.findById(id);
     if (!curso)
@@ -50,15 +54,20 @@ export class CursosService {
       descripcion: dto.descripcion,
       descripcion_corta: dto.descripcion_corta,
       descripcion_larga: dto.descripcion_larga,
-      objetivos: dto.objetivos !== undefined ? dto.objetivos : dto.lo_que_aprenderas,
+      objetivos:
+        dto.objetivos !== undefined ? dto.objetivos : dto.lo_que_aprenderas,
       requisitos: dto.requisitos,
       nivel: dto.nivel,
       precio: dto.precio,
       precio_descuento: dto.precio_descuento,
-      duracion_horas: dto.duracion_horas !== undefined ? dto.duracion_horas : dto.duracion,
+      duracion_horas:
+        dto.duracion_horas !== undefined ? dto.duracion_horas : dto.duracion,
       tiempo: dto.tiempo,
       imagen: dto.imagen,
-      video_preview: dto.video_preview !== undefined ? dto.video_preview : dto.video_previsualizacion,
+      video_preview:
+        dto.video_preview !== undefined
+          ? dto.video_preview
+          : dto.video_previsualizacion,
       estado: dto.estado,
       destacado: dto.destacado,
       id_docente: dto.id_docente || userId,
@@ -69,7 +78,7 @@ export class CursosService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
-    try {   
+    try {
       const curso = await queryRunner.manager.save(
         queryRunner.manager.create(Curso, {
           ...cursoData,
@@ -110,15 +119,20 @@ export class CursosService {
       descripcion: dto.descripcion,
       descripcion_corta: dto.descripcion_corta,
       descripcion_larga: dto.descripcion_larga,
-      objetivos: dto.objetivos !== undefined ? dto.objetivos : dto.lo_que_aprenderas,
+      objetivos:
+        dto.objetivos !== undefined ? dto.objetivos : dto.lo_que_aprenderas,
       requisitos: dto.requisitos,
       nivel: dto.nivel,
       precio: dto.precio,
       precio_descuento: dto.precio_descuento,
-      duracion_horas: dto.duracion_horas !== undefined ? dto.duracion_horas : dto.duracion,
+      duracion_horas:
+        dto.duracion_horas !== undefined ? dto.duracion_horas : dto.duracion,
       tiempo: dto.tiempo,
       imagen: dto.imagen,
-      video_preview: dto.video_preview !== undefined ? dto.video_preview : dto.video_previsualizacion,
+      video_preview:
+        dto.video_preview !== undefined
+          ? dto.video_preview
+          : dto.video_previsualizacion,
       estado: dto.estado,
       destacado: dto.destacado,
       id_docente: dto.id_docente,

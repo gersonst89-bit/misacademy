@@ -17,6 +17,7 @@ export class CertificacionesRepository {
     tipoCertificado?: string,
     programa?: string,
     cursoId?: number,
+    busqueda?: string,
   ) {
     const pageNum = Math.max(Number(page) || 1, 1);
 
@@ -50,6 +51,32 @@ export class CertificacionesRepository {
       query.andWhere('cert.id_curso = :cursoId', {
         cursoId,
       });
+    }
+
+    const termino = busqueda?.trim().replace(/\s+/g, ' ');
+
+    if (termino) {
+      const patron = `%${termino.toLowerCase()}%`;
+
+      query.andWhere(
+        new Brackets((qb) => {
+          qb.where('LOWER(cert.codigo_certificado) LIKE :patron', { patron })
+            .orWhere(
+              "LOWER(COALESCE(cert.nombre_estudiante, '')) LIKE :patron",
+              { patron },
+            )
+            .orWhere(
+              `LOWER(CONCAT_WS(' ', COALESCE(usuario.nombre, ''), COALESCE(usuario.apellido, ''))) LIKE :patron`,
+              { patron },
+            )
+            .orWhere("LOWER(COALESCE(cert.nombre_curso, '')) LIKE :patron", {
+              patron,
+            })
+            .orWhere("LOWER(COALESCE(curso.nombre, '')) LIKE :patron", {
+              patron,
+            });
+        }),
+      );
     }
 
     query

@@ -87,6 +87,7 @@ export class AdminCertificacionesController {
     @Query('tipo_certificado') tipoCertificado?: string,
     @Query('programa') programa?: string,
     @Query('cursoId') cursoId?: string,
+    @Query('busqueda') busqueda?: string,
   ) {
     return this.svc.findAll(
       page ? Number(page) : 1,
@@ -94,6 +95,7 @@ export class AdminCertificacionesController {
       tipoCertificado,
       programa,
       cursoId ? Number(cursoId) : undefined,
+      busqueda,
     );
   }
 

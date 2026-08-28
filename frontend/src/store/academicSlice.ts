@@ -16,20 +16,36 @@ const initialState: AcademicState = {
   lastFetched: null,
 };
 
-// Acción asíncrona para cargar las líneas
 export const fetchLineas = createAsyncThunk(
   'academic/fetchLineas',
-  async (_, { getState }) => {
-    const state = getState() as { academic: AcademicState };
-    // Si se cargaron hace menos de 5 minutos, no volver a pedir
-    if (state.academic.lineas.length > 0 && state.academic.lastFetched && Date.now() - state.academic.lastFetched < 300000) {
-      return state.academic.lineas;
-    }
+  async () => {
+    const { data } = await apiClient.get('/lineas-academicas/menu');
 
-    // Usa apiClient (axios) en lugar de fetch nativo para heredar interceptores globales
-    const { data } = await apiClient.get('/lineas-academicas');
-    return (data.data || []).filter((l: LineaAcademica) => l.estado === 'Publicado');
-  }
+    const lineas = Array.isArray(data) ? data : data.data || [];
+
+    return lineas.filter((l: LineaAcademica) => l.estado === 'Publicado');
+  },
+  {
+    condition: (_, { getState }) => {
+      const state = getState() as { academic: AcademicState };
+
+      // Ya hay una petición en curso.
+      if (state.academic.loading) {
+        return false;
+      }
+
+      // Los datos todavía están vigentes (5 minutos).
+      if (
+        state.academic.lineas.length > 0 &&
+        state.academic.lastFetched &&
+        Date.now() - state.academic.lastFetched < 300000
+      ) {
+        return false;
+      }
+
+      return true;
+    },
+  },
 );
 
 const academicSlice = createSlice({

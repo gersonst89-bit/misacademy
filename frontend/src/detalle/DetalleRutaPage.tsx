@@ -1,103 +1,109 @@
-"use client";
+'use client';
 
-import React, { useEffect, useMemo, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import "./learning-path.css";
-import { API_URL } from "../config/api";
-import { apiClient } from "../services/apiClient";
+import React, { useEffect, useMemo, useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import './learning-path.css';
+import { API_URL } from '../config/api';
+import { apiClient } from '../services/apiClient';
 
 const API_BASE = API_URL;
 
 // ─── Accent theme por línea ──────────────────────────────────────────────────
 const getAccentTheme = (lineaSlug: string) => {
-  const s = (lineaSlug || "").toLowerCase();
-  if (s.includes("ia"))
+  const s = (lineaSlug || '').toLowerCase();
+  if (s.includes('ia'))
     return {
-      text: "text-purple-400",
-      textGrad: "from-purple-400 via-white to-purple-600",
-      textGrad2: "from-purple-300 to-purple-600",
-      stroke: "#a855f7",
-      barBg: "bg-purple-500",
-      glow1: "bg-purple-500/10",
-      glow2: "bg-indigo-500/8",
-      sectionGlow: "bg-purple-500/6",
-      badgeBg: "bg-purple-500/10 border-purple-500/20",
-      float: "bg-purple-500/10",
-      hoverBorder: "hover:border-purple-500/30",
-      hoverTitle: "group-hover:text-purple-400",
-      checkItem: "bg-purple-500/10 border-purple-500/20 text-purple-400 group-hover/item:bg-purple-500",
-      slideDot: "bg-purple-400",
-      certBadge: "bg-purple-500/10 border-purple-500/20 text-purple-400",
-      certFeat: "text-purple-400",
-      ctaText: "from-purple-300 to-purple-500",
-      btnShadowRgba: "rgba(168,85,247,0.35)",
-      btnGradient: "from-purple-600 to-indigo-500",
+      text: 'text-purple-400',
+      textGrad: 'from-purple-400 via-white to-purple-600',
+      textGrad2: 'from-purple-300 to-purple-600',
+      stroke: '#a855f7',
+      barBg: 'bg-purple-500',
+      glow1: 'bg-purple-500/10',
+      glow2: 'bg-indigo-500/8',
+      sectionGlow: 'bg-purple-500/6',
+      badgeBg: 'bg-purple-500/10 border-purple-500/20',
+      float: 'bg-purple-500/10',
+      hoverBorder: 'hover:border-purple-500/30',
+      hoverTitle: 'group-hover:text-purple-400',
+      hoverBg: 'group-hover:bg-purple-500 group-hover:text-white group-hover:border-purple-500',
+      checkItem:
+        'bg-purple-500/10 border-purple-500/20 text-purple-400 group-hover/item:bg-purple-500',
+      slideDot: 'bg-purple-400',
+      certBadge: 'bg-purple-500/10 border-purple-500/20 text-purple-400',
+      certFeat: 'text-purple-400',
+      ctaText: 'from-purple-300 to-purple-500',
+      btnShadowRgba: 'rgba(168,85,247,0.35)',
+      btnGradient: 'from-purple-600 to-indigo-500',
     };
-  if (s.includes("teacher"))
+  if (s.includes('teacher'))
     return {
-      text: "text-emerald-400",
-      textGrad: "from-emerald-400 via-white to-emerald-600",
-      textGrad2: "from-emerald-300 to-emerald-600",
-      stroke: "#10b981",
-      barBg: "bg-emerald-500",
-      glow1: "bg-emerald-500/10",
-      glow2: "bg-teal-500/8",
-      sectionGlow: "bg-emerald-500/6",
-      badgeBg: "bg-emerald-500/10 border-emerald-500/20",
-      float: "bg-emerald-500/10",
-      hoverBorder: "hover:border-emerald-500/30",
-      hoverTitle: "group-hover:text-emerald-400",
-      checkItem: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 group-hover/item:bg-emerald-500",
-      slideDot: "bg-emerald-400",
-      certBadge: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
-      certFeat: "text-emerald-400",
-      ctaText: "from-emerald-300 to-emerald-500",
-      btnShadowRgba: "rgba(16,185,129,0.35)",
-      btnGradient: "from-emerald-500 to-teal-400",
+      text: 'text-emerald-400',
+      textGrad: 'from-emerald-400 via-white to-emerald-600',
+      textGrad2: 'from-emerald-300 to-emerald-600',
+      stroke: '#10b981',
+      barBg: 'bg-emerald-500',
+      glow1: 'bg-emerald-500/10',
+      glow2: 'bg-teal-500/8',
+      sectionGlow: 'bg-emerald-500/6',
+      badgeBg: 'bg-emerald-500/10 border-emerald-500/20',
+      float: 'bg-emerald-500/10',
+      hoverBorder: 'hover:border-emerald-500/30',
+      hoverTitle: 'group-hover:text-emerald-400',
+      hoverBg: 'group-hover:bg-emerald-500 group-hover:text-white group-hover:border-emerald-500',
+      checkItem:
+        'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 group-hover/item:bg-emerald-500',
+      slideDot: 'bg-emerald-400',
+      certBadge: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
+      certFeat: 'text-emerald-400',
+      ctaText: 'from-emerald-300 to-emerald-500',
+      btnShadowRgba: 'rgba(16,185,129,0.35)',
+      btnGradient: 'from-emerald-500 to-teal-400',
     };
-  if (s.includes("business"))
+  if (s.includes('business'))
     return {
-      text: "text-amber-400",
-      textGrad: "from-amber-400 via-white to-amber-600",
-      textGrad2: "from-amber-300 to-amber-600",
-      stroke: "#f59e0b",
-      barBg: "bg-amber-500",
-      glow1: "bg-amber-500/10",
-      glow2: "bg-orange-500/8",
-      sectionGlow: "bg-amber-500/6",
-      badgeBg: "bg-amber-500/10 border-amber-500/20",
-      float: "bg-amber-500/10",
-      hoverBorder: "hover:border-amber-500/30",
-      hoverTitle: "group-hover:text-amber-400",
-      checkItem: "bg-amber-500/10 border-amber-500/20 text-amber-400 group-hover/item:bg-amber-500",
-      slideDot: "bg-amber-400",
-      certBadge: "bg-amber-500/10 border-amber-500/20 text-amber-400",
-      certFeat: "text-amber-400",
-      ctaText: "from-amber-300 to-amber-500",
-      btnShadowRgba: "rgba(245,158,11,0.35)",
-      btnGradient: "from-amber-500 to-orange-400",
+      text: 'text-amber-400',
+      textGrad: 'from-amber-400 via-white to-amber-600',
+      textGrad2: 'from-amber-300 to-amber-600',
+      stroke: '#f59e0b',
+      barBg: 'bg-amber-500',
+      glow1: 'bg-amber-500/10',
+      glow2: 'bg-orange-500/8',
+      sectionGlow: 'bg-amber-500/6',
+      badgeBg: 'bg-amber-500/10 border-amber-500/20',
+      float: 'bg-amber-500/10',
+      hoverBorder: 'hover:border-amber-500/30',
+      hoverTitle: 'group-hover:text-amber-400',
+      hoverBg: 'group-hover:bg-amber-500 group-hover:text-black group-hover:border-amber-500',
+      checkItem: 'bg-amber-500/10 border-amber-500/20 text-amber-400 group-hover/item:bg-amber-500',
+      slideDot: 'bg-amber-400',
+      certBadge: 'bg-amber-500/10 border-amber-500/20 text-amber-400',
+      certFeat: 'text-amber-400',
+      ctaText: 'from-amber-300 to-amber-500',
+      btnShadowRgba: 'rgba(245,158,11,0.35)',
+      btnGradient: 'from-amber-500 to-orange-400',
     };
   // DEV / default = sky
   return {
-    text: "text-sky-400",
-    textGrad: "from-sky-400 via-white to-sky-600",
-    textGrad2: "from-sky-300 to-sky-600",
-    stroke: "#38bdf8",
-    barBg: "bg-sky-500",
-    glow1: "bg-sky-500/10",
-    glow2: "bg-blue-500/8",
-    sectionGlow: "bg-sky-500/6",
-    badgeBg: "bg-sky-500/10 border-sky-500/20",
-    float: "bg-sky-500/10",
-    hoverBorder: "hover:border-sky-500/30",
-    hoverTitle: "group-hover:text-sky-400",
-    checkItem: "bg-sky-500/10 border-sky-500/20 text-sky-400 group-hover/item:bg-sky-500",
-    slideDot: "bg-sky-400",
-    certBadge: "bg-sky-500/10 border-sky-500/20 text-sky-400",
-    certFeat: "text-sky-400",
-    ctaText: "from-sky-300 to-sky-500",
-    btnShadowRgba: "rgba(14,165,233,0.35)",
-    btnGradient: "from-sky-600 to-blue-500",
+    text: 'text-sky-400',
+    textGrad: 'from-sky-400 via-white to-sky-600',
+    textGrad2: 'from-sky-300 to-sky-600',
+    stroke: '#38bdf8',
+    barBg: 'bg-sky-500',
+    glow1: 'bg-sky-500/10',
+    glow2: 'bg-blue-500/8',
+    sectionGlow: 'bg-sky-500/6',
+    badgeBg: 'bg-sky-500/10 border-sky-500/20',
+    float: 'bg-sky-500/10',
+    hoverBorder: 'hover:border-sky-500/30',
+    hoverTitle: 'group-hover:text-sky-400',
+    hoverBg: 'group-hover:bg-sky-500 group-hover:text-white group-hover:border-sky-500',
+    checkItem: 'bg-sky-500/10 border-sky-500/20 text-sky-400 group-hover/item:bg-sky-500',
+    slideDot: 'bg-sky-400',
+    certBadge: 'bg-sky-500/10 border-sky-500/20 text-sky-400',
+    certFeat: 'text-sky-400',
+    ctaText: 'from-sky-300 to-sky-500',
+    btnShadowRgba: 'rgba(14,165,233,0.35)',
+    btnGradient: 'from-sky-600 to-blue-500',
   };
 };
 
@@ -112,12 +118,24 @@ const LoadingSpinner: React.FC = () => (
 );
 
 const createSlug = (title: string): string =>
-  title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 -]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-");
+  title
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9 -]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
 
 const slugify = (s?: string) =>
-  (s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  (s ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
 
-const num = (v: any) => (v == null || v === "" ? NaN : Number(v));
+const num = (v: any) => (v == null || v === '' ? NaN : Number(v));
 
 const parseList = (json: any): any[] => {
   if (Array.isArray(json)) return json;
@@ -130,23 +148,24 @@ const parseList = (json: any): any[] => {
 };
 
 async function fetchJson(url: string) {
-  const relativeUrl = url.replace(API_BASE, "");
+  const relativeUrl = url.replace(API_BASE, '');
   const res = await apiClient.get(relativeUrl);
   return res.data;
 }
 
 async function fetchAllPaged(baseUrl: string): Promise<any[]> {
   const results: any[] = [];
-  let page = 1, lastPage = 1;
+  let page = 1,
+    lastPage = 1;
   let first = true;
   while (first || page <= lastPage) {
     first = false;
-    const sep = baseUrl.includes("?") ? "&" : "?";
+    const sep = baseUrl.includes('?') ? '&' : '?';
     const json = await fetchJson(`${baseUrl}${sep}page=${page}`);
     const chunk = parseList(json);
     results.push(...chunk);
     const lp = json.last_page ?? json.meta?.last_page ?? json.data?.last_page ?? 1;
-    lastPage = typeof lp === "number" ? lp : 1;
+    lastPage = typeof lp === 'number' ? lp : 1;
     page++;
   }
   return results;
@@ -163,11 +182,15 @@ async function fetchFromFirstNonEmpty(urls: string[]) {
 }
 
 const getRutaId = (o: any) => o?.id_ruta ?? o?.ruta_id ?? o?.id ?? null;
-const getRutaNombre = (o: any) => o?.nombre ?? o?.titulo ?? "-";
+const getRutaNombre = (o: any) => o?.nombre ?? o?.titulo ?? '-';
 const getRutaPrecio = (o: any) => Number(o?.precio ?? o?.price ?? o?.costo ?? 0);
 const getCursoId = (o: any) => o?.id_curso ?? o?.curso_id ?? o?.id;
-const getCursoNombre = (o: any) => o?.nombre ?? o?.titulo ?? "Curso";
-const getCursoRutas = (c: any) => { if (!c) return []; const r = c.rutas ?? c.rutas_ids ?? c.rutasId; return Array.isArray(r) ? r : r ? [r] : []; };
+const getCursoNombre = (o: any) => o?.nombre ?? o?.titulo ?? 'Curso';
+const getCursoRutas = (c: any) => {
+  if (!c) return [];
+  const r = c.rutas ?? c.rutas_ids ?? c.rutasId;
+  return Array.isArray(r) ? r : r ? [r] : [];
+};
 
 function cursoPerteneceARuta(curso: any, rutaId: number) {
   const rid = Number(rutaId);
@@ -176,18 +199,18 @@ function cursoPerteneceARuta(curso: any, rutaId: number) {
   if (direct != null && Number(direct) === rid) return true;
   return getCursoRutas(curso).some((r) => {
     if (!r) return false;
-    if (typeof r === "string" || typeof r === "number") return Number(r) === rid;
+    if (typeof r === 'string' || typeof r === 'number') return Number(r) === rid;
     return Number(r.id_ruta ?? r.ruta_id ?? r.id ?? r.id_ruta_academica) === rid;
   });
 }
 
-import { useToast } from "../hooks/useToast";
+import { useToast } from '../hooks/useToast';
 
 const DetalleRutaPage: React.FC = () => {
   const { showToast } = useToast();
   const { slug, rutaTitle } = useParams();
   const navigate = useNavigate();
-  const accent = getAccentTheme(slug || "");
+  const accent = getAccentTheme(slug || '');
 
   const [loading, setLoading] = useState(true);
   const [loadingCursos, setLoadingCursos] = useState(true);
@@ -199,61 +222,83 @@ const DetalleRutaPage: React.FC = () => {
 
   useEffect(() => {
     let cancel = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const json = await fetchJson(`${API_BASE}/rutas-academicas?_${Date.now()}`);
-        if (!cancel) setRutas(parseList(json));
-      } catch {
-        if (!cancel) setError("Error cargando rutas.");
-      } finally {
-        if (!cancel) setLoading(false);
-      }
-    })();
-    return () => { cancel = true; };
-  }, []);
 
-  const idxRutaBySlug = useMemo(() => new Map(rutas.map((r) => [slugify(getRutaNombre(r)), r])), [rutas]);
-  let ruta: any | undefined = idxRutaBySlug.get(slugify(rutaTitle ?? slug ?? "")) || rutas[0];
+    const cargarDatos = async () => {
+      setLoading(true);
+      setLoadingCursos(true);
+      setError(null);
+
+      try {
+        const currentSlug = rutaTitle ?? slug ?? '';
+
+        if (!currentSlug) {
+          if (!cancel) {
+            setRutas([]);
+            setCursosDeRuta([]);
+            setError('No se pudo identificar la ruta.');
+          }
+          return;
+        }
+
+        // Una sola petición: ruta + cursos relacionados
+        const rutaData = await fetchJson(
+          `${API_BASE}/rutas-academicas/slug/${encodeURIComponent(currentSlug)}`,
+        );
+
+        if (cancel) return;
+
+        // Guardamos la ruta en el mismo estado que ya usa
+        // el resto del componente.
+        setRutas([rutaData]);
+
+        // Los cursos ya vienen dentro de la respuesta.
+        setCursosDeRuta(Array.isArray(rutaData?.cursos) ? rutaData.cursos : []);
+      } catch (error) {
+        console.error('Error cargando ruta:', error);
+
+        if (!cancel) {
+          setRutas([]);
+          setCursosDeRuta([]);
+          setError('Error cargando la información de la ruta.');
+        }
+      } finally {
+        if (!cancel) {
+          setLoading(false);
+          setLoadingCursos(false);
+        }
+      }
+    };
+
+    cargarDatos();
+
+    return () => {
+      cancel = true;
+    };
+  }, [slug, rutaTitle]);
+
+  const idxRutaBySlug = useMemo(
+    () => new Map(rutas.map((r) => [slugify(getRutaNombre(r)), r])),
+    [rutas],
+  );
+  let ruta: any | undefined = idxRutaBySlug.get(slugify(rutaTitle ?? slug ?? '')) || rutas[0];
 
   useEffect(() => {
     const checkOwnership = async () => {
       if (!ruta) return;
-      const userStored = localStorage.getItem("user");
+      const userStored = localStorage.getItem('user');
       if (!userStored) return;
       try {
-        const res = await apiClient.get("/compras/historial");
+        const res = await apiClient.get('/compras/historial');
         const data = res.data;
         const compras = data.compras || data.data || [];
         const rid = num(getRutaId(ruta));
         const owned = compras.some((c: any) => c.ruta?.id_ruta === rid || c.id_ruta === rid);
         setIsOwned(owned);
       } catch (err) {
-        console.error("Error al verificar propiedad:", err);
+        console.error('Error al verificar propiedad:', err);
       }
     };
     checkOwnership();
-  }, [ruta]);
-
-  useEffect(() => {
-    let cancel = false;
-    (async () => {
-      setLoadingCursos(true);
-      setError(null);
-      if (!ruta) { setCursosDeRuta([]); setLoadingCursos(false); return; }
-      const rid = num(getRutaId(ruta));
-      if (!rid || Number.isNaN(rid)) { setCursosDeRuta([]); setLoadingCursos(false); return; }
-      try {
-        let cursos = await fetchFromFirstNonEmpty([`${API_BASE}/cursos?_${Date.now()}`]);
-        cursos = cursos.filter((c) => cursoPerteneceARuta(c, rid));
-        if (!cancel) setCursosDeRuta(cursos);
-      } catch {
-        if (!cancel) setError("Error cargando cursos.");
-      } finally {
-        if (!cancel) setLoadingCursos(false);
-      }
-    })();
-    return () => { cancel = true; };
   }, [ruta]);
 
   const pasos = useMemo(
@@ -261,7 +306,7 @@ const DetalleRutaPage: React.FC = () => {
       [...cursosDeRuta]
         .sort((a, b) => String(getCursoNombre(a)).localeCompare(getCursoNombre(b)))
         .map((c, i) => ({ n: i + 1, titulo: getCursoNombre(c), idCurso: getCursoId(c), curso: c })),
-    [cursosDeRuta]
+    [cursosDeRuta],
   );
 
   const heroImages = pasos.map((p) => p.curso?.imagen).filter(Boolean);
@@ -281,130 +326,232 @@ const DetalleRutaPage: React.FC = () => {
 
   async function onAddToCart() {
     if (!ruta) return;
-    const userStored = localStorage.getItem("user");
-    if (!userStored) return showToast("Por favor, ingresa sesión para agregar la ruta al carrito.", "info");
+    const userStored = localStorage.getItem('user');
+    if (!userStored)
+      return showToast('Por favor, ingresa sesión para agregar la ruta al carrito.', 'info');
     try {
       setAdding(true);
       const rid = getRutaId(ruta);
-      if (!rid) return showToast("Error: No se pudo identificar la ruta.", "error");
-      const res = await apiClient.post("/carrito/agregar", { id_ruta: rid }).catch((err: any) => {
-        if (err?.response?.status === 401) showToast("Por favor, ingresa sesión para agregar la ruta al carrito.", "info");
-        else showToast(err?.response?.data?.message || "No se pudo añadir al carrito.", "error");
+      if (!rid) return showToast('Error: No se pudo identificar la ruta.', 'error');
+      const res = await apiClient.post('/carrito/agregar', { id_ruta: rid }).catch((err: any) => {
+        if (err?.response?.status === 401)
+          showToast('Por favor, ingresa sesión para agregar la ruta al carrito.', 'info');
+        else showToast(err?.response?.data?.message || 'No se pudo añadir al carrito.', 'error');
         return null;
       });
-      if (res) showToast("Ruta añadida al carrito", "success");
+      if (res) showToast('Ruta añadida al carrito', 'success');
     } catch (err) {
-      showToast("Error de conexión.", "error");
+      showToast('Error de conexión.', 'error');
     } finally {
       setAdding(false);
     }
   }
 
   const precio = getRutaPrecio(ruta);
-  const labelPrecio = precio <= 0 ? "Gratis" : `S/. ${precio.toFixed(2)}`;
+  const labelPrecio = precio <= 0 ? 'Gratis' : `S/. ${precio.toFixed(2)}`;
 
   return (
     <div className="min-h-screen px-4 md:px-8 lg:px-10 pt-0 pb-6 lg:pb-10 text-white overflow-x-hidden bg-[#03070c]">
-
       {/* ─── HERO ──────────────────────────────────────────────────────────── */}
-      <header className="relative w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center pt-20 pb-16 lg:pt-24 lg:pb-20">
-        {/* Glows */}
-        <div className={`absolute top-10 left-1/4 w-[500px] h-[500px] ${accent.glow1} blur-[150px] rounded-full -z-10 animate-pulse`} />
-        <div className={`absolute bottom-0 right-0 w-[400px] h-[400px] ${accent.glow2} blur-[130px] rounded-full -z-10`} />
+      <header className="relative w-full max-w-7xl mx-auto pt-14 pb-12 sm:pt-20 sm:pb-16 lg:pt-24 lg:pb-20">
+        {/* Ambient glows */}
+        <div
+          className={`absolute top-8 left-[8%] w-[420px] h-[420px] ${accent.glow1} blur-[150px] rounded-full -z-10 pointer-events-none`}
+        />
+        <div
+          className={`absolute top-1/4 right-[4%] w-[360px] h-[360px] ${accent.glow2} blur-[130px] rounded-full -z-10 pointer-events-none`}
+        />
 
-        {/* Left text */}
-        <div className="text-center lg:text-left z-20 max-w-xl mx-auto lg:mx-0">
-          <div className={`inline-flex items-center gap-3 px-4 py-2 ${accent.badgeBg} border rounded-2xl mb-8 backdrop-blur-md`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${accent.text.replace("text-", "bg-")} animate-pulse`} />
-            <span className={`text-[10px] font-black tracking-[0.3em] ${accent.text} uppercase`}>Ruta de Especialización</span>
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-[1.02fr_0.98fr] gap-12 lg:gap-10 xl:gap-16 items-center">
+          {/* Left: route information */}
+          <div className="text-center lg:text-left z-20 max-w-2xl mx-auto lg:mx-0">
+            <div
+              className={`inline-flex items-center gap-3 px-4 py-2 ${accent.badgeBg} border rounded-full mb-7 backdrop-blur-md shadow-lg shadow-black/10`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${accent.text.replace('text-', 'bg-')} animate-pulse`}
+              />
+              <span
+                className={`text-[9px] sm:text-[10px] font-black tracking-[0.28em] ${accent.text} uppercase`}
+              >
+                Ruta de Especialización
+              </span>
+            </div>
 
-          {(() => {
-              const connectors = new Set(["con", "de", "del", "y", "e", "en", "la", "el", "los", "las", "por", "para", "a", "al", "sin"]);
+            {(() => {
+              const connectors = new Set([
+                'con',
+                'de',
+                'del',
+                'y',
+                'e',
+                'en',
+                'la',
+                'el',
+                'los',
+                'las',
+                'por',
+                'para',
+                'a',
+                'al',
+                'sin',
+              ]);
               const words = getRutaNombre(ruta).trim().split(/\s+/);
-              const lastWord = words[words.length - 1] ?? "";
-              const secondToLast = words.length > 1 ? words[words.length - 2] : "";
-              const hasPrefixConnector = connectors.has(secondToLast.toLowerCase()) && words.length > 2;
-              const mainText = hasPrefixConnector ? words.slice(0, -2).join(" ") : words.slice(0, -1).join(" ");
-              const prefixText = hasPrefixConnector ? secondToLast + " " : "";
+              const lastWord = words[words.length - 1] ?? '';
+              const secondToLast = words.length > 1 ? words[words.length - 2] : '';
+              const hasPrefixConnector =
+                connectors.has(secondToLast.toLowerCase()) && words.length > 2;
+              const mainText = hasPrefixConnector
+                ? words.slice(0, -2).join(' ')
+                : words.slice(0, -1).join(' ');
+              const prefixText = hasPrefixConnector ? secondToLast + ' ' : '';
               return (
-                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black mb-8 tracking-tight leading-[1.05]">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl xl:text-7xl font-black mb-7 tracking-tight leading-[1.02]">
                   <span className="block text-white">{mainText}</span>
                   <span className="block">
                     {prefixText && <span className="text-white">{prefixText}</span>}
-                    <span className={`text-transparent bg-clip-text bg-gradient-to-r ${accent.textGrad}`}>{lastWord}</span>
+                    <span
+                      className={`text-transparent bg-clip-text bg-gradient-to-r ${accent.textGrad}`}
+                    >
+                      {lastWord}
+                    </span>
                   </span>
                 </h1>
               );
             })()}
 
-          <p className="text-slate-400 text-base sm:text-lg md:text-xl font-light max-w-2xl leading-relaxed mb-10 mx-auto lg:mx-0">
-            {ruta?.descripcion || "Domina las tecnologías más demandadas con un plan de estudio diseñado por expertos de la industria."}
-          </p>
+            <p className="text-slate-400 text-base sm:text-lg md:text-xl font-light max-w-xl leading-relaxed mb-7 mx-auto lg:mx-0">
+              {ruta?.descripcion ||
+                'Domina las tecnologías más demandadas con un plan de estudio diseñado por expertos de la industria.'}
+            </p>
 
-          <div className="flex flex-wrap justify-center lg:justify-start gap-6">
-            <div className="flex items-center gap-3 bg-white/5 px-6 py-3 rounded-2xl border border-white/5">
-              <span className={`${accent.text} font-black italic`}>01.</span>
-              <span className="text-xs font-bold uppercase tracking-widest text-slate-300">Nivel {ruta?.nivel || "Experto"}</span>
-            </div>
-            <div className="flex items-center gap-3 bg-white/5 px-6 py-3 rounded-2xl border border-white/5">
-              <span className={`${accent.text} font-black italic`}>02.</span>
-              <span className="text-xs font-bold uppercase tracking-widest text-slate-300">{ruta?.horas_totales || "40+"} Horas</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Right image */}
-        <div className="relative group">
-          {heroImages.length > 0 ? (
-            <div className="relative aspect-[4/3] rounded-[3rem] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] border border-white/10 backdrop-blur-3xl">
-              <img
-                src={heroImages[slide]}
-                className="w-full h-full object-cover transition-all duration-1000 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-              <div className="absolute bottom-10 left-10 right-10 flex justify-between items-end">
-                <div className="flex gap-2">
-                  {heroImages.map((_, i) => (
-                    <div
-                      key={i}
-                      className={`h-1 rounded-full transition-all duration-500 ${slide === i ? `w-8 ${accent.slideDot}` : "w-2 bg-white/20"}`}
-                      onClick={() => setSlide(i)}
-                    />
-                  ))}
-                </div>
+            {/* Route meta */}
+            <div className="flex flex-wrap justify-center lg:justify-start gap-3 mb-8">
+              <div className="flex items-center gap-3 bg-white/[0.035] px-4 sm:px-5 py-3 rounded-xl border border-white/8 backdrop-blur-sm">
+                <span className={`${accent.text} text-[10px] font-black tracking-widest`}>01.</span>
+                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.14em] text-slate-300">
+                  Nivel {ruta?.nivel || 'Experto'}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 bg-white/[0.035] px-4 sm:px-5 py-3 rounded-xl border border-white/8 backdrop-blur-sm">
+                <span className={`${accent.text} text-[10px] font-black tracking-widest`}>02.</span>
+                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.14em] text-slate-300">
+                  {ruta?.horas_totales || '40+'} Horas
+                </span>
               </div>
             </div>
-          ) : (
-            <div className="aspect-[4/3] bg-white/5 rounded-[3rem] animate-pulse border border-white/10" />
-          )}
 
-          {/* Floating rating */}
-          <div className={`absolute -bottom-10 -right-10 ${accent.float} backdrop-blur-xl border border-white/10 p-8 rounded-3xl hidden md:block animate-bounce-slow`}>
-            <div className="text-3xl font-black text-white italic tracking-tighter">4.9/5</div>
-            <div className={`text-[10px] font-bold ${accent.text} uppercase tracking-widest mt-1`}>Rating Global</div>
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3 sm:gap-4">
+              <button
+                type="button"
+                onClick={() =>
+                  document
+                    .getElementById('plan-estudio')
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+                className={`group/hero relative overflow-hidden px-7 sm:px-8 py-4 rounded-xl bg-gradient-to-r ${accent.btnGradient} text-white font-black uppercase tracking-[0.16em] text-[10px] sm:text-xs shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl`}
+              >
+                <span className="relative z-10 flex items-center justify-center gap-3">
+                  Ver plan de estudio
+                  <span className="transition-transform duration-300 group-hover/hero:translate-x-1">
+                    →
+                  </span>
+                </span>
+              </button>
+
+              {!isOwned && (
+                <button
+                  type="button"
+                  onClick={onAddToCart}
+                  disabled={adding}
+                  className="px-7 sm:px-8 py-4 rounded-xl bg-white/[0.025] border border-white/10 text-slate-200 font-black uppercase tracking-[0.16em] text-[10px] sm:text-xs transition-all duration-300 hover:bg-white/[0.07] hover:border-white/20 hover:-translate-y-0.5 disabled:opacity-60"
+                >
+                  {adding ? 'Procesando...' : 'Obtener acceso'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Right: visual */}
+          <div className="relative w-full max-w-[620px] mx-auto lg:ml-auto group">
+            <div
+              className={`absolute -inset-4 ${accent.glow1} blur-3xl rounded-[2.5rem] opacity-70 pointer-events-none`}
+            />
+
+            {heroImages.length > 0 ? (
+              <div className="relative aspect-[16/11] sm:aspect-[16/10] rounded-[2rem] lg:rounded-[2.5rem] overflow-hidden shadow-[0_35px_90px_-30px_rgba(0,0,0,0.85)] border border-white/10 bg-white/[0.02]">
+                <img
+                  src={heroImages[slide]}
+                  className="w-full h-full object-cover transition-all duration-1000 group-hover:scale-[1.025]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#03070c]/90 via-transparent to-black/10" />
+                <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7 flex items-end justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    {heroImages.map((_, i) => (
+                      <button
+                        type="button"
+                        aria-label={`Ver imagen ${i + 1}`}
+                        key={i}
+                        className={`h-1 rounded-full transition-all duration-500 cursor-pointer ${slide === i ? `w-8 ${accent.slideDot}` : 'w-2 bg-white/30 hover:bg-white/50'}`}
+                        onClick={() => setSlide(i)}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Integrated rating */}
+                  <div className="bg-[#07131c]/80 backdrop-blur-xl border border-white/10 rounded-2xl px-4 sm:px-5 py-3 text-right shadow-xl">
+                    <div className="flex items-baseline justify-end gap-1">
+                      <span className="text-xl sm:text-2xl font-black text-white italic tracking-tighter">
+                        4.9
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-bold">/5</span>
+                    </div>
+                    <div
+                      className={`text-[8px] sm:text-[9px] font-black ${accent.text} uppercase tracking-[0.18em] mt-0.5`}
+                    >
+                      Rating global
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="relative aspect-[16/11] sm:aspect-[16/10] bg-white/[0.03] rounded-[2rem] lg:rounded-[2.5rem] animate-pulse border border-white/10" />
+            )}
           </div>
         </div>
       </header>
 
       {/* ─── PLAN DE ESTUDIO ───────────────────────────────────────────────── */}
-      <section className="relative mt-32 max-w-7xl mx-auto w-full">
+      <section
+        id="plan-estudio"
+        className="relative mt-28 lg:mt-32 max-w-7xl mx-auto w-full scroll-mt-24"
+      >
         {/* Glows */}
-        <div className={`absolute top-0 left-0 w-[500px] h-[500px] ${accent.sectionGlow} rounded-full blur-[140px] -z-10 pointer-events-none`} />
-        <div className={`absolute bottom-0 right-0 w-[400px] h-[400px] ${accent.glow2} rounded-full blur-[130px] -z-10 pointer-events-none`} />
+        <div
+          className={`absolute top-0 left-0 w-[500px] h-[500px] ${accent.sectionGlow} rounded-full blur-[140px] -z-10 pointer-events-none`}
+        />
+        <div
+          className={`absolute bottom-0 right-0 w-[400px] h-[400px] ${accent.glow2} rounded-full blur-[130px] -z-10 pointer-events-none`}
+        />
 
-        <div className="flex items-end justify-between mb-16 px-4">
+        <div className="flex items-end justify-between mb-12 md:mb-14 px-4">
           <div>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-black uppercase tracking-tighter italic font-['Outfit'] mb-2">
-              Plan de{" "}
-              <span className="text-transparent" style={{ WebkitTextStroke: `1px ${accent.stroke}` }}>
+              Plan de{' '}
+              <span
+                className="text-transparent"
+                style={{ WebkitTextStroke: `1px ${accent.stroke}` }}
+              >
                 Estudio
               </span>
             </h2>
             <div className={`h-1 w-20 ${accent.barBg} rounded-full mb-4`} />
           </div>
           <div className="hidden md:block text-right">
-            <span className="text-5xl font-black text-white/5 italic select-none">ROADMAP</span>
+            <span className="text-5xl lg:text-6xl font-black text-white/[0.035] italic select-none">
+              ROADMAP
+            </span>
           </div>
         </div>
 
@@ -415,44 +562,51 @@ const DetalleRutaPage: React.FC = () => {
             {pasos.map((p, i) => (
               <Link
                 key={i}
-                to={isOwned ? `/video-page/${p.idCurso}` : `/curso/${p.curso?.slug || createSlug(p.titulo)}`}
-                className={`group block relative bg-white/[0.03] border border-white/8 rounded-[2.5rem] overflow-hidden transition-all duration-500 ${accent.hoverBorder} hover:bg-white/[0.05] hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)]`}
+                to={
+                  isOwned
+                    ? `/video-page/${p.idCurso}`
+                    : `/curso/${p.curso?.slug || createSlug(p.titulo)}`
+                }
+                className={`group block relative bg-white/[0.03] border border-white/8 rounded-[2.5rem] overflow-hidden transition-all duration-500 ${accent.hoverBorder} hover:-translate-y-2 hover:bg-white/[0.05] hover:shadow-[0_35px_70px_-20px_rgba(0,0,0,0.7)]`}
               >
                 {/* Image */}
                 <div className="aspect-video relative overflow-hidden">
                   <img
                     src={
                       p?.curso?.imagen
-                        ? p.curso.imagen.startsWith("http")
+                        ? p.curso.imagen.startsWith('http')
                           ? p.curso.imagen
-                          : `${API_URL}/${p.curso.imagen.startsWith("/") ? p.curso.imagen.slice(1) : p.curso.imagen}`
-                        : "/placeholder.jpg"
+                          : `${API_URL}/${p.curso.imagen.startsWith('/') ? p.curso.imagen.slice(1) : p.curso.imagen}`
+                        : '/placeholder.jpg'
                     }
                     loading="lazy"
                     className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#03070c] via-transparent to-transparent" />
 
-                  {/* Module badge */}
-                  <div className={`absolute top-6 left-6 px-4 py-1.5 ${accent.badgeBg} border backdrop-blur-xl rounded-full text-[9px] font-black ${accent.text} uppercase tracking-widest`}>
-                    Módulo {p.n < 10 ? `0${p.n}` : p.n}
-                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#03070c] via-transparent to-transparent" />
                 </div>
 
                 {/* Content */}
                 <div className="p-8">
-                  <h3 className={`text-2xl font-bold mb-4 line-clamp-2 leading-tight transition-colors ${accent.hoverTitle}`}>
+                  <h3
+                    className={`text-2xl font-bold mb-4 line-clamp-2 leading-tight transition-colors ${accent.hoverTitle}`}
+                  >
                     {p.titulo}
                   </h3>
                   <p className="text-slate-500 text-sm line-clamp-2 mb-8 font-light leading-relaxed group-hover:text-slate-400 transition-colors">
-                    {p.curso?.descripcion_corta || "Explora los conceptos fundamentales y avanzados de este módulo especializado."}
+                    {p.curso?.descripcion_corta ||
+                      'Explora los conceptos fundamentales y avanzados de este módulo especializado.'}
                   </p>
 
                   <div className="flex items-center justify-between pt-6 border-t border-white/5">
-                    <span className={`text-[10px] font-black uppercase tracking-widest ${isOwned ? "text-emerald-400" : accent.text}`}>
-                      {isOwned ? "Acceso de por vida" : "Ver Detalles"}
+                    <span
+                      className={`text-[10px] font-black uppercase tracking-widest ${isOwned ? 'text-emerald-400' : accent.text}`}
+                    >
+                      {isOwned ? 'Acceso de por vida' : 'Ver Detalles'}
                     </span>
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all ${isOwned ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500" : `${accent.badgeBg} border ${accent.text} group-hover:${accent.barBg.replace("bg-", "bg-")}`}`}>
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all duration-300 group-hover:translate-x-1 group-hover:scale-110 ${isOwned ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white' : `${accent.badgeBg} ${accent.text} ${accent.hoverBg}`}`}
+                    >
                       →
                     </div>
                   </div>
@@ -461,47 +615,73 @@ const DetalleRutaPage: React.FC = () => {
             ))}
           </div>
         ) : (
-          <p className="text-gray-400 py-10 text-lg px-4">Esta ruta aún no tiene cursos asignados.</p>
+          <p className="text-gray-400 py-10 text-lg px-4">
+            Esta ruta aún no tiene cursos asignados.
+          </p>
         )}
       </section>
 
       {/* ─── MEMBRESÍA / CTA ───────────────────────────────────────────────── */}
       <section className="w-full mt-24 grid lg:grid-cols-2 gap-12 items-center max-w-7xl mx-auto">
-        <div className={`relative p-6 sm:p-12 rounded-[2rem] sm:rounded-[3rem] overflow-hidden transition-all duration-700 ${isOwned ? "bg-gradient-to-br from-emerald-500/10 via-black/40 to-emerald-900/10 border-emerald-500/30" : `bg-gradient-to-br ${accent.glow1.replace("/10", "/5")} via-black/40 ${accent.glow1.replace("/10", "/5")} ${accent.badgeBg.split(" ")[1]?.replace("border-", "border-") || "border-white/10"}`} border backdrop-blur-2xl shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] group/card text-center`}>
+        <div
+          className={`relative p-6 sm:p-12 rounded-[2rem] sm:rounded-[3rem] overflow-hidden transition-all duration-700 ${isOwned ? 'bg-gradient-to-br from-emerald-500/10 via-black/40 to-emerald-900/10 border-emerald-500/30' : `bg-gradient-to-br ${accent.glow1.replace('/10', '/5')} via-black/40 ${accent.glow1.replace('/10', '/5')} ${accent.badgeBg.split(' ')[1]?.replace('border-', 'border-') || 'border-white/10'}`} border backdrop-blur-2xl shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] group/card text-center`}
+        >
           {/* Glows */}
-          <div className={`absolute -top-24 -right-24 w-48 h-48 ${isOwned ? "bg-emerald-500/20" : accent.glow1} blur-[100px] rounded-full`} />
-          <div className={`absolute -bottom-24 -left-24 w-48 h-48 ${isOwned ? "bg-emerald-500/10" : accent.glow2} blur-[100px] rounded-full`} />
+          <div
+            className={`absolute -top-24 -right-24 w-48 h-48 ${isOwned ? 'bg-emerald-500/20' : accent.glow1} blur-[100px] rounded-full`}
+          />
+          <div
+            className={`absolute -bottom-24 -left-24 w-48 h-48 ${isOwned ? 'bg-emerald-500/10' : accent.glow2} blur-[100px] rounded-full`}
+          />
 
           <div className="relative z-10">
-            <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border mb-8 ${isOwned ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : `${accent.badgeBg} ${accent.text}`} text-[10px] font-black uppercase tracking-[0.2em]`}>
+            <div
+              className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border mb-8 ${isOwned ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : `${accent.badgeBg} ${accent.text}`} text-[10px] font-black uppercase tracking-[0.2em]`}
+            >
               <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-              {isOwned ? "Acceso Estudiante" : "Membresía Premium"}
+              {isOwned ? 'Acceso Estudiante' : 'Membresía Premium'}
             </div>
 
             <h2 className="text-3xl sm:text-4xl font-black mb-6 tracking-tight uppercase font-['Outfit'] leading-tight">
-              <span className="block text-white">{isOwned ? "¡Ya es" : "Acceso"}</span>
-              <span className={`block text-transparent bg-clip-text bg-gradient-to-r ${isOwned ? "from-emerald-300 to-emerald-500" : accent.ctaText}`}>
-                {isOwned ? "Tuya!" : "Completo"}
+              <span className="block text-white">{isOwned ? '¡Ya es' : 'Acceso'}</span>
+              <span
+                className={`block text-transparent bg-clip-text bg-gradient-to-r ${isOwned ? 'from-emerald-300 to-emerald-500' : accent.ctaText}`}
+              >
+                {isOwned ? 'Tuya!' : 'Completo'}
               </span>
             </h2>
 
             {!isOwned && (
-              <div className="text-4xl font-black text-white mb-6 font-['Outfit']">
-                {labelPrecio}
+              <div className="mb-7">
+                <div className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500 mb-2">
+                  Pago único
+                </div>
+                <div className="text-5xl sm:text-6xl font-black text-white font-['Outfit'] tracking-tight">
+                  {labelPrecio}
+                </div>
               </div>
             )}
 
             <p className="text-slate-400 text-lg font-light mb-10 max-w-sm mx-auto leading-relaxed">
               {isOwned
-                ? "Tienes acceso ilimitado a todos los cursos y futuras actualizaciones de esta ruta."
+                ? 'Tienes acceso ilimitado a todos los cursos y futuras actualizaciones de esta ruta.'
                 : `Únete a los más de ${contador} estudiantes que ya están transformando su carrera.`}
             </p>
 
             <div className="grid grid-cols-2 gap-4 mb-12 max-w-md mx-auto">
-              {["Cursos", "Soporte", "Material", "Diploma"].map((label, i) => (
-                <div key={i} className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-4 hover:bg-white/10 transition-colors">
-                  <span className={`text-xl font-bold ${isOwned ? "text-emerald-400" : accent.text}`}>✓</span>
-                  <span className="text-xs font-bold uppercase tracking-widest text-slate-300">{label}</span>
+              {['Cursos', 'Soporte', 'Material', 'Diploma'].map((label, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-4 hover:bg-white/10 transition-colors"
+                >
+                  <span
+                    className={`text-xl font-bold ${isOwned ? 'text-emerald-400' : accent.text}`}
+                  >
+                    ✓
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-slate-300">
+                    {label}
+                  </span>
                 </div>
               ))}
             </div>
@@ -516,11 +696,19 @@ const DetalleRutaPage: React.FC = () => {
               }}
               disabled={adding}
               className="w-full group/btn relative py-6 rounded-[2rem] overflow-hidden transition-all duration-500 active:scale-95"
-              style={{ boxShadow: `0 20px 40px -10px ${isOwned ? "rgba(16,185,129,0.35)" : accent.btnShadowRgba}` }}
+              style={{
+                boxShadow: `0 20px 40px -10px ${isOwned ? 'rgba(16,185,129,0.35)' : accent.btnShadowRgba}`,
+              }}
             >
-              <div className={`absolute inset-0 bg-gradient-to-r ${isOwned ? "from-emerald-600 to-teal-500" : accent.btnGradient} group-hover/btn:scale-105 transition-transform duration-500`} />
+              <div
+                className={`absolute inset-0 bg-gradient-to-r ${isOwned ? 'from-emerald-600 to-teal-500' : accent.btnGradient} group-hover/btn:scale-105 transition-transform duration-500`}
+              />
               <span className="relative z-10 text-white font-black uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-3">
-                {adding ? "Procesando..." : isOwned ? "Continuar Aprendiendo" : "Obtener acceso ahora"}
+                {adding
+                  ? 'Procesando...'
+                  : isOwned
+                    ? 'Continuar Aprendiendo'
+                    : 'Obtener acceso ahora'}
                 <span className="group-hover/btn:translate-x-1 transition-transform">→</span>
               </span>
             </button>
@@ -537,20 +725,24 @@ const DetalleRutaPage: React.FC = () => {
           </h3>
 
           <p className="text-slate-400 text-base sm:text-lg md:text-xl leading-relaxed mb-10 font-light max-w-xl mx-auto lg:mx-0">
-            Accede a todos los cursos, recursos, soporte y módulos de esta ruta.
-            Aprende a tu ritmo desde cualquier dispositivo y obtén tu acreditación oficial.
+            Accede a todos los cursos, recursos, soporte y módulos de esta ruta. Aprende a tu ritmo
+            desde cualquier dispositivo y obtén tu acreditación oficial.
           </p>
 
           <div className="flex justify-center lg:justify-start">
             <div className="space-y-6 text-left inline-block">
               {[
-                "Contenido actualizado semanalmente",
-                "Soporte directo con mentores",
-                "Descarga de materiales exclusivos",
-                "Validación de conocimientos práctica",
+                'Contenido actualizado semanalmente',
+                'Soporte directo con mentores',
+                'Descarga de materiales exclusivos',
+                'Validación de conocimientos práctica',
               ].map((txt, i) => (
                 <div key={i} className="flex items-center gap-4 group/item">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all ${accent.checkItem} group-hover/item:text-black`}>✓</div>
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all ${accent.checkItem} group-hover/item:text-black`}
+                  >
+                    ✓
+                  </div>
                   <span className="text-slate-300 font-medium tracking-wide">{txt}</span>
                 </div>
               ))}
@@ -560,11 +752,15 @@ const DetalleRutaPage: React.FC = () => {
       </section>
 
       {/* ─── CERTIFICACIÓN ─────────────────────────────────────────────────── */}
-      <section className="w-full mt-40 mb-32 max-w-7xl mx-auto px-4">
+      <section className="w-full mt-28 lg:mt-32 mb-24 lg:mb-28 max-w-7xl mx-auto px-4">
         <div className="relative bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-[2rem] sm:rounded-[4rem] p-6 sm:p-12 md:p-20 overflow-hidden backdrop-blur-3xl shadow-2xl">
           {/* Glows */}
-          <div className={`absolute top-0 right-0 w-96 h-96 ${accent.sectionGlow} blur-[100px] rounded-full -z-10`} />
-          <div className={`absolute bottom-0 left-0 w-64 h-64 ${accent.glow2} blur-[100px] rounded-full -z-10`} />
+          <div
+            className={`absolute top-0 right-0 w-96 h-96 ${accent.sectionGlow} blur-[100px] rounded-full -z-10`}
+          />
+          <div
+            className={`absolute bottom-0 left-0 w-64 h-64 ${accent.glow2} blur-[100px] rounded-full -z-10`}
+          />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
             <div className="relative order-2 lg:order-1">
@@ -580,28 +776,43 @@ const DetalleRutaPage: React.FC = () => {
             </div>
 
             <div className="order-1 lg:order-2 text-center lg:text-left mb-12 lg:mb-0">
-              <div className={`inline-flex items-center gap-3 px-4 py-2 ${accent.certBadge} border rounded-2xl mb-8`}>
-                <span className={`text-[10px] font-black tracking-[0.3em] ${accent.text} uppercase`}>Reconocimiento Global</span>
+              <div
+                className={`inline-flex items-center gap-3 px-4 py-2 ${accent.certBadge} border rounded-2xl mb-8`}
+              >
+                <span
+                  className={`text-[10px] font-black tracking-[0.3em] ${accent.text} uppercase`}
+                >
+                  Reconocimiento Global
+                </span>
               </div>
 
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-8 tracking-tight uppercase font-['Outfit']">
                 Tu Éxito Merece ser <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-500">Certificado</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-500">
+                  Certificado
+                </span>
               </h2>
 
               <p className="text-slate-400 text-lg leading-relaxed mb-12 font-light">
-                Al finalizar esta ruta recibirás un certificado digital con tecnología de validación única,
-                listo para compartir en LinkedIn y potenciar tu empleabilidad.
+                Al finalizar esta ruta recibirás un certificado digital con tecnología de validación
+                única, listo para compartir en LinkedIn y potenciar tu empleabilidad.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 {[
-                  { t: "Oficial", d: "Acreditado por MIS" },
-                  { t: "Global", d: "Válido internacional" },
-                  { t: "Único", d: "Código QR seguro" },
+                  { t: 'Oficial', d: 'Acreditado por MIS' },
+                  { t: 'Global', d: 'Válido internacional' },
+                  { t: 'Único', d: 'Código QR seguro' },
                 ].map((item, i) => (
-                  <div key={i} className="bg-white/5 border border-white/5 rounded-3xl p-6 hover:bg-white/10 transition-all group/feat">
-                    <p className={`${accent.certFeat} font-black text-xs uppercase tracking-widest mb-2 group-hover/feat:scale-110 transition-transform`}>{item.t}</p>
+                  <div
+                    key={i}
+                    className="bg-white/5 border border-white/5 rounded-3xl p-6 hover:bg-white/10 transition-all group/feat"
+                  >
+                    <p
+                      className={`${accent.certFeat} font-black text-xs uppercase tracking-widest mb-2 group-hover/feat:scale-110 transition-transform`}
+                    >
+                      {item.t}
+                    </p>
                     <p className="text-slate-500 text-[10px] font-bold leading-tight">{item.d}</p>
                   </div>
                 ))}

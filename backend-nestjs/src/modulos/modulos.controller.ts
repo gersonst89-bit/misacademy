@@ -61,6 +61,21 @@ export class AdminModulosController {
     );
   }
 
+  @Get('check-order')
+  checkOrder(
+    @Query('id_curso', ParseIntPipe) idCurso: number,
+    @Query('orden', ParseIntPipe) orden: number,
+    @Query('exclude_id') excludeId?: string,
+  ) {
+    return this.modulosService
+      .existsByCursoAndOrden(
+        idCurso,
+        orden,
+        excludeId ? Number(excludeId) : undefined,
+      )
+      .then((exists) => ({ exists }));
+  }
+
   @Post()
   create(@Body() dto: CreateModuloDto) {
     return this.modulosService.create(dto);

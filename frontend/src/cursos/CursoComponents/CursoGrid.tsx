@@ -1,14 +1,20 @@
-import React, { useState, useEffect } from "react";
-import CourseCard from "./CursoCard";
-import { apiUrl } from "../../config/api";
-import { apiClient } from "../../services/apiClient";
-import { motion, AnimatePresence } from "framer-motion";
-import { Search, Filter, Sparkles, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchLineas } from '../../store/academicSlice';
+import CourseCard from './CursoCard';
+import { apiClient } from '../../services/apiClient';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Filter, Sparkles, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface LineaAcademica {
   id_linea_academica: number;
   nombre: string;
   estado: string;
+}
+
+interface CursosProps {
+  initialData?: any[];
+  initialTotalPages?: number;
 }
 
 const ITEMS_PER_PAGE = 8;
@@ -30,7 +36,7 @@ const itemVariants = {
     y: 0,
     scale: 1,
     transition: {
-      type: "spring" as const,
+      type: 'spring' as const,
       stiffness: 100,
       damping: 15,
     },
@@ -44,134 +50,275 @@ const itemVariants = {
 };
 
 const createSlug = (title: string): string => {
-  if (!title) return "";
+  if (!title) return '';
+
   return title
     .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9 -]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9 -]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
 };
 
-const Cursos: React.FC<{ initialData?: any[] }> = ({ initialData }) => {
+const Cursos: React.FC<CursosProps> = ({ initialData, initialTotalPages = 1 }) => {
   const sectionRef = React.useRef<HTMLElement>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const dispatch = useDispatch<any>();
+
+  const { lineas } = useSelector((state: any) => state.academic);
+  const [searchQuery, setSearchQuery] = useState('');
   const [courses, setCourses] = useState<any[]>(initialData || []);
-  const [lineas, setLineas] = useState<LineaAcademica[]>([]);
   const [selectedLinea, setSelectedLinea] = useState<number | null>(null);
-  const [loading, setLoading] = useState<boolean>(!initialData);
+
+  const [loading, setLoading] = useState<boolean>(!initialData || initialData.length === 0);
+
+  const [pageLoading, setPageLoading] = useState(false);
+  const [loadingAllCourses, setLoadingAllCourses] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
-  const [lineaCursoIds, setLineaCursoIds] = useState<Map<number, Set<number>>>(new Map());
+
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Cuando es false, solo tenemos la página actual.
+  // Cuando es true, courses contiene todo el catálogo.
+  const [allCoursesLoaded, setAllCoursesLoaded] = useState(false);
+
+  const [serverTotalPages, setServerTotalPages] = useState(initialTotalPages);
+
+  /**
+   * Mantener sincronizado el contenido inicial recibido desde CursosPage.
+   */
   useEffect(() => {
     if (initialData) {
       setCourses(initialData);
+      setCurrentPage(1);
       setLoading(false);
+      setAllCoursesLoaded(false);
     }
+  }, [initialData, initialTotalPages]);
 
-    const fetchCourses = async () => {
-      if (initialData) return;
-      setLoading(true);
-      try {
-        let allCourses: any[] = [];
-        let page = 1;
-        let lastPage = 1;
+  /**
+   * Cargar una página concreta del catálogo.
+   * Esto reemplaza la carga automática de todas las páginas.
+   */
+  const fetchCoursePage = async (page: number) => {
+    try {
+      setPageLoading(true);
+      setError(null);
 
-        do {
-          const response = await apiClient.get(`/cursos?page=${page}`).catch((err: any) => {
-            throw new Error(err?.response?.data?.message || err?.message || "Error al cargar los cursos");
-          });
+      const params = new URLSearchParams({
+        page: String(page),
+      });
 
-          const data = response.data;
-          const cursosPagina = data.data || [];
-          allCourses = [...allCourses, ...cursosPagina];
-
-          lastPage = data.last_page || 1;
-          page++;
-        } while (page <= lastPage);
-
-        setCourses(allCourses);
-      } catch (err: any) {
-        console.error("Error al cargar cursos:", err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
+      if (selectedLinea !== null) {
+        params.set('id_linea_academica', String(selectedLinea));
       }
-    };
 
-    const fetchLineas = async () => {
-      try {
-        const res = await apiClient.get("/lineas-academicas");
-        const data = res.data;
-        const activas = (data.data || []).filter(
-          (l: LineaAcademica) => l.estado === "Publicado"
+      const response = await apiClient.get(`/cursos?${params.toString()}`).catch((err: any) => {
+        throw new Error(
+          err?.response?.data?.message || err?.message || 'Error al cargar los cursos',
         );
-        setLineas(activas);
+      });
 
-        const idMap = new Map<number, Set<number>>();
-        for (const linea of activas as any[]) {
-          const lineaId = linea.id_linea_academica ?? linea.id_linea;
-          const ids = new Set<number>();
-          const rutas = linea.rutas_academicas || linea.rutas || [];
-          for (const ruta of rutas) {
-            const cursos = ruta.cursos || [];
-            for (const c of cursos) {
-              const cid = c.id_curso ?? c.id;
-              if (cid != null) ids.add(Number(cid));
-            }
-          }
-          if (lineaId != null) idMap.set(Number(lineaId), ids);
-        }
-        setLineaCursoIds(idMap);
-      } catch (err) {
-        console.error("Error cargando líneas:", err);
+      const data = response.data;
+      const cursosPagina = data.data || [];
+
+      setCourses(cursosPagina);
+      setServerTotalPages(data.last_page || 1);
+
+      setAllCoursesLoaded(false);
+
+      return cursosPagina;
+    } catch (err: any) {
+      console.error('Error al cargar cursos:', err);
+      setError(err.message);
+      return [];
+    } finally {
+      setPageLoading(false);
+    }
+  };
+
+  /**
+   * Cargar todas las páginas solamente cuando el usuario
+   * realmente necesita búsqueda o filtros.
+   *
+   * Esto conserva la lógica anterior de búsqueda/filtros,
+   * pero evita pagar ese coste durante la carga inicial.
+   */
+  const loadAllCourses = async () => {
+    if (allCoursesLoaded || loadingAllCourses) return;
+
+    try {
+      setLoadingAllCourses(true);
+      setError(null);
+
+      const totalPages = Math.max(initialTotalPages, 1);
+
+      // Si solo existe una página, ya tenemos todo.
+      if (totalPages === 1) {
+        setAllCoursesLoaded(true);
+        return;
       }
-    };
 
-    fetchCourses();
-    fetchLineas();
-  }, [initialData]);
+      const remainingResponses = await Promise.all(
+        Array.from({ length: totalPages - 1 }, (_, index) =>
+          apiClient.get(`/cursos?page=${index + 2}`).catch((err: any) => {
+            throw new Error(
+              err?.response?.data?.message || err?.message || 'Error al cargar los cursos',
+            );
+          }),
+        ),
+      );
 
-  // Reset to page 1 when filters/search change
+      const remainingCourses = remainingResponses.flatMap((response) => response.data?.data || []);
+
+      const firstPageCourses = initialData || [];
+
+      const allCourses = [...firstPageCourses, ...remainingCourses];
+
+      setCourses(allCourses);
+      setAllCoursesLoaded(true);
+    } catch (err: any) {
+      console.error('Error al cargar todos los cursos:', err);
+      setError(err.message);
+    } finally {
+      setLoadingAllCourses(false);
+    }
+  };
+
+  useEffect(() => {
+    dispatch(fetchLineas());
+  }, [dispatch]);
+
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedLinea]);
 
+    // Filtro por línea: el backend devuelve directamente
+    // los cursos correspondientes a esa línea.
+    if (selectedLinea !== null) {
+      fetchCoursePage(1);
+      return;
+    }
+
+    // Al volver a "Todos", recuperamos la primera página
+    // normal del catálogo.
+    if (!searchQuery.trim()) {
+      fetchCoursePage(1);
+      return;
+    }
+
+    // La búsqueda de texto sigue usando el catálogo completo.
+    if (!allCoursesLoaded) {
+      loadAllCourses();
+    }
+  }, [selectedLinea, searchQuery]);
+
+  /**
+   * Si la carga inicial aún no llegó, dejamos la página en estado loading.
+   */
+  useEffect(() => {
+    if (!loading) {
+      window.scrollTo(0, 0);
+    }
+  }, [loading]);
+
+  /**
+   * Filtrado local.
+   *
+   * Cuando allCoursesLoaded=false:
+   *   courses = página actual.
+   *
+   * Cuando allCoursesLoaded=true:
+   *   courses = catálogo completo.
+   */
   const filteredCourses = courses.filter((course) => {
-    if (course.estado?.toLowerCase() !== "publicado") return false;
+    if (course.estado?.toLowerCase() !== 'publicado') {
+      return false;
+    }
 
-    const lowercasedQuery = searchQuery.toLowerCase();
-    const nombre = course.nombre || "";
-    const descripcion = course.descripcion || course.descripcion_corta || "";
+    const lowercasedQuery = searchQuery.toLowerCase().trim();
+
+    const nombre = course.nombre || '';
+    const descripcion = course.descripcion || course.descripcion_corta || '';
+
     const matchesSearch =
       nombre.toLowerCase().includes(lowercasedQuery) ||
       descripcion.toLowerCase().includes(lowercasedQuery);
 
-    if (selectedLinea === null) return matchesSearch;
+    if (selectedLinea === null) {
+      return matchesSearch;
+    }
 
-    const allowedIds = lineaCursoIds.get(selectedLinea);
-    const courseId = Number(course.id_curso ?? course.id);
+    /**
+     * Los cursos vienen acompañados por sus rutas.
+     * Usamos esa relación para determinar la línea académica.
+     */
     const matchesLinea =
-      (allowedIds != null && allowedIds.has(courseId)) ||
-      (Array.isArray(course.rutas) && course.rutas.some((r: any) => Number(r.id_linea_academica ?? r.id_linea) === selectedLinea));
+      Array.isArray(course.rutas) &&
+      course.rutas.some((r: any) => Number(r.id_linea_academica ?? r.id_linea) === selectedLinea);
 
     return matchesSearch && matchesLinea;
   });
 
-  const totalPages = Math.ceil(filteredCourses.length / ITEMS_PER_PAGE);
-  const paginatedCourses = filteredCourses.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  /**
+   * En modo normal, la API controla la paginación.
+   * En modo búsqueda/filtro, paginamos localmente sobre
+   * todos los cursos cargados.
+   */
+  const totalPages = allCoursesLoaded
+    ? Math.max(1, Math.ceil(filteredCourses.length / ITEMS_PER_PAGE))
+    : Math.max(serverTotalPages, 1);
 
-  const goToPage = (page: number) => {
+  const paginatedCourses = allCoursesLoaded
+    ? filteredCourses.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+    : filteredCourses;
+
+  /**
+   * Cambiar de página.
+   *
+   * Sin filtros:
+   *   solicita solamente la página elegida.
+   *
+   * Con filtros:
+   *   cambia la página localmente.
+   */
+  const goToPage = async (page: number) => {
+    if (page < 1 || page > totalPages) {
+      return;
+    }
+
+    if (page === currentPage) {
+      return;
+    }
+
     setCurrentPage(page);
+
+    if (!allCoursesLoaded) {
+      await fetchCoursePage(page);
+    }
+
     if (sectionRef.current) {
-      sectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      sectionRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
     }
   };
+
+  if (loading) {
+    return (
+      <section className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-20 relative">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="aspect-[4/5] rounded-[2rem] bg-white/5 animate-pulse border border-white/5"
+            />
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section ref={sectionRef} className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-20 relative">
@@ -193,10 +340,17 @@ const Cursos: React.FC<{ initialData?: any[] }> = ({ initialData }) => {
             <div className="w-8 h-8 bg-sky-500/10 rounded-lg flex items-center justify-center">
               <Sparkles size={16} className="text-sky-400" />
             </div>
-            <span className="text-[10px] font-black tracking-[0.3em] text-sky-400 uppercase">Catálogo de Excelencia</span>
+
+            <span className="text-[10px] font-black tracking-[0.3em] text-sky-400 uppercase">
+              Catálogo de Excelencia
+            </span>
           </motion.div>
+
           <h2 className="text-5xl lg:text-6xl font-black text-white tracking-tight leading-none italic pr-4">
-            Nuestros <span className="text-gradient-sky drop-shadow-[0_0_10px_rgba(14,165,233,0.3)]">Cursos</span>
+            Nuestros{' '}
+            <span className="text-gradient-sky drop-shadow-[0_0_10px_rgba(14,165,233,0.3)]">
+              Cursos
+            </span>
           </h2>
         </div>
 
@@ -204,6 +358,7 @@ const Cursos: React.FC<{ initialData?: any[] }> = ({ initialData }) => {
           <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-sky-500 transition-colors">
             <Search size={18} />
           </div>
+
           <input
             type="text"
             className="premium-input w-full !pl-16 !pr-4 !py-4 text-sm font-medium tracking-tight"
@@ -214,41 +369,47 @@ const Cursos: React.FC<{ initialData?: any[] }> = ({ initialData }) => {
         </div>
       </div>
 
-      {/* Filtros — con fondo diferenciado y separador */}
+      {/* Filtros */}
       <div className="relative z-10 mb-12">
         <div className="bg-white/[0.02] border border-white/5 rounded-2xl px-6 py-5 backdrop-blur-sm">
           <div className="flex items-center gap-3 text-slate-500 mb-4">
             <Filter size={16} />
-            <span className="text-[10px] font-black uppercase tracking-widest">Filtrar por Especialidad</span>
+
+            <span className="text-[10px] font-black uppercase tracking-widest">
+              Filtrar por Especialidad
+            </span>
+
             {filteredCourses.length > 0 && (
               <span className="ml-auto text-[10px] font-bold text-sky-400/70 tracking-widest">
                 {filteredCourses.length} cursos
               </span>
             )}
           </div>
+
           <div className="flex flex-wrap gap-3">
             <button
               onClick={() => setSelectedLinea(null)}
               className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 border ${
                 selectedLinea === null
-                  ? "bg-sky-500 text-white border-sky-400 shadow-[0_0_20px_rgba(14,165,233,0.3)]"
-                  : "bg-white/5 text-slate-400 border-white/5 hover:border-white/20 hover:text-white"
+                  ? 'bg-sky-500 text-white border-sky-400 shadow-[0_0_20px_rgba(14,165,233,0.3)]'
+                  : 'bg-white/5 text-slate-400 border-white/5 hover:border-white/20 hover:text-white'
               }`}
             >
               Todos
             </button>
-            {lineas.map((linea, index) => (
+
+            {lineas.map((linea: LineaAcademica, index: number) => (
               <button
                 key={linea.id_linea_academica || `grid-linea-${index}`}
                 onClick={() =>
                   setSelectedLinea(
-                    selectedLinea === linea.id_linea_academica ? null : linea.id_linea_academica
+                    selectedLinea === linea.id_linea_academica ? null : linea.id_linea_academica,
                   )
                 }
                 className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 border ${
                   selectedLinea === linea.id_linea_academica
-                    ? "bg-sky-500 text-white border-sky-400 shadow-[0_0_20px_rgba(14,165,233,0.3)]"
-                    : "bg-white/5 text-slate-400 border-white/5 hover:border-white/20 hover:text-white"
+                    ? 'bg-sky-500 text-white border-sky-400 shadow-[0_0_20px_rgba(14,165,233,0.3)]'
+                    : 'bg-white/5 text-slate-400 border-white/5 hover:border-white/20 hover:text-white'
                 }`}
               >
                 {linea.nombre}
@@ -258,23 +419,23 @@ const Cursos: React.FC<{ initialData?: any[] }> = ({ initialData }) => {
         </div>
       </div>
 
-      {loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="aspect-[4/5] rounded-[2rem] bg-white/5 animate-pulse border border-white/5" />
-          ))}
+      {(pageLoading || loadingAllCourses) && (
+        <div className="flex items-center justify-center mb-6">
+          <div className="w-6 h-6 border-2 border-sky-500/20 border-t-sky-500 rounded-full animate-spin" />
         </div>
       )}
 
       {error && (
         <div className="flex flex-col items-center justify-center py-20 text-center bg-rose-500/5 rounded-[3rem] border border-rose-500/20">
           <AlertCircle size={48} className="text-rose-500 mb-4" />
+
           <p className="text-xl font-bold text-white mb-2">Ops, algo salió mal</p>
+
           <p className="text-rose-400 text-sm">{error}</p>
         </div>
       )}
 
-      {!loading && !error && (
+      {!error && (
         <>
           <motion.div
             variants={containerVariants}
@@ -295,10 +456,10 @@ const Cursos: React.FC<{ initialData?: any[] }> = ({ initialData }) => {
                       title={course.nombre}
                       description={course.descripcion}
                       precio={`S/. ${course.precio}`}
-                      image={course.imagen || "/ejemplo2.jpg"}
+                      image={course.imagen || '/ejemplo2.jpg'}
                       slug={course.slug || createSlug(course.nombre)}
                       cursoId={course.id_curso}
-                      nivel={course.nivel || ""}
+                      nivel={course.nivel || ''}
                     />
                   </motion.div>
                 ))
@@ -313,9 +474,12 @@ const Cursos: React.FC<{ initialData?: any[] }> = ({ initialData }) => {
                   <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6 text-slate-600">
                     <Search size={32} />
                   </div>
+
                   <h3 className="text-2xl font-bold text-white mb-2">Sin resultados</h3>
+
                   <p className="text-slate-500 text-sm max-w-xs">
-                    No pudimos encontrar cursos para "{searchQuery}". Intenta con otra palabra clave.
+                    No pudimos encontrar cursos para "{searchQuery}". Intenta con otra palabra
+                    clave.
                   </p>
                 </motion.div>
               )}
@@ -332,7 +496,7 @@ const Cursos: React.FC<{ initialData?: any[] }> = ({ initialData }) => {
             >
               <button
                 onClick={() => goToPage(currentPage - 1)}
-                disabled={currentPage === 1}
+                disabled={currentPage === 1 || pageLoading || loadingAllCourses}
                 className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:bg-sky-500 hover:text-white hover:border-sky-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-300"
               >
                 <ChevronLeft size={18} />
@@ -342,10 +506,11 @@ const Cursos: React.FC<{ initialData?: any[] }> = ({ initialData }) => {
                 <button
                   key={page}
                   onClick={() => goToPage(page)}
+                  disabled={pageLoading || loadingAllCourses}
                   className={`w-10 h-10 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 border ${
                     page === currentPage
-                      ? "bg-sky-500 text-white border-sky-400 shadow-[0_0_20px_rgba(14,165,233,0.3)]"
-                      : "bg-white/5 text-slate-400 border-white/10 hover:border-white/20 hover:text-white"
+                      ? 'bg-sky-500 text-white border-sky-400 shadow-[0_0_20px_rgba(14,165,233,0.3)]'
+                      : 'bg-white/5 text-slate-400 border-white/10 hover:border-white/20 hover:text-white'
                   }`}
                 >
                   {page}
@@ -354,7 +519,7 @@ const Cursos: React.FC<{ initialData?: any[] }> = ({ initialData }) => {
 
               <button
                 onClick={() => goToPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
+                disabled={currentPage === totalPages || pageLoading || loadingAllCourses}
                 className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:bg-sky-500 hover:text-white hover:border-sky-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-300"
               >
                 <ChevronRight size={18} />

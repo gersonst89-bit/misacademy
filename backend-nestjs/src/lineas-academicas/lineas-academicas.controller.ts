@@ -25,8 +25,16 @@ export class LineasAcademicasController {
   @Get() findAll(@Query() q: any) {
     return this.svc.findAllLineas(q);
   }
+  @Get('menu')
+  findMenu() {
+    return this.svc.findLineasMenu();
+  }
   @Get('slug/:slug') findBySlug(@Param('slug') s: string) {
     return this.svc.findLineaBySlug(s);
+  }
+  @Get('curso/:idCurso/linea')
+  findLineaByCurso(@Param('idCurso') idCurso: string) {
+    return this.svc.findLineaByCursoId(Number(idCurso));
   }
   @Get(':id') findById(@Param('id') id: number) {
     return this.svc.findLineaById(id);
@@ -55,11 +63,25 @@ export class RutasAcademicasController {
   @Get() findAll(@Query() q: any) {
     return this.svc.findAllRutas(q);
   }
+
+  @Get('slug/:slug')
+  findBySlug(@Param('slug') slug: string) {
+    return this.svc.findRutaBySlug(slug);
+  }
+
   @Get('destacadas') destacadas(@Query('limit') l?: number) {
     return this.svc.findRutasDestacadas(l);
   }
   @Get('buscar') buscar(@Query('q') q: string, @Query('page') p?: number) {
     return this.svc.buscarRutas(q, p);
+  }
+  @Get('menu')
+  findMenu() {
+    return this.svc.findRutasMenu();
+  }
+  @Get('admin-list')
+  findAllAdmin(@Query() q: any) {
+    return this.svc.findAllRutasAdmin(q);
   }
   @Get(':id') findById(@Param('id') id: number) {
     return this.svc.findRutaById(id);

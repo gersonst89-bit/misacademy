@@ -6,7 +6,7 @@ const LeftSide: React.FC = () => {
       <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/circles.png')] bg-repeat"></div>
       <div className="relative z-10 text-center">
         <img
-          src="/logomatt.png" // coloca tu logo aquí
+          src="/images/logomatt.webp" // coloca tu logo aquí
           alt="MattInnova Logo"
           className="mx-auto w-40 mb-6"
         />

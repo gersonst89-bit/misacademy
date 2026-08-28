@@ -127,4 +127,25 @@ export class ModulosRepository {
       last_page: Math.ceil(total / safePerPage),
     };
   }
+
+  async existsByCursoAndOrden(
+    idCurso: number,
+    orden: number,
+    excludeId?: number,
+  ): Promise<boolean> {
+    const qb = this.moduloRepo
+      .createQueryBuilder('m')
+      .where('m.id_curso = :idCurso', { idCurso })
+      .andWhere('m.orden = :orden', { orden });
+
+    if (excludeId) {
+      qb.andWhere('m.id_modulo != :excludeId', { excludeId });
+    }
+
+    const count = await qb.getCount();
+
+    return count > 0;
+  }
+
+  
 }

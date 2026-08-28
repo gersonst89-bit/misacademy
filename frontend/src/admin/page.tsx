@@ -139,10 +139,14 @@ export default function AdminLayout() {
         setUserData(p.user || p);
 
         // Ya no redirigimos aquí, dejamos que el Guardia externo lo maneje
-        if (userRole === 2) {
-          setActiveSection('cursos');
-        } else if (userRole === 1) {
-          setActiveSection('dashboard');
+        const currentTab = searchParams.get('tab');
+
+        if (!currentTab) {
+          if (userRole === 2) {
+            setActiveSection('cursos');
+          } else if (userRole === 1) {
+            setActiveSection('dashboard');
+          }
         }
       })
       .catch((err) => {
@@ -304,7 +308,7 @@ export default function AdminLayout() {
                     <div className="relative">
                       <div className="absolute inset-0 bg-sky-500/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                       <img
-                        src="/logomatt.png"
+                        src="/images/logomatt.webp"
                         alt="Logo"
                         className="h-8 w-auto relative z-10 drop-shadow-[0_0_15px_rgba(14,165,233,0.3)]"
                       />
@@ -322,7 +326,11 @@ export default function AdminLayout() {
                 {isCollapsed && (
                   <div className="relative group">
                     <div className="absolute inset-0 bg-sky-500/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <img src="/logomatt.png" alt="Logo" className="h-8 w-auto relative z-10" />
+                    <img
+                      src="/images/logomatt.webp"
+                      alt="Logo"
+                      className="h-8 w-auto relative z-10"
+                    />
                   </div>
                 )}
 

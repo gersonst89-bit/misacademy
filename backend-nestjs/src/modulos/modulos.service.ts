@@ -23,6 +23,13 @@ export class ModulosService {
   ) {
     return this.modulosRepo.findAll(page, perPage, { query, id_curso, estado });
   }
+  async existsByCursoAndOrden(
+    idCurso: number,
+    orden: number,
+    excludeId?: number,
+  ) {
+    return this.modulosRepo.existsByCursoAndOrden(idCurso, orden, excludeId);
+  }
   async create(dto: CreateModuloDto) {
     return this.modulosRepo.create(dto);
   }
