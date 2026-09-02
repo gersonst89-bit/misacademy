@@ -8,6 +8,9 @@ import {
   IoInformationCircleOutline,
   IoFilterOutline,
   IoTrashOutline,
+  IoQrCodeOutline,
+  IoClose,
+  IoDownloadOutline,
 } from 'react-icons/io5';
 import { FaChevronDown } from 'react-icons/fa';
 import type {
@@ -137,6 +140,89 @@ function FiltroTipo({
   );
 }
 
+function QRCertificadoModal({
+  isOpen,
+  onClose,
+  item,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  item: CertificacionPlus | null;
+}) {
+  if (!isOpen || !item) return null;
+
+  const verificationUrl = `${window.location.origin}/consulta?codigo=${item.codigo_certificado}`;
+  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encodeURIComponent(
+    verificationUrl,
+  )}`;
+
+  const handleDownload = async () => {
+    try {
+      const res = await fetch(qrImageUrl);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `QR-${item.codigo_certificado}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error descargando QR:', err);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm p-8 relative animate-fadeIn">
+        <button
+          onClick={onClose}
+          className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 transition-colors"
+        >
+          <IoClose size={22} />
+        </button>
+
+        <div className="flex flex-col items-center text-center">
+          <div className="flex items-center gap-2 mb-1 text-sky-600">
+            <IoQrCodeOutline size={18} />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+              Código QR de Verificación
+            </span>
+          </div>
+
+          <h3 className="text-lg font-black text-slate-900 mb-1">{item.codigo_certificado}</h3>
+          <p className="text-xs text-slate-400 font-bold mb-6">
+            {item.usuario_nombre || '—'} · {item.curso_nombre || '—'}
+          </p>
+
+          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 mb-6">
+            <img
+              src={qrImageUrl}
+              alt={`QR ${item.codigo_certificado}`}
+              width={220}
+              height={220}
+              className="rounded-lg"
+            />
+          </div>
+
+          <p className="text-[10px] text-slate-400 font-medium mb-6 break-all px-2">
+            {verificationUrl}
+          </p>
+
+          <button
+            onClick={handleDownload}
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-br from-[#0E1C2B] to-[#1a3a5a] text-white px-6 py-3 rounded-2xl font-black uppercase tracking-[0.15em] text-[10px] hover:shadow-xl hover:shadow-slate-900/20 transition-all active:scale-95"
+          >
+            <IoDownloadOutline size={16} />
+            Descargar QR
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Certificados() {
   const [items, setItems] = useState<CertificacionPlus[]>([]);
   const [busqueda, setBusqueda] = useState('');
@@ -155,6 +241,9 @@ export function Certificados() {
 
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [certToDelete, setCertToDelete] = useState<CertificacionPlus | null>(null);
+
+  const [isQrOpen, setIsQrOpen] = useState(false);
+  const [certForQr, setCertForQr] = useState<CertificacionPlus | null>(null);
 
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -354,6 +443,12 @@ export function Certificados() {
     setSelected(c);
     setIsInfoOpen(true);
   };
+
+  const handleVerQr = (c: CertificacionPlus) => {
+    setCertForQr(c);
+    setIsQrOpen(true);
+  };
+
   const handleEditar = (c: CertificacionPlus) => {
     if (c.tipo_certificado !== 'adicional') return;
     setCertToEdit(c as CertificacionAdicional);
@@ -567,6 +662,17 @@ export function Certificados() {
                             className="hover:scale-110 transition-transform"
                           />
                         </button>
+                        <button
+                          onClick={() => handleVerQr(c)}
+                          className="p-2.5 rounded-xl text-indigo-500 hover:bg-indigo-50 transition-all duration-300"
+                          title="Generar QR"
+                        >
+                          <IoQrCodeOutline
+                            size={18}
+                            className="hover:scale-110 transition-transform"
+                          />
+                        </button>
+
                         {c.tipo_certificado === 'adicional' && (
                           <button
                             onClick={() => handleEditar(c)}
@@ -680,6 +786,15 @@ export function Certificados() {
                     <IoInformationCircleOutline size={20} />
                   </button>
 
+                  <button
+                    type="button"
+                    onClick={() => handleVerQr(c)}
+                    className="p-2.5 text-indigo-500 flex-1 flex justify-center"
+                    title="Generar QR"
+                  >
+                    <IoQrCodeOutline size={20} />
+                  </button>
+
                   {c.tipo_certificado === 'adicional' && (
                     <button
                       type="button"
@@ -745,6 +860,8 @@ export function Certificados() {
         onClose={() => setIsInfoOpen(false)}
         item={selected}
       />
+      <QRCertificadoModal isOpen={isQrOpen} onClose={() => setIsQrOpen(false)} item={certForQr} />
+
       <AddCertificadoModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
