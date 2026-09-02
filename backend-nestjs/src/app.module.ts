@@ -34,7 +34,7 @@ import { HealthController } from './health.controller';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      ignoreEnvFile: true,
+      //ignoreEnvFile: true,
       cache: true,
     }),
 

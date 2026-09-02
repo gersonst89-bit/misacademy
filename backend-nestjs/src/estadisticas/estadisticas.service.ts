@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EstadisticasRepository } from './estadisticas.repository';
+
 @Injectable()
 export class EstadisticasService {
   constructor(private readonly repo: EstadisticasRepository) {}
@@ -10,6 +11,10 @@ export class EstadisticasService {
 
   async getEstudiantesPorLinea() {
     return this.repo.getEstudiantesPorLinea();
+  }
+
+  async getEstudiantesInscritosPorMes() {
+    return this.repo.getEstudiantesInscritosPorMes();
   }
 
   async getRetencionMensual() {

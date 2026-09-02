@@ -15,9 +15,9 @@ import {
   LoginDto,
   ForgotPasswordDto,
   ResetPasswordDto,
+  UpdateDniDto,
 } from './dto/auth.dto';
 import { Usuario } from '../entities/usuario.entity';
-
 
 const DUMMY_PASSWORD_HASH =
   '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
@@ -316,6 +316,36 @@ export class AuthService {
     return user;
   }
 
+  async updateDni(userId: number, dto: UpdateDniDto) {
+    const user = await this.authRepo.findById(userId);
+
+    if (!user) {
+      throw new HttpException('Usuario no encontrado', HttpStatus.NOT_FOUND);
+    }
+
+    const dni = dto.dni.trim();
+
+    if (!/^\d{8}$/.test(dni)) {
+      throw new HttpException(
+        'El DNI debe tener exactamente 8 dígitos.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const existingUser = await this.authRepo.findByDni(dni);
+
+    if (existingUser && existingUser.id_usuario !== userId) {
+      throw new HttpException(
+        'El DNI ya está registrado en otra cuenta.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    await this.authRepo.updateDni(userId, dni);
+
+    return this.authRepo.findById(userId);
+  }
+
   async changePassword(user: Usuario) {
     const token = await this.authRepo.createResetToken(user.id_usuario);
 
@@ -398,6 +428,67 @@ export class AuthService {
     }
 
     const payload = { sub: user.id_usuario, email: user.email };
+
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: this.jwtExpiration as any,
+    });
+
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: this.refreshSecret,
+      expiresIn: '7d',
+    });
+
+    await this.authRepo.saveRefreshToken(user.id_usuario, refreshToken);
+
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id_usuario: user.id_usuario,
+        nombre: user.nombre,
+        email: user.email,
+      },
+    };
+  }
+
+  async googleLogin(req: any) {
+    if (!req.user) {
+      throw new HttpException('No user from Google', HttpStatus.BAD_REQUEST);
+    }
+
+    const { email, nombre, apellido, imagen_perfil } = req.user;
+
+    if (!email) {
+      throw new HttpException(
+        'Google no proporcionó un correo electrónico válido.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    let user = await this.authRepo.findByEmail(email);
+
+    if (!user) {
+      user = await this.authRepo.register({
+        email,
+        nombre: nombre || 'Usuario',
+        apellido: apellido || '',
+        password: Math.random().toString(36).slice(-10),
+      });
+
+      await this.authRepo.markEmailVerified(user.id_usuario);
+    }
+
+    // Sincronizar la foto de perfil de Google
+    if (imagen_perfil && user.imagen_perfil !== imagen_perfil) {
+      await this.authRepo.updateAvatar(user.id_usuario, imagen_perfil);
+
+      user.imagen_perfil = imagen_perfil;
+    }
+
+    const payload = {
+      sub: user.id_usuario,
+      email: user.email,
+    };
 
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: this.jwtExpiration as any,

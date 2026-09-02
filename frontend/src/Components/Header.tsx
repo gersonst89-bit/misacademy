@@ -63,33 +63,42 @@ function Header() {
   }, [dispatch]);
 
   useEffect(() => {
-    const userStored = localStorage.getItem('user');
-    if (userStored && !isUserLoggedIn) {
-      apiClient
-        .get(`/auth/profile?t=${Date.now()}`)
-        .then((res) => {
-          const data = res.data;
-          if (data) {
-            setUser(data);
-            setIsUserLoggedIn(true);
+    if (isUserLoggedIn) return;
 
-            apiClient
-              .get('/carrito')
-              .then((resCarrito) => {
-                const cartData = resCarrito.data;
-                setCartCount(cartData?.data?.items?.length || 0);
-              })
-              .catch(() => {
-                setCartCount(0);
-              });
-          } else {
-            localStorage.removeItem('user');
-          }
-        })
-        .catch(() => {
+    apiClient
+      .get(`/auth/profile?t=${Date.now()}`)
+      .then((res) => {
+        const data = res.data;
+
+        if (!data) {
+          setIsUserLoggedIn(false);
+          setUser(null);
           localStorage.removeItem('user');
-        });
-    }
+          return;
+        }
+
+        setUser(data);
+        setIsUserLoggedIn(true);
+
+        // Mantener información básica en localStorage
+        localStorage.setItem('user', JSON.stringify(data));
+
+        apiClient
+          .get('/carrito')
+          .then((resCarrito) => {
+            const cartData = resCarrito.data;
+            setCartCount(cartData?.data?.items?.length || 0);
+          })
+          .catch(() => {
+            setCartCount(0);
+          });
+      })
+      .catch(() => {
+        setIsUserLoggedIn(false);
+        setUser(null);
+        localStorage.removeItem('user');
+        setCartCount(0);
+      });
   }, [isUserLoggedIn]);
 
   useEffect(() => {
@@ -267,7 +276,9 @@ function Header() {
                             user?.nombre || user?.user?.nombre || user?.usuario?.nombre || 'A';
 
                           if (imgPath) {
-                            const finalUrl = `${apiUrl('/').replace(/\/$/, '')}/${imgPath.replace(/^\/?(api\/)?/, '')}`;
+                            const finalUrl = /^https?:\/\//i.test(imgPath)
+                              ? imgPath
+                              : `${apiUrl('/').replace(/\/$/, '')}/${imgPath.replace(/^\/?(api\/)?/, '')}`;
                             return (
                               <img
                                 src={finalUrl}

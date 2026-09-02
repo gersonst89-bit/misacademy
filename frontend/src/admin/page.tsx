@@ -681,7 +681,7 @@ export default function AdminLayout() {
 
         <main
           ref={mainContentRef}
-          className="flex-1 overflow-y-auto bg-[#FDFDFD] sidebar-scrollbar"
+          className="flex-1 overflow-y-auto bg-[#DDF4F8] sidebar-scrollbar"
         >
           <motion.div
             initial={{ opacity: 0, y: 10 }}

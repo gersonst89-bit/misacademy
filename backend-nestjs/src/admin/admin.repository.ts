@@ -6,6 +6,7 @@ import { AuthenticationLog } from '../entities/authentication-log.entity';
 import { Material } from '../entities/material.entity';
 import { Pago } from '../entities/pago.entity';
 import { Reclamacion } from '../entities/reclamacion.entity';
+import { TokenUsuario } from '../entities/token-usuario.entity';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -20,6 +21,8 @@ export class AdminRepository {
     @InjectRepository(Pago) private readonly pagoRepo: Repository<Pago>,
     @InjectRepository(Reclamacion)
     private readonly reclamacionRepo: Repository<Reclamacion>,
+    @InjectRepository(TokenUsuario)
+    private readonly tokenUsuarioRepo: Repository<TokenUsuario>,
   ) {}
 
   // Usuarios
@@ -74,6 +77,12 @@ export class AdminRepository {
     await this.usuarioRepo.update({ id_usuario: id }, { estado: 'Inactivo' });
   }
   async deleteUsuario(id: number) {
+    // Eliminar tokens asociados al usuario
+    await this.tokenUsuarioRepo.delete({ id_usuario: id });
+
+    // Eliminar el usuario.
+    // Las relaciones configuradas con CASCADE / SET NULL
+    // se encargan del resto.
     await this.usuarioRepo.delete({ id_usuario: id });
   }
   async getPagosByUsuario(id: number) {

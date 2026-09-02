@@ -21,7 +21,7 @@ export class SesionUsuario {
   @Column({ type: 'timestamp', nullable: true })
   ultimo_acceso!: Date;
 
-  @ManyToOne(() => Usuario)
+  @ManyToOne(() => Usuario, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'id_usuario' })
   usuario!: Usuario;
 }

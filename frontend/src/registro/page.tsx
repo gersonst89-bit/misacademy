@@ -70,6 +70,10 @@ export default function RegistroPage() {
     window.location.href = `${BASE_URL}/api/auth/github`;
   };
 
+  const handleGoogleLogin = () => {
+    window.location.href = `${BASE_URL}/api/auth/google`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -435,12 +439,13 @@ export default function RegistroPage() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
+                onClick={handleGoogleLogin}
                 className="flex items-center justify-center gap-2 px-4 py-2 bg-white/[0.03] border border-white/10 rounded-2xl hover:bg-white/[0.08] transition-all text-xs font-bold text-white group"
               >
                 <Chrome
                   size={14}
                   className="text-white/60 group-hover:text-white transition-colors"
-                />{' '}
+                />
                 Google
               </button>
               <button

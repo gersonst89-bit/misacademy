@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Body,
   Param,
   Req,
@@ -13,18 +14,25 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
 import { AuthGuard } from '@nestjs/passport';
+
 import { AuthService } from './auth.service';
+
 import {
   RegisterDto,
   LoginDto,
   ForgotPasswordDto,
   ResetPasswordDto,
+  UpdateDniDto,
 } from './dto/auth.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+
 import type { Request, Response, CookieOptions } from 'express';
+
 import { Usuario } from '../entities/usuario.entity';
+
 import { plainToInstance } from 'class-transformer';
+
 import { UserResponseDto, LoginResponseDto } from './dto/user-response.dto';
 
 @Controller('auth')
@@ -34,18 +42,26 @@ export class AuthController {
     private readonly configService: ConfigService,
   ) {}
 
+  // ========================================================================
+  // COOKIES
+  // ========================================================================
+
   private getCookieOptions(): CookieOptions {
     const isProd = this.configService.get<string>('APP_ENV') === 'production';
+
     const cookieOptions: CookieOptions = {
       httpOnly: true,
       secure: isProd,
       sameSite: isProd ? 'none' : 'lax',
       path: '/',
     };
+
     const domain = this.configService.get<string>('COOKIE_DOMAIN');
+
     if (isProd && domain) {
       cookieOptions.domain = domain;
     }
+
     return cookieOptions;
   }
 
@@ -81,20 +97,32 @@ export class AuthController {
     });
   }
 
-  // ========================
+  // ========================================================================
   // REGISTER
-  // ========================
+  // ========================================================================
+
   @Post('register')
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Throttle({
+    default: {
+      limit: 3,
+      ttl: 60000,
+    },
+  })
   async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
-  // ========================
+  // ========================================================================
   // LOGIN
-  // ========================
+  // ========================================================================
+
   @Post('login')
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({
+    default: {
+      limit: 5,
+      ttl: 60000,
+    },
+  })
   async login(
     @Body() dto: LoginDto,
     @Req() req: Request,
@@ -108,13 +136,13 @@ export class AuthController {
 
     const cookieOptions = this.getCookieOptions();
 
-    // ✅ auth_token: mismo TTL que el JWT (15min) para que expiren juntos
+    // auth_token: 15 minutos
     res.cookie('auth_token', result.accessToken, {
       ...cookieOptions,
       maxAge: 15 * 60 * 1000,
     });
 
-    // ✅ refresh_token: 7 días
+    // refresh_token: 7 días
     res.cookie('refresh_token', result.refreshToken, {
       ...cookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -127,12 +155,14 @@ export class AuthController {
     return res.status(200).json(serialized);
   }
 
-  // ========================
+  // ========================================================================
   // LOGOUT
-  // ========================
+  // ========================================================================
+
   @Post('logout')
   async logout(@Req() req: Request, @Res() res: Response) {
     const refreshToken = req.cookies?.['refresh_token'];
+
     const accessToken = req.cookies?.['auth_token'];
 
     let userId: number | undefined;
@@ -145,14 +175,16 @@ export class AuthController {
           userId = Number(payload.sub);
         }
       } catch {
-        // El token puede estar expirado; igualmente continuamos con el logout.
+        // El token puede estar expirado;
+        // igualmente continuamos con logout.
       }
     }
 
     try {
       await this.authService.logout(userId, refreshToken);
     } catch {
-      // Aunque falle la BD, igualmente debemos borrar las cookies.
+      // Aunque falle la BD,
+      // igualmente debemos borrar cookies.
     }
 
     this.clearAuthCookies(res);
@@ -162,18 +194,21 @@ export class AuthController {
     });
   }
 
-  // ========================
+  // ========================================================================
   // VERIFY EMAIL
-  // ========================
+  // ========================================================================
+
   @Get('verify/:token')
   async verify(@Param('token') token: string, @Res() res: Response) {
     const result = await this.authService.verify(token);
+
     return res.redirect(result.redirect);
   }
 
-  // ========================
+  // ========================================================================
   // PASSWORD
-  // ========================
+  // ========================================================================
+
   @Post('forgot-password')
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto);
@@ -184,14 +219,25 @@ export class AuthController {
     return this.authService.resetPassword(dto);
   }
 
-  // ========================
+  // ========================================================================
   // PROFILE
-  // ========================
+  // ========================================================================
+
   @Get('profile')
   @UseGuards(JwtAuthGuard)
   async profile(@CurrentUser() user: Usuario) {
     const profile = await this.authService.getProfile(user.id_usuario);
+
     return plainToInstance(UserResponseDto, profile, {
+      excludeExtraneousValues: true,
+    });
+  }
+  @Patch('profile/dni')
+  @UseGuards(JwtAuthGuard)
+  async updateDni(@CurrentUser() user: Usuario, @Body() dto: UpdateDniDto) {
+    const updatedUser = await this.authService.updateDni(user.id_usuario, dto);
+
+    return plainToInstance(UserResponseDto, updatedUser, {
       excludeExtraneousValues: true,
     });
   }
@@ -208,9 +254,10 @@ export class AuthController {
     return user;
   }
 
-  // ========================
+  // ========================================================================
   // GITHUB LOGIN
-  // ========================
+  // ========================================================================
+
   @Get('github')
   @UseGuards(AuthGuard('github'))
   async githubAuth() {}
@@ -225,12 +272,13 @@ export class AuthController {
 
     const cookieOptions = this.getCookieOptions();
 
-    // ✅ Consistencia con el login normal: auth_token con maxAge de 15min
+    // Access token: 15 minutos
     res.cookie('auth_token', result.accessToken, {
       ...cookieOptions,
       maxAge: 15 * 60 * 1000,
     });
 
+    // Refresh token: 7 días
     res.cookie('refresh_token', result.refreshToken, {
       ...cookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -239,7 +287,43 @@ export class AuthController {
     return res.redirect(`${frontendUrl}/perfil`);
   }
 
+  // ========================================================================
+  // GOOGLE LOGIN
+  // ========================================================================
+
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  async googleAuth() {}
+
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleAuthRedirect(@Req() req: any, @Res() res: Response) {
+    const result = await this.authService.googleLogin(req);
+
+    const frontendUrl =
+      this.configService.get<string>('APP_URL_BASE') || 'http://localhost:5173';
+
+    const cookieOptions = this.getCookieOptions();
+
+    // Access token: 15 minutos
+    res.cookie('auth_token', result.accessToken, {
+      ...cookieOptions,
+      maxAge: 15 * 60 * 1000,
+    });
+
+    // Refresh token: 7 días
+    res.cookie('refresh_token', result.refreshToken, {
+      ...cookieOptions,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return res.redirect(`${frontendUrl}/`);
+  }
+
+  // ========================================================================
   // REFRESH TOKEN
+  // ========================================================================
+
   @Post('refresh')
   async refresh(@Req() req: Request, @Res() res: Response) {
     const refreshToken = req.cookies?.['refresh_token'];
@@ -253,26 +337,28 @@ export class AuthController {
 
       const cookieOptions = this.getCookieOptions();
 
-      // ✅ Actualizar el access token en cookie con maxAge consistente (15m)
+      // Actualizar access token
       res.cookie('auth_token', result.accessToken, {
         ...cookieOptions,
         maxAge: 15 * 60 * 1000,
       });
 
-      // Mantener el refresh token vigente y renovar solo el access token
+      // Mantener refresh token
       res.cookie('refresh_token', result.refreshToken, {
         ...cookieOptions,
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
-      return res.json({ success: true });
+      return res.json({
+        success: true,
+      });
     } catch (error: any) {
       const status =
         error instanceof HttpException
           ? error.getStatus()
           : error?.status || error?.response?.status;
 
-      // Solo cerrar sesión si el backend confirma que el refresh
+      // Solo cerrar sesión si el refresh
       // es inválido, expiró o fue comprometido.
       if (status === 401) {
         const baseOptions = this.getCookieOptions();

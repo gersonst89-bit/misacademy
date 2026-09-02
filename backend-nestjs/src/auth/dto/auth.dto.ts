@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsString,
   MinLength,
+  Matches,
 } from 'class-validator';
 import { Match } from '../../common/decorators/match.decorator';
 
@@ -64,4 +65,12 @@ export class ResetPasswordDto {
   @IsNotEmpty({ message: 'La confirmación de contraseña es requerida' })
   @Match('password', { message: 'Las contraseñas no coinciden' })
   password_confirmation!: string;
+}
+export class UpdateDniDto {
+  @IsNotEmpty({ message: 'El DNI es requerido' })
+  @IsString()
+  @Matches(/^\d{8}$/, {
+    message: 'El DNI debe tener exactamente 8 dígitos',
+  })
+  dni!: string;
 }

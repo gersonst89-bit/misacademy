@@ -16,18 +16,18 @@ export class AuditLog {
   @Column({ nullable: true })
   id_usuario!: number;
 
-  @ManyToOne(() => Usuario)
+  @ManyToOne(() => Usuario, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'id_usuario' })
   usuario!: Usuario;
 
   @Column()
-  action!: string; // e.g., 'CREATE', 'UPDATE', 'DELETE'
+  action!: string;
 
   @Column()
-  module!: string; // e.g., 'cursos', 'pagos', 'auth'
+  module!: string;
 
   @Column({ type: 'text', nullable: true })
-  details!: string; // JSON with changes or relevant info
+  details!: string;
 
   @Column({ nullable: true })
   ip_address!: string;

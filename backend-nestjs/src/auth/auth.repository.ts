@@ -141,6 +141,16 @@ export class AuthRepository {
     );
   }
 
+  async findByDni(dni: string): Promise<Usuario | null> {
+    return this.usuarioRepo.findOne({
+      where: { dni },
+    });
+  }
+
+  async updateDni(userId: number, dni: string): Promise<void> {
+    await this.usuarioRepo.update({ id_usuario: userId }, { dni });
+  }
+
   async saveRefreshToken(userId: number, token: string) {
     const expiration = new Date();
     expiration.setDate(expiration.getDate() + 7);

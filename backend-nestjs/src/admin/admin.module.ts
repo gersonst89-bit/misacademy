@@ -8,11 +8,25 @@ import {
 } from './admin.controller';
 import { AdminService } from './admin.service';
 import { AdminRepository } from './admin.repository';
-import { Usuario, AuthenticationLog, Material, Pago, Reclamacion } from '../entities';
+import {
+  Usuario,
+  AuthenticationLog,
+  Material,
+  Pago,
+  Reclamacion,
+} from '../entities';
+import { TokenUsuario } from '../entities/token-usuario.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Usuario, AuthenticationLog, Material, Pago, Reclamacion]),
+    TypeOrmModule.forFeature([
+      Usuario,
+      AuthenticationLog,
+      Material,
+      Pago,
+      Reclamacion,
+      TokenUsuario,
+    ]),
   ],
   controllers: [
     AdminUsuariosController,
