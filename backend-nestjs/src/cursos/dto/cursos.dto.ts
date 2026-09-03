@@ -49,7 +49,9 @@ export class UpdateCursoDto {
   @IsOptional() @IsString() video_previsualizacion?: string;
   @IsOptional() @IsString() estado?: string;
   @IsOptional() @IsBoolean() destacado?: boolean;
-  @IsOptional() @IsNumber() id_docente?: number;
+  @IsOptional()
+  @IsNumber()
+  id_docente?: number | null;
   @IsOptional() @IsArray() rutas?: number[];
 }
 

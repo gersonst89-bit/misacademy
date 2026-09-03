@@ -1,4 +1,5 @@
 import axios from 'axios';
+
 import { apiClient } from '../services/apiClient';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -8,44 +9,82 @@ const MAX_NETWORK_RETRIES = 3;
 const BASE_BACKOFF_MS = 1000;
 
 let isRefreshing = false;
-let failedQueue: any[] = [];
+let failedQueue: Array<{
+  resolve: (value?: unknown) => void;
+  reject: (reason?: unknown) => void;
+}> = [];
 
-const processQueue = (error: any) => {
+/**
+ * Resuelve/rechaza las peticiones que quedaron esperando
+ * mientras se intentaba renovar la sesión.
+ */
+const processQueue = (error: any = null) => {
   failedQueue.forEach((prom) => {
-    if (error) prom.reject(error);
-    else prom.resolve(null);
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(null);
+    }
   });
+
   failedQueue = [];
 };
 
+/**
+ * Redirección centralizada al login cuando realmente
+ * se confirma que la sesión ya no es válida.
+ */
 const redirectToLogin = () => {
   const path = window.location.pathname;
+
   if (path !== '/login' && path !== '/registro') {
     localStorage.removeItem('user');
+
     window.location.href = '/login?expired=true';
   }
 };
 
+/**
+ * Obtiene una cookie concreta.
+ */
 const getCookie = (name: string): string | null => {
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+
+  if (parts.length === 2) {
+    return parts.pop()?.split(';').shift() || null;
+  }
+
   return null;
 };
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+/**
+ * Espera determinada cantidad de milisegundos.
+ */
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /**
- * Es error de red si Axios no recibió respuesta del servidor
- * (timeout, conexión caída, DNS, CORS de red, etc).
- * NO es error de red si el servidor respondió (aunque sea con 401/500).
+ * Es error de red si Axios NO recibió respuesta HTTP.
+ *
+ * Ejemplos:
+ * - timeout
+ * - DNS
+ * - conexión caída
+ * - CORS que impide obtener respuesta
+ *
+ * Si el servidor respondió con 401/403/500, esto NO es
+ * considerado error de red.
  */
 const isNetworkError = (error: any) => !error?.response;
 
 /**
- * Intenta refrescar la sesión. Reintenta automáticamente ante fallos de red
- * (con backoff exponencial). Solo lanza una excepción "definitiva" cuando
- * el backend responde explícitamente que el refresh token es inválido.
+ * Intenta renovar la sesión.
+ *
+ * Reintenta únicamente cuando realmente no hubo respuesta
+ * del servidor.
+ *
+ * Si el backend responde explícitamente 401/403/etc.,
+ * ese error se propaga inmediatamente.
  */
 const attemptRefreshWithRetry = async (): Promise<void> => {
   let lastError: any = null;
@@ -55,114 +94,288 @@ const attemptRefreshWithRetry = async (): Promise<void> => {
       await axios.post(
         `${API_URL}/auth/refresh`,
         {},
-        { withCredentials: true, timeout: REFRESH_TIMEOUT_MS },
+        {
+          withCredentials: true,
+          timeout: REFRESH_TIMEOUT_MS,
+        },
       );
-      return; // éxito
+
+      // Refresh exitoso
+      return;
     } catch (err: any) {
       lastError = err;
 
-      // Rechazo EXPLÍCITO del backend (token inválido/expirado/reutilizado)
-      // -> no tiene sentido reintentar, hay que cerrar sesión ya.
+      /**
+       * El backend respondió.
+       *
+       * No reintentamos porque ya tenemos una respuesta
+       * explícita del servidor.
+       */
       if (err?.response) {
         throw err;
       }
 
-      // Error de red -> reintentar con backoff, salvo que sea el último intento
+      /**
+       * No hubo respuesta: problema de red.
+       * Se reintenta con backoff exponencial.
+       */
       if (attempt < MAX_NETWORK_RETRIES) {
         await sleep(BASE_BACKOFF_MS * Math.pow(2, attempt));
-        continue;
       }
     }
   }
 
-  // Se agotaron los reintentos por problemas de red (nunca hubo respuesta del server)
+  /**
+   * Se agotaron todos los reintentos y nunca
+   * obtuvimos una respuesta HTTP.
+   */
   throw lastError;
 };
 
+/**
+ * Configura interceptores para una instancia de Axios.
+ */
 const setupInterceptorsForInstance = (instance: any) => {
-  instance.interceptors.request.use((config: any) => {
-    config.withCredentials = true;
+  /**
+   * ============================
+   * REQUEST INTERCEPTOR
+   * ============================
+   */
+  instance.interceptors.request.use(
+    (config: any) => {
+      /**
+       * Las peticiones necesitan cookies de sesión.
+       */
+      config.withCredentials = true;
 
-    const method = String(config.method || 'get').toLowerCase();
-    const isUnsafeMethod = ['post', 'put', 'patch', 'delete'].includes(method);
+      const method = String(config.method || 'get').toLowerCase();
 
-    if (isUnsafeMethod && !config.url?.includes('/auth/login')) {
-      const csrfToken = getCookie('XSRF-TOKEN');
+      const isUnsafeMethod = ['post', 'put', 'patch', 'delete'].includes(method);
 
-      if (csrfToken) {
-        config.headers = config.headers || {};
-        config.headers['X-CSRF-Token'] = decodeURIComponent(csrfToken);
+      /**
+       * CSRF solo para métodos inseguros.
+       *
+       * Nunca agregamos el token CSRF al login.
+       */
+      if (isUnsafeMethod && !config.url?.includes('/auth/login')) {
+        const csrfToken = getCookie('XSRF-TOKEN');
+
+        if (csrfToken) {
+          config.headers = config.headers || {};
+
+          config.headers['X-CSRF-Token'] = decodeURIComponent(csrfToken);
+        }
       }
-    }
 
-    return config;
-  });
+      return config;
+    },
+    (error: any) => Promise.reject(error),
+  );
 
+  /**
+   * ============================
+   * RESPONSE INTERCEPTOR
+   * ============================
+   */
   instance.interceptors.response.use(
+    /**
+     * Respuesta correcta: no hacemos nada.
+     */
     (response: any) => response,
-    async (error: any) => {
-      const originalRequest = error.config;
 
-      // Error de red en la petición original: no tocar la sesión.
-      if (!error.response) {
+    /**
+     * Error de respuesta.
+     */
+    async (error: any) => {
+      const originalRequest = error?.config;
+
+      const requestUrl = String(originalRequest?.url || '');
+
+      /**
+       * --------------------------------------------------
+       * CASOS ESPECIALES DE AUTENTICACIÓN
+       * --------------------------------------------------
+       */
+
+      /**
+       * /auth/profile NO debe provocar refresh ni redirect.
+       *
+       * Este endpoint se usa para comprobar si existe sesión.
+       * Si no existe, simplemente debe devolver el error a quien
+       * hizo la petición para que el frontend lo maneje.
+       *
+       * Esto evita:
+       *
+       * /
+       *  ↓
+       * /auth/profile → 401
+       *  ↓
+       * refresh
+       *  ↓
+       * /login?expired=true
+       *
+       * especialmente después de cerrar sesión.
+       */
+      if (requestUrl.includes('/auth/profile')) {
         return Promise.reject(error);
       }
 
+      /**
+       * /auth/logout tampoco debe activar el flujo de refresh.
+       *
+       * Si el usuario ya decidió cerrar sesión, no tiene sentido
+       * intentar renovar la sesión.
+       */
+      if (requestUrl.includes('/auth/logout')) {
+        return Promise.reject(error);
+      }
+
+      /**
+       * Error de red:
+       *
+       * No tocar la sesión.
+       * No refrescar.
+       * No redirigir.
+       */
+      if (!error?.response) {
+        return Promise.reject(error);
+      }
+
+      /**
+       * Solo procesamos 401.
+       *
+       * Un 400, 404, 409, 422, 500, etc. no significa
+       * automáticamente que la sesión haya expirado.
+       */
       if (error.response.status !== 401) {
         return Promise.reject(error);
       }
 
-      if (originalRequest._retry) {
+      /**
+       * Si esta petición ya pasó por el proceso de refresh,
+       * no debemos entrar en un bucle infinito.
+       */
+      if (originalRequest?._retry) {
         return Promise.reject(error);
       }
 
+      /**
+       * Marcamos esta petición como reintentada.
+       */
       originalRequest._retry = true;
 
-      if (originalRequest.url?.includes('/auth/refresh')) {
-        // Esto solo debería ocurrir si el propio /auth/refresh devolvió 401
-        // (rechazo explícito), gracias a que attemptRefreshWithRetry ya
-        // filtró los errores de red antes de llegar aquí.
+      /**
+       * Si el propio endpoint refresh respondió 401,
+       * entonces el refresh token ya no es válido.
+       *
+       * En ese caso sí corresponde cerrar sesión.
+       */
+      if (requestUrl.includes('/auth/refresh')) {
+        localStorage.removeItem('user');
         redirectToLogin();
+
         return Promise.reject(error);
       }
 
+      /**
+       * Login y logout nunca deben entrar en el flujo
+       * de renovación de sesión.
+       *
+       * También evitamos redirecciones estando ya
+       * en login o registro.
+       */
       if (
-        originalRequest.url?.includes('/auth/login') ||
-        originalRequest.url?.includes('/auth/logout') ||
+        requestUrl.includes('/auth/login') ||
+        requestUrl.includes('/auth/logout') ||
         window.location.pathname === '/login' ||
         window.location.pathname === '/registro'
       ) {
         return Promise.reject(error);
       }
 
+      /**
+       * --------------------------------------------------
+       * YA HAY UN REFRESH EN CURSO
+       * --------------------------------------------------
+       *
+       * Las demás peticiones esperan a que termine.
+       */
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
+          failedQueue.push({
+            resolve,
+            reject,
+          });
         })
           .then(() => instance(originalRequest))
           .catch((err) => Promise.reject(err));
       }
 
+      /**
+       * --------------------------------------------------
+       * INICIAR REFRESH
+       * --------------------------------------------------
+       */
       isRefreshing = true;
 
       try {
         await attemptRefreshWithRetry();
 
+        /**
+         * El refresh fue exitoso.
+         *
+         * Liberamos las peticiones pendientes.
+         */
         processQueue(null);
-        return instance(originalRequest);
-      } catch (err: any) {
-        processQueue(err);
 
-        // Solo cerramos sesión si el fallo fue un rechazo EXPLÍCITO
-        // del backend. Si fue error de red persistente, dejamos la
-        // sesión intacta: el usuario reintentará su siguiente acción
-        // cuando la conexión vuelva.
-        if (!isNetworkError(err)) {
+        /**
+         * Reintentamos la petición original.
+         */
+        return instance(originalRequest);
+      } catch (refreshError: any) {
+        /**
+         * El refresh falló.
+         *
+         * Rechazamos todas las peticiones que estaban esperando.
+         */
+        processQueue(refreshError);
+
+        /**
+         * SOLO cerramos sesión cuando el backend
+         * confirma explícitamente que la sesión/token
+         * ya no es válido.
+         *
+         * 401 / 403 = sesión inválida.
+         *
+         * 500 = error de servidor → NO expulsar.
+         * timeout = red → NO expulsar.
+         * DNS = red → NO expulsar.
+         * CORS sin response = red → NO expulsar.
+         */
+        const refreshStatus = refreshError?.response?.status;
+
+        const isAuthFailure = refreshStatus === 401 || refreshStatus === 403;
+
+        if (isAuthFailure) {
           localStorage.removeItem('user');
           redirectToLogin();
+        } else if (isNetworkError(refreshError)) {
+          /**
+           * Problema de red persistente.
+           *
+           * Conservamos la sesión.
+           */
+          console.warn('No se pudo renovar la sesión por un problema de red.', refreshError);
+        } else {
+          /**
+           * El backend respondió con un error distinto de 401/403.
+           *
+           * Conservamos la sesión.
+           */
+          console.error('Error del servidor al renovar la sesión:', refreshError);
         }
 
-        return Promise.reject(err);
+        return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
@@ -170,6 +383,12 @@ const setupInterceptorsForInstance = (instance: any) => {
   );
 };
 
+/**
+ * Configuración global.
+ *
+ * Se mantiene para axios y apiClient,
+ * como ya estaba en tu implementación.
+ */
 export const setupGlobalInterceptors = () => {
   setupInterceptorsForInstance(axios);
   setupInterceptorsForInstance(apiClient);

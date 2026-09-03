@@ -135,8 +135,11 @@ export class CursosService {
           : dto.video_previsualizacion,
       estado: dto.estado,
       destacado: dto.destacado,
-      id_docente: dto.id_docente,
     };
+
+    if (dto.id_docente !== undefined) {
+      updateData.id_docente = dto.id_docente;
+    }
 
     // Remove undefined fields to not overwrite with null if not intended (optional)
     Object.keys(updateData).forEach(

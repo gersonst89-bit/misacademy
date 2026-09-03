@@ -35,6 +35,7 @@ const slugify = (s: string) =>
 function Header() {
   const dispatch = useAppDispatch();
   const { lineas, loading: loadingLineas } = useAppSelector((state) => state.academic);
+
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [lineasHover, setLineasHover] = useState(false);
@@ -54,7 +55,9 @@ function Header() {
     const handleScroll = () => {
       setScrolled(window.scrollY > 30);
     };
+
     window.addEventListener('scroll', handleScroll, { passive: true });
+
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -107,7 +110,9 @@ function Header() {
         setMenuPerfil(false);
       }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
+
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
@@ -129,7 +134,10 @@ function Header() {
   };
 
   const handleMouseEnter = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
     setLineasHover(true);
   };
 
@@ -170,7 +178,7 @@ function Header() {
                 <img
                   src="/images/logomatt.webp"
                   alt="MIS ACADEMY"
-                  className="h-10 md:h-14 relative z-10 drop-shadow-[0_0_20px_rgba(14,165,233,0.4)] group-hover:drop-shadow-[0_0_35px_rgba(14,165,233,0.75)] transition-all duration-500"
+                  className="w-[145px] md:w-[165px] h-auto object-contain relative z-10 drop-shadow-[0_0_20px_rgba(14,165,233,0.4)] group-hover:drop-shadow-[0_0_35px_rgba(14,165,233,0.75)] transition-all duration-500"
                 />
               </Link>
             </div>
@@ -178,10 +186,26 @@ function Header() {
             {/* Navegación Desktop */}
             <nav className="hidden md:flex items-center space-x-1">
               {[
-                { name: 'Inicio', icon: <Home size={16} />, path: '/' },
-                { name: 'Cursos', icon: <RouteIcon size={16} />, path: '/cursos' },
-                { name: 'Líneas', icon: <BookOpen size={16} />, path: '/lineas-academicas' },
-                { name: 'Consulta', icon: <Search size={16} />, path: '/consulta' },
+                {
+                  name: 'Inicio',
+                  icon: <Home size={16} />,
+                  path: '/',
+                },
+                {
+                  name: 'Cursos',
+                  icon: <RouteIcon size={16} />,
+                  path: '/cursos',
+                },
+                {
+                  name: 'Líneas',
+                  icon: <BookOpen size={16} />,
+                  path: '/lineas-academicas',
+                },
+                {
+                  name: 'Consulta',
+                  icon: <Search size={16} />,
+                  path: '/consulta',
+                },
               ].map((item) => {
                 const isActive = location.pathname === item.path;
 
@@ -202,13 +226,16 @@ function Header() {
                     >
                       {item.icon}
                     </span>
+
                     <span className="relative z-10">{item.name}</span>
+
                     {item.name === 'Líneas' && (
                       <ChevronDown
                         size={14}
-                        className={`transition-transform duration-300 group-hover:rotate-180 opacity-40 group-hover:opacity-100`}
+                        className="transition-transform duration-300 group-hover:rotate-180 opacity-40 group-hover:opacity-100"
                       />
                     )}
+
                     {isActive && (
                       <motion.div
                         layoutId="nav-active"
@@ -230,7 +257,9 @@ function Header() {
                   >
                     Entrar
                   </Link>
+
                   <div className="w-px h-5 bg-white/10" />
+
                   <Link
                     to="/registro"
                     className="relative overflow-hidden group px-5 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-white text-sm font-semibold tracking-wider transition-all hover:scale-105 hover:shadow-lg hover:shadow-sky-500/20 active:scale-95"
@@ -248,6 +277,7 @@ function Header() {
                       size={16}
                       className="group-hover:scale-110 transition-transform"
                     />
+
                     {cartCount > 0 && (
                       <motion.span
                         initial={{ scale: 0 }}
@@ -272,13 +302,18 @@ function Header() {
                             user?.imagen_perfil ||
                             user?.user?.imagen_perfil ||
                             user?.usuario?.imagen_perfil;
+
                           const nombre =
                             user?.nombre || user?.user?.nombre || user?.usuario?.nombre || 'A';
 
                           if (imgPath) {
                             const finalUrl = /^https?:\/\//i.test(imgPath)
                               ? imgPath
-                              : `${apiUrl('/').replace(/\/$/, '')}/${imgPath.replace(/^\/?(api\/)?/, '')}`;
+                              : `${apiUrl('/').replace(/\/$/, '')}/${imgPath.replace(
+                                  /^\/?(api\/)?/,
+                                  '',
+                                )}`;
+
                             return (
                               <img
                                 src={finalUrl}
@@ -287,6 +322,7 @@ function Header() {
                               />
                             );
                           }
+
                           return nombre.charAt(0).toUpperCase();
                         })()}
                       </div>
@@ -339,10 +375,12 @@ function Header() {
                   <div className="w-8 h-8 bg-sky-500/10 border border-sky-500/30 rounded-lg flex items-center justify-center">
                     <Sparkles size={14} className="text-sky-400" />
                   </div>
+
                   <h4 className="text-[10px] font-black tracking-[0.3em] text-white uppercase">
                     Especializaciones Académicas
                   </h4>
                 </div>
+
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                   {lineas.map((linea: any, index: number) => (
                     <Link
@@ -354,10 +392,12 @@ function Header() {
                       <div className="w-12 h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-sky-400 group-hover/item:bg-sky-500 group-hover/item:border-sky-400 group-hover/item:text-white transition-all duration-300 font-black text-sm">
                         {linea.nombre.charAt(0)}
                       </div>
+
                       <div className="flex-1">
                         <p className="text-sm font-black text-white group-hover/item:text-sky-400 transition-colors uppercase tracking-tight">
                           {linea.nombre}
                         </p>
+
                         <p className="text-[10px] text-slate-500 font-medium mt-1">
                           Ver rutas académicas
                         </p>

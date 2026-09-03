@@ -404,7 +404,12 @@ export function Cursos() {
 
         destacado: Boolean(cursoActualizado.destacado),
 
-        id_docente: cursoActualizado.id_docente ? Number(cursoActualizado.id_docente) : undefined,
+        id_docente:
+          cursoActualizado.id_docente === null
+            ? null
+            : cursoActualizado.id_docente !== undefined
+              ? Number(cursoActualizado.id_docente)
+              : undefined,
 
         rutas:
           cursoActualizado.rutas?.map((r) => (typeof r === 'number' ? r : (r as any).id_ruta)) ||
@@ -434,11 +439,18 @@ export function Cursos() {
               ? rutasActualizadas
               : cursoAEditar?.rutas || [],
 
-          docente: cursoActualizadoRes.docente || cursoAEditar?.docente || null,
+          docente:
+            cursoActualizadoRes.id_docente === null
+              ? null
+              : cursoActualizadoRes.docente || cursoAEditar?.docente || null,
         };
 
         if (cursoAEditar && cursoAEditar.id_curso === cursoFinal.id_curso) {
           setCursoAEditar(cursoFinal);
+        }
+
+        if (cursoSeleccionado && cursoSeleccionado.id_curso === cursoFinal.id_curso) {
+          setCursoSeleccionado(cursoFinal);
         }
 
         setCursos((prev) => prev.map((c) => (c.id_curso === cursoFinal.id_curso ? cursoFinal : c)));

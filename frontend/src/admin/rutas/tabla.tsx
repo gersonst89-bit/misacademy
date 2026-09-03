@@ -144,7 +144,6 @@ export function RutasAcademicas() {
     fetchRutas();
   }, [pagina, busquedaDebounced, filtroEstado]);
 
-
   const handleEstadoClick = (ruta: RutaAcademica) => {
     setRutaEstado(ruta);
     setIsEstadoModalOpen(true);

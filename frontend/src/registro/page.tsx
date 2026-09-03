@@ -142,8 +142,7 @@ export default function RegistroPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-start relative overflow-y-auto py-8 md:py-12 px-6 md:px-12 lg:px-24 font-sans">
-      {/* Background Image (Fixed for premium parallax effect) */}
+    <div className="min-h-screen flex items-start md:items-center justify-start relative py-4 sm:py-8 md:py-12 px-3 sm:px-6 md:px-12 lg:px-24 font-sans">
       <div className="fixed inset-0 z-0">
         <img
           src="/login.png"
@@ -205,14 +204,14 @@ export default function RegistroPage() {
         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         className="relative w-full max-w-[640px] z-10 md:ml-12 lg:ml-24 xl:ml-40"
       >
-        <div className="bg-black/60 backdrop-blur-xl border border-white/10 shadow-2xl rounded-[2.5rem] p-5 sm:p-6">
+        <div className="bg-black/60 backdrop-blur-xl border border-white/10 shadow-2xl rounded-[2rem] sm:rounded-[2.5rem] p-4 sm:p-6">
           {/* Header */}
-          <div className="text-center mb-2">
-            <Link to="/" className="inline-block mb-2 hover:scale-105 transition-transform">
+          <div className="text-center mb-4 sm:mb-3">
+            <Link to="/" className="inline-block mb-3 sm:mb-4 hover:scale-105 transition-transform">
               <img
                 src="/images/logomatt.webp"
                 alt="Logo"
-                className="h-10 brightness-0 invert opacity-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]"
+                className="h-14 sm:h-20 w-auto brightness-0 invert opacity-100 drop-shadow-[0_0_18px_rgba(255,255,255,0.35)]"
               />
             </Link>
             <h1 className="text-xl font-black font-['Outfit'] text-white uppercase tracking-tight mb-0.5">
@@ -223,8 +222,8 @@ export default function RegistroPage() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-2.5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-['Outfit'] font-bold uppercase tracking-[0.15em] text-sky-100/70 ml-2">
                   Nombres
@@ -267,12 +266,20 @@ export default function RegistroPage() {
             </div>
 
             {/* Nota informativa de Nombres y Apellidos */}
-            <div className="text-[10px] text-white/40 leading-relaxed px-3 flex items-start gap-2">
-              <span className="text-sky-400">💡</span>
+            <div className="text-[9px] sm:text-[10px] text-white/40 leading-relaxed px-3 flex items-start gap-2">
+              <span className="text-sky-400 flex-shrink-0">💡</span>
+
               <span>
-                Ingresa tus nombres y apellidos completos tal como figuran en tu documento de
-                identidad (DNI). Se usarán exactamente así para la firma y emisión de tus
-                certificados oficiales.
+                <span className="sm:hidden">
+                  Escribe tus nombres y apellidos tal como aparecen en tu DNI. Se usarán así en tu
+                  certificado.
+                </span>
+
+                <span className="hidden sm:inline">
+                  Ingresa tus nombres y apellidos completos tal como figuran en tu documento de
+                  identidad (DNI). Se usarán exactamente así para la firma y emisión de tus
+                  certificados oficiales.
+                </span>
               </span>
             </div>
 
@@ -317,7 +324,7 @@ export default function RegistroPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-['Outfit'] font-bold uppercase tracking-[0.15em] text-sky-100/70 ml-2">
                   Contraseña

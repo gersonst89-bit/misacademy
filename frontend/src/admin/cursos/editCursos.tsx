@@ -55,7 +55,6 @@ export const EditCursoModal: React.FC<EditCursoModalProps> = ({
     { id_usuario: number; nombre: string; apellido: string }[]
   >([]);
   const [idDocenteSeleccionado, setIdDocenteSeleccionado] = useState<number | ''>('');
-
   useEffect(() => {
     if (isOpen && curso) {
       setNombre(curso.nombre);
@@ -72,9 +71,9 @@ export const EditCursoModal: React.FC<EditCursoModalProps> = ({
       setNivel(curso.nivel ?? 'Principiante');
       setEstado(curso.estado as any);
       setDestacado(curso.destacado === true || curso.destacado === 1);
+      const docId = curso.id_docente ?? curso.docente?.id_usuario ?? 0;
 
-      const docId = curso.id_docente || curso.docente?.id_usuario || '';
-      setIdDocenteSeleccionado(docId as number | '');
+      setIdDocenteSeleccionado(docId);
 
       if (curso.rutas && curso.rutas.length > 0) {
         const firstRuta = curso.rutas[0];
@@ -138,7 +137,10 @@ export const EditCursoModal: React.FC<EditCursoModalProps> = ({
       nivel,
       estado,
       destacado: !!destacado,
-      id_docente: idDocenteSeleccionado ? Number(idDocenteSeleccionado) : undefined,
+      id_docente:
+        idDocenteSeleccionado === '' || idDocenteSeleccionado === 0
+          ? null
+          : Number(idDocenteSeleccionado),
       fecha_actualizacion: new Date().toISOString(),
       rutas: idRutaSeleccionada ? ([idRutaSeleccionada] as any) : curso.rutas,
     };
@@ -200,15 +202,20 @@ export const EditCursoModal: React.FC<EditCursoModalProps> = ({
               onChange={(e) => setNombre(e.target.value)}
               placeholder="Ej: Especialista en Power BI"
             />
-
             <SearchableSelect
               label="Docente Asignado"
               value={idDocenteSeleccionado}
               onChange={(v) => setIdDocenteSeleccionado(v)}
-              options={docentes.map((d) => ({
-                value: d.id_usuario,
-                label: `${d.nombre} ${d.apellido}`,
-              }))}
+              options={[
+                {
+                  value: 0,
+                  label: 'Sin docente',
+                },
+                ...docentes.map((d) => ({
+                  value: d.id_usuario,
+                  label: `${d.nombre} ${d.apellido}`,
+                })),
+              ]}
               placeholder="Selecciona docente..."
             />
 

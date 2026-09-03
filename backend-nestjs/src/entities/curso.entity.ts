@@ -17,8 +17,8 @@ export class Curso {
   @PrimaryGeneratedColumn({ name: 'id_curso' })
   id_curso!: number;
 
-  @Column()
-  id_docente!: number;
+  @Column({ type: 'int', nullable: true })
+  id_docente!: number | null;
 
   @Column({ length: 200 })
   nombre!: string;
@@ -74,9 +74,9 @@ export class Curso {
   @Column({ type: 'timestamp', nullable: true })
   fecha_actualizacion!: Date;
 
-  @ManyToOne(() => Usuario)
+  @ManyToOne(() => Usuario, { nullable: true })
   @JoinColumn({ name: 'id_docente' })
-  docente!: Usuario;
+  docente!: Usuario | null;
 
   @ManyToMany('RutaAcademica', 'cursos')
   @JoinTable({
