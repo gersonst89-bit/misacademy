@@ -48,9 +48,6 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   background-color: #03070c;
-  background-image:
-    radial-gradient(circle at 100% 100%, hsla(var(--secondary), 0.1) 0%, transparent 40%),
-    radial-gradient(circle at 0% 50%, hsla(var(--accent), 0.05) 0%, transparent 30%);
   color: hsl(var(--text-main));
   font-family: var(--font-body);
   scrollbar-gutter: stable;

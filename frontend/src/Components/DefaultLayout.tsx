@@ -1,11 +1,11 @@
-import React from "react";
-import type { ReactNode } from "react";
-import Header from "./Header";
-import Footer from "./Footer";
-import Chatbot from "./Chatbot";
-import WhatsAppButton from "./WhatsAppButton";
-import { motion, AnimatePresence } from "framer-motion";
-import { useLocation } from "react-router-dom";
+import React from 'react';
+import type { ReactNode } from 'react';
+import Header from './Header';
+import Footer from './Footer';
+import Chatbot from './Chatbot';
+import WhatsAppButton from './WhatsAppButton';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 
 interface DefaultLayoutProps {
   children: ReactNode;
@@ -23,15 +23,19 @@ const DefaultLayout: React.FC<DefaultLayoutProps> = ({ children }) => {
       </div>
 
       <Header />
-      
-      <main className="flex-grow relative z-10 pt-24 md:pt-32">
+
+      <main
+        className={`flex-grow relative z-10 pt-24 md:pt-32 ${
+          location.pathname === '/lineas-academicas' ? 'bg-[#03070c]' : ''
+        }`}
+      >
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
           >
             {children}
           </motion.div>

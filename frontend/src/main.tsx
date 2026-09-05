@@ -9,7 +9,6 @@ import ErrorBoundary from "./Components/ErrorBoundary";
 
 import { ToastProvider } from "./hooks/useToast";
 
-// Iniciar protección global de peticiones (401)
 setupGlobalInterceptors();
 
 createRoot(document.getElementById("root")!).render(
@@ -23,3 +22,4 @@ createRoot(document.getElementById("root")!).render(
     </StrictMode>
   </Provider>
 );
+

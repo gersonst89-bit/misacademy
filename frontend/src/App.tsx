@@ -10,8 +10,6 @@ import DefaultLayout from './Components/DefaultLayout';
 import NoHeaderFooterLayout from './Components/NoHeaderFooterLayout';
 import Preloader from './Components/Preloader';
 
-
-
 // Lazy Loaded Pages & Components
 const Hero = lazy(() => import('./Components/Hero'));
 const WhyChoose = lazy(() => import('./Components/WhyChooseUs'));
@@ -389,3 +387,4 @@ function App() {
 }
 
 export default App;
+
