@@ -44,6 +44,7 @@ const MOSTRAR_DIPLOMA_OFICIAL = false;
 /* =======================
    Helpers
    ======================= */
+
 function fmt(value: any) {
   if (value === null || value === undefined || value === '') return '—';
   return String(value);
@@ -88,8 +89,29 @@ function getCursoNombre(curso: any) {
 }
 
 /* =======================
+   Normalización de búsqueda
+   ======================= */
+
+function quitarTildes(str: string) {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function limpiarBusqueda(str: string, tipoBusqueda: 'nombre' | 'dni' | 'codigo') {
+  let limpio = quitarTildes(str);
+
+  if (tipoBusqueda === 'nombre') {
+    limpio = limpio.replace(/[^a-zA-Z0-9\s]/g, '');
+  } else {
+    limpio = limpio.replace(/[^a-zA-Z0-9\s-]/g, '');
+  }
+
+  return limpio.trim().replace(/\s+/g, ' ');
+}
+
+/* =======================
    Component
    ======================= */
+
 export default function ConsultarCertificado() {
   const [codigo, setCodigo] = useState('');
   const [tipo, setTipo] = useState<'nombre' | 'dni' | 'codigo'>('codigo');
@@ -114,6 +136,7 @@ export default function ConsultarCertificado() {
   /* =======================
      Toast auto hide
      ======================= */
+
   useEffect(() => {
     if (status !== 'idle' && message) {
       setIsMessageVisible(true);
@@ -125,52 +148,13 @@ export default function ConsultarCertificado() {
   }, [status, message]);
 
   /* =======================
-     Campos a mostrar
-     ======================= */
-  const fields = useMemo(
-    () => [
-      {
-        label: 'ID Certificación',
-        getValue: (d: Certificacion) => fmt(d.id_certificacion),
-      },
-      {
-        label: 'Código del Certificado',
-        getValue: (d: Certificacion) => fmt(d.codigo_certificado),
-      },
-      {
-        label: 'Tipo de Certificado',
-        getValue: (d: Certificacion) => getTipoCertificadoLabel(d.tipo_certificado),
-      },
-      {
-        label: 'Fecha de Emisión',
-        getValue: (d: Certificacion) => fmtDate(d.fecha_emision),
-      },
-      {
-        label: 'Calificación Final',
-        getValue: (d: Certificacion) => fmt(d.calificacion_final),
-      },
-      {
-        label: 'Estudiante',
-        getValue: (d: Certificacion) => fmt(d.nombre_estudiante ?? getNombreCompleto(d.usuario)),
-      },
-      {
-        label: 'Correo Electrónico',
-        getValue: (d: Certificacion) => fmt(d.email_destinatario ?? d.usuario?.email),
-      },
-      {
-        label: 'Curso',
-        getValue: (d: Certificacion) => fmt(d.nombre_curso ?? getCursoNombre(d.curso)),
-      },
-    ],
-    [],
-  );
-
-  /* =======================
      Buscar certificados
      ======================= */
+
   const buscar = async (c?: string, explicitTipo?: string) => {
-    const code = (c ?? codigo).trim();
-    const activeTipo = explicitTipo ?? tipo;
+    const activeTipo = (explicitTipo ?? tipo) as 'nombre' | 'dni' | 'codigo';
+
+    const code = limpiarBusqueda((c ?? codigo).trim(), activeTipo);
 
     if (!code) {
       setStatus('error');
@@ -240,6 +224,7 @@ export default function ConsultarCertificado() {
   /* =======================
      Limpiar
      ======================= */
+
   const limpiar = () => {
     setCodigo('');
     setStatus('idle');
@@ -251,6 +236,7 @@ export default function ConsultarCertificado() {
   /* =======================
      Autoload por URL
      ======================= */
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const c = params.get('codigo');
@@ -264,6 +250,7 @@ export default function ConsultarCertificado() {
   /* =======================
      Agrupar por persona
      ======================= */
+
   const certificadosPorPersona = useMemo(() => {
     return data.reduce((acc: Record<string, Certificacion[]>, cert) => {
       const persona = cert.nombre_estudiante ?? getNombreCompleto(cert.usuario) ?? 'Sin nombre';
@@ -282,7 +269,8 @@ export default function ConsultarCertificado() {
     <div className="min-h-screen w-full px-4 sm:px-6 py-4 sm:py-6 lg:py-8 text-white bg-[#03070C] relative overflow-hidden">
       {/* =======================
           Decorative atmosphere
-          ======================= */}
+         ======================= */}
+
       <div className="absolute top-[5%] left-[8%] w-[280px] sm:w-[400px] h-[280px] sm:h-[400px] bg-sky-500/10 rounded-full blur-[110px] sm:blur-[130px] pointer-events-none" />
 
       <div className="absolute top-[38%] right-[5%] w-[240px] sm:w-[360px] h-[240px] sm:h-[360px] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none" />
@@ -292,7 +280,8 @@ export default function ConsultarCertificado() {
       <div className="max-w-5xl mx-auto relative z-10">
         {/* =======================
             Hero / Header
-            ======================= */}
+           ======================= */}
+
         <div className="text-center mb-7 sm:mb-8 pt-0">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-sky-500/15 bg-sky-500/[0.04] backdrop-blur-xl mb-4">
             <FaShieldAlt className="text-sky-400 text-xs" />
@@ -316,7 +305,8 @@ export default function ConsultarCertificado() {
 
         {/* =======================
             Selector de método
-            ======================= */}
+           ======================= */}
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 mb-6 sm:mb-7 max-w-2xl mx-auto bg-white/[0.015] border border-white/10 p-2 rounded-[1.75rem] sm:rounded-3xl backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.2)]">
           {(['codigo', 'dni', 'nombre'] as const).map((t) => {
             const isActive = tipo === t;
@@ -360,7 +350,8 @@ export default function ConsultarCertificado() {
 
         {/* =======================
             Search
-            ======================= */}
+           ======================= */}
+
         <div className="relative mb-5 sm:mb-6">
           <div className="absolute -inset-2 sm:-inset-3 rounded-[2.25rem] bg-sky-500/[0.035] blur-2xl pointer-events-none" />
 
@@ -407,7 +398,8 @@ export default function ConsultarCertificado() {
 
         {/* =======================
             Trust indicators
-            ======================= */}
+           ======================= */}
+
         {status === 'idle' && data.length === 0 && (
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 mb-8 sm:mb-10">
             <div className="flex items-center gap-2 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.15em] text-gray-500">
@@ -435,7 +427,8 @@ export default function ConsultarCertificado() {
 
         {/* =======================
             Toast
-            ======================= */}
+           ======================= */}
+
         {status !== 'idle' && message && (
           <div
             className={`fixed bottom-5 sm:bottom-8 right-4 sm:right-8 left-4 sm:left-auto px-5 sm:px-6 py-3.5 sm:py-4 rounded-2xl border backdrop-blur-xl z-50 transition-all duration-500 shadow-2xl flex items-center gap-3 ${
@@ -466,12 +459,14 @@ export default function ConsultarCertificado() {
 
         {/* =======================
             Resultados
-            ======================= */}
+           ======================= */}
+
         {Object.keys(certificadosPorPersona).length > 0 && (
           <div className="space-y-16 sm:space-y-20 mt-16 sm:mt-20 animate-fadeIn pb-24 sm:pb-32">
             {Object.entries(certificadosPorPersona).map(([persona, certs]) => (
               <div key={persona} className="space-y-7 sm:space-y-8">
                 {/* Nombre del estudiante */}
+
                 <div className="flex items-center gap-3 sm:gap-6">
                   <div className="h-px flex-1 bg-gradient-to-r from-transparent via-sky-500/30 to-transparent" />
 
@@ -486,6 +481,7 @@ export default function ConsultarCertificado() {
                 </div>
 
                 {/* Certificados */}
+
                 <div
                   className={
                     certs.length === 1
@@ -516,9 +512,11 @@ export default function ConsultarCertificado() {
                         className="group relative overflow-hidden rounded-[2rem] sm:rounded-[2.5rem] border border-white/10 bg-white/[0.025] backdrop-blur-3xl shadow-[0_30px_90px_rgba(0,0,0,0.32)] transition-all duration-500 hover:border-sky-500/35 hover:-translate-y-1"
                       >
                         {/* Glow interno */}
+
                         <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-72 h-52 bg-sky-500/[0.06] blur-[90px] pointer-events-none" />
 
                         {/* Botón diploma */}
+
                         {MOSTRAR_DIPLOMA_OFICIAL && (
                           <button
                             onClick={() =>
@@ -534,6 +532,7 @@ export default function ConsultarCertificado() {
 
                         <div className="relative p-6 sm:p-8 lg:p-9">
                           {/* Cabecera */}
+
                           <div className="mb-6 sm:mb-7">
                             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/[0.06] mb-3">
                               <FaCheck className="text-emerald-400 text-[9px]" />
@@ -559,6 +558,7 @@ export default function ConsultarCertificado() {
                           </div>
 
                           {/* Estudiante + Curso */}
+
                           <div className="mb-6 sm:mb-7">
                             <span className="block text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-1.5">
                               Estudiante
@@ -586,8 +586,10 @@ export default function ConsultarCertificado() {
                           </div>
 
                           {/* Datos principales */}
+
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                             {/* Fecha */}
+
                             <div className="rounded-2xl border border-white/8 bg-white/[0.025] p-4 sm:p-5">
                               <div className="flex items-center gap-2 mb-3">
                                 <div className="w-8 h-8 rounded-lg bg-sky-500/[0.08] border border-sky-500/10 flex items-center justify-center">
@@ -605,6 +607,7 @@ export default function ConsultarCertificado() {
                             </div>
 
                             {/* Calificación */}
+
                             <div className="rounded-2xl border border-white/8 bg-white/[0.025] p-4 sm:p-5">
                               <div className="flex items-center gap-2 mb-3">
                                 <div className="w-8 h-8 rounded-lg bg-amber-500/[0.08] border border-amber-500/10 flex items-center justify-center">
@@ -623,6 +626,7 @@ export default function ConsultarCertificado() {
                           </div>
 
                           {/* Correo */}
+
                           <div className="mt-3 sm:mt-4 rounded-2xl border border-white/8 bg-white/[0.025] p-4 sm:p-5">
                             <div className="flex items-center gap-3">
                               <div className="w-9 h-9 rounded-xl bg-sky-500/[0.08] border border-sky-500/10 flex items-center justify-center flex-shrink-0">
@@ -642,6 +646,7 @@ export default function ConsultarCertificado() {
                           </div>
 
                           {/* ID de registro */}
+
                           <div className="mt-4 flex items-center justify-between gap-3">
                             <span className="text-[9px] font-black uppercase tracking-[0.18em] text-gray-500">
                               ID de registro
@@ -654,6 +659,7 @@ export default function ConsultarCertificado() {
                         </div>
 
                         {/* Footer de verificación */}
+
                         <div className="relative border-t border-white/8 bg-white/[0.025] px-6 sm:px-8 py-4 flex items-center justify-between gap-4">
                           <div className="flex items-center gap-2.5">
                             <div className="w-7 h-7 rounded-full bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center">
@@ -684,7 +690,8 @@ export default function ConsultarCertificado() {
 
         {/* =======================
             Sin resultados
-            ======================= */}
+           ======================= */}
+
         {status === 'error' && data.length === 0 && (
           <div className="mt-16 sm:mt-20 text-center animate-fadeIn">
             <div className="relative max-w-xl mx-auto overflow-hidden rounded-[2rem] sm:rounded-[2.5rem] border border-white/10 bg-white/[0.02] backdrop-blur-xl px-6 sm:px-10 py-10 sm:py-12">

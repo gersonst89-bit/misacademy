@@ -22,6 +22,7 @@ interface EditCursoModalProps {
   onClose: () => void;
   curso: Curso;
   onSave: (cursoActualizado: Curso) => Promise<boolean>;
+  isLoading?: boolean;
 }
 
 export const EditCursoModal: React.FC<EditCursoModalProps> = ({
@@ -29,6 +30,7 @@ export const EditCursoModal: React.FC<EditCursoModalProps> = ({
   onClose,
   curso,
   onSave,
+  isLoading = false,
 }) => {
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -55,6 +57,7 @@ export const EditCursoModal: React.FC<EditCursoModalProps> = ({
     { id_usuario: number; nombre: string; apellido: string }[]
   >([]);
   const [idDocenteSeleccionado, setIdDocenteSeleccionado] = useState<number | ''>('');
+
   useEffect(() => {
     if (isOpen && curso) {
       setNombre(curso.nombre);
@@ -71,15 +74,17 @@ export const EditCursoModal: React.FC<EditCursoModalProps> = ({
       setNivel(curso.nivel ?? 'Principiante');
       setEstado(curso.estado as any);
       setDestacado(curso.destacado === true || curso.destacado === 1);
-      const docId = curso.id_docente ?? curso.docente?.id_usuario ?? 0;
 
-      setIdDocenteSeleccionado(docId);
+      const docId = curso.id_docente ?? (curso as any).docente?.id_usuario ?? '';
+      setIdDocenteSeleccionado(docId === '' || docId === null ? '' : Number(docId));
 
       if (curso.rutas && curso.rutas.length > 0) {
         const firstRuta = curso.rutas[0];
-        setIdRutaSeleccionada(
-          typeof firstRuta === 'object' ? (firstRuta as any).id_ruta : (firstRuta as number),
-        );
+        const rutaId =
+          typeof firstRuta === 'object' ? (firstRuta as any).id_ruta : Number(firstRuta);
+        setIdRutaSeleccionada(rutaId || '');
+      } else {
+        setIdRutaSeleccionada('');
       }
     }
   }, [isOpen, curso]);
@@ -137,12 +142,9 @@ export const EditCursoModal: React.FC<EditCursoModalProps> = ({
       nivel,
       estado,
       destacado: !!destacado,
-      id_docente:
-        idDocenteSeleccionado === '' || idDocenteSeleccionado === 0
-          ? null
-          : Number(idDocenteSeleccionado),
+      id_docente: idDocenteSeleccionado === '' ? null : Number(idDocenteSeleccionado),
       fecha_actualizacion: new Date().toISOString(),
-      rutas: idRutaSeleccionada ? ([idRutaSeleccionada] as any) : curso.rutas,
+      rutas: idRutaSeleccionada === '' ? [] : [Number(idRutaSeleccionada)],
     };
 
     setIsSaving(true);
@@ -165,10 +167,10 @@ export const EditCursoModal: React.FC<EditCursoModalProps> = ({
           </div>
           <button
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || isLoading}
             className="w-full md:w-auto bg-gradient-to-br from-[#0E1C2B] to-[#1a3a5a] text-white px-10 py-4 rounded-2xl font-black tracking-tight hover:shadow-2xl hover:shadow-sky-900/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 border border-white/5 text-sm"
           >
-            <IoSaveOutline size={18} /> {isSaving ? 'Cargando...' : 'Guardar Cambios'}
+            <IoSaveOutline size={18} /> {isSaving ? 'Guardando...' : 'Guardar Cambios'}
           </button>
           <button
             onClick={onClose}
@@ -179,218 +181,230 @@ export const EditCursoModal: React.FC<EditCursoModalProps> = ({
         </>
       }
     >
-      <div className="space-y-4 md:space-y-6">
-        {/* Section 1: Basic Info */}
-        <div className="bg-slate-50/40 p-4 rounded-[1.5rem] border border-slate-100/50 space-y-4">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-xl bg-white text-sky-600 flex items-center justify-center shadow-sm border border-sky-100/50">
-              <IoBookOutline size={18} />
-            </div>
-            <div className="flex flex-col">
-              <h3 className="text-[9px] font-black uppercase tracking-[0.25em] text-sky-600/70">
-                Módulo 01
-              </h3>
-              <span className="text-[13px] font-black text-slate-900 tracking-tight">
-                Información Principal
-              </span>
-            </div>
+      <div className="relative">
+        {/* Overlay de carga mientras se obtienen los datos completos */}
+        {isLoading && (
+          <div className="absolute inset-0 z-20 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center gap-3 min-h-[200px]">
+            <div className="w-10 h-10 border-4 border-sky-500/20 border-t-sky-500 rounded-full animate-spin" />
+            <p className="text-sky-500 font-black text-[10px] uppercase tracking-widest animate-pulse">
+              Cargando datos del curso...
+            </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InputComponent
-              label="Nombre del Curso"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              placeholder="Ej: Especialista en Power BI"
-            />
-            <SearchableSelect
-              label="Docente Asignado"
-              value={idDocenteSeleccionado}
-              onChange={(v) => setIdDocenteSeleccionado(v)}
-              options={[
-                {
-                  value: 0,
-                  label: 'Sin docente',
-                },
-                ...docentes.map((d) => ({
-                  value: d.id_usuario,
-                  label: `${d.nombre} ${d.apellido}`,
-                })),
-              ]}
-              placeholder="Selecciona docente..."
-            />
-
-            <SearchableSelect
-              label="Ruta Académica"
-              value={idRutaSeleccionada}
-              onChange={(v) => setIdRutaSeleccionada(v)}
-              options={rutas.map((r) => ({ value: r.id_ruta, label: r.nombre }))}
-              placeholder="Selecciona ruta..."
-            />
-
-            <SelectComponent
-              label="Nivel"
-              value={nivel}
-              onChange={(e) => setNivel(e.target.value)}
-              options={[
-                { value: 'Principiante', label: 'Principiante' },
-                { value: 'Intermedio', label: 'Intermedio' },
-                { value: 'Avanzado', label: 'Avanzado' },
-              ]}
-            />
-          </div>
-        </div>
-
-        {/* Section 2: Descriptions */}
-        <div className="bg-slate-50/40 p-4 rounded-[1.5rem] border border-slate-100/50 space-y-4">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-xl bg-white text-emerald-600 flex items-center justify-center shadow-sm border border-emerald-100/50">
-              <IoLayersOutline size={18} />
-            </div>
-            <div className="flex flex-col">
-              <h3 className="text-[9px] font-black uppercase tracking-[0.25em] text-emerald-600/70">
-                Módulo 02
-              </h3>
-              <span className="text-[13px] font-black text-slate-900 tracking-tight">
-                Contenido y Medios
-              </span>
-            </div>
-          </div>
-
-          <TextareaComponent
-            label="Descripción General (Breve)"
-            maxLength={300}
-            value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
-            placeholder="Breve resumen..."
-            className="h-28"
-          />
-
-          <InputComponent
-            label="Descripción Corta"
-            maxLength={150}
-            value={descripcionCorta}
-            onChange={(e) => setDescripcionCorta(e.target.value)}
-            placeholder="Subtítulo o frase corta"
-          />
-
-          <TextareaComponent
-            label="Descripción Detallada"
-            maxLength={5000}
-            value={descripcionLarga}
-            onChange={(e) => setDescripcionLarga(e.target.value)}
-            placeholder="Contenido extenso..."
-            className="h-36"
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <InputComponent
-              label="Imagen de Portada (URL)"
-              value={imagen}
-              onChange={(e) => setImagen(e.target.value)}
-              placeholder="URL de la imagen"
-            />
-            <InputComponent
-              label="Video Promocional (URL)"
-              value={video}
-              onChange={(e) => setVideo(e.target.value)}
-              placeholder="URL del video"
-            />
-          </div>
-
-          <TextareaComponent
-            label="Lo que aprenderás (separar ítems por comas)"
-            maxLength={1000}
-            value={loQueAprenderas}
-            onChange={(e) => setLoQueAprenderas(e.target.value)}
-            placeholder="Ej: Dominar Power BI desde cero, Crear dashboards interactivos, Automatizar reportes"
-            className="h-28"
-          />
-
-          <TextareaComponent
-            label="Requisitos Previos (separar ítems por comas)"
-            maxLength={1000}
-            value={requisitos}
-            onChange={(e) => setRequisitos(e.target.value)}
-            placeholder="Ej: Conocimientos básicos de Excel, Computadora con Windows 10 u 11"
-            className="h-28"
-          />
-        </div>
-
-        {/* Section 3: Specs and Pricing */}
-        <div className="bg-slate-50/40 p-4 rounded-[1.5rem] border border-slate-100/50 space-y-4">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-xl bg-white text-amber-600 flex items-center justify-center shadow-sm border border-amber-100/50">
-              <IoTimeOutline size={18} />
-            </div>
-            <div className="flex flex-col">
-              <h3 className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600/70">
-                Módulo 03
-              </h3>
-              <span className="text-[13px] font-black text-slate-900 tracking-tight">
-                Detalles de Valor
-              </span>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <InputComponent
-              label="Duración (Horas)"
-              type="number"
-              value={duracion}
-              onChange={(e) => setDuracion(e.target.value)}
-              placeholder="Ej: 40"
-            />
-            <InputComponent
-              label="Semanas Est."
-              type="number"
-              value={tiempo}
-              onChange={(e) => setTiempo(e.target.value)}
-              placeholder="Ej: 4"
-            />
-            <InputComponent
-              label="Precio (S/)"
-              type="number"
-              value={precio}
-              onChange={(e) => setPrecio(e.target.value)}
-              placeholder="Ej: 199.00"
-            />
-          </div>
-        </div>
-
-        {/* Section 4: Settings */}
-        <div className="pt-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-8">
-            <SelectComponent
-              label="Estado del Curso"
-              value={estado}
-              onChange={(e) => setEstado(e.target.value as any)}
-              options={[
-                { value: 'Publicado', label: 'Publicado' },
-                { value: 'Activo', label: 'Activo (Borrador)' },
-                { value: 'Inactivo', label: 'Inactivo' },
-                { value: 'Archivado', label: 'Archivado' },
-              ]}
-              className="!py-2.5 !px-5 text-sm"
-            />
-
-            <label className="flex items-center gap-3 cursor-pointer group pt-6">
-              <div className="relative">
-                <input
-                  type="checkbox"
-                  checked={destacado}
-                  onChange={(e) => setDestacado(e.target.checked)}
-                  className="sr-only"
-                />
-                <div
-                  className={`w-12 h-6 rounded-full transition-colors ${destacado ? 'bg-sky-500' : 'bg-gray-200'}`}
-                />
-                <div
-                  className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${destacado ? 'translate-x-6' : ''}`}
-                />
+        )}
+        <div className="space-y-4 md:space-y-6">
+          {/* Section 1: Basic Info */}
+          <div className="bg-slate-50/40 p-4 rounded-[1.5rem] border border-slate-100/50 space-y-4">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-9 h-9 rounded-xl bg-white text-sky-600 flex items-center justify-center shadow-sm border border-sky-100/50">
+                <IoBookOutline size={18} />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-sky-600 transition-colors">
-                ¿Destacado?
-              </span>
-            </label>
+              <div className="flex flex-col">
+                <h3 className="text-[9px] font-black uppercase tracking-[0.25em] text-sky-600/70">
+                  Módulo 01
+                </h3>
+                <span className="text-[13px] font-black text-slate-900 tracking-tight">
+                  Información Principal
+                </span>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <InputComponent
+                label="Nombre del Curso"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                placeholder="Ej: Especialista en Power BI"
+              />
+
+              <SearchableSelect
+                label="Docente Asignado"
+                value={idDocenteSeleccionado}
+                onChange={(v) => setIdDocenteSeleccionado(v)}
+                options={[
+                  { value: '', label: 'Sin docente' },
+                  ...docentes.map((d) => ({
+                    value: d.id_usuario,
+                    label: `${d.nombre} ${d.apellido}`,
+                  })),
+                ]}
+                placeholder="Selecciona docente..."
+              />
+
+              <SearchableSelect
+                label="Ruta Académica"
+                value={idRutaSeleccionada}
+                onChange={(v) => setIdRutaSeleccionada(v)}
+                options={[
+                  { value: '', label: 'Curso libre / Sin ruta' },
+                  ...rutas.map((r) => ({ value: r.id_ruta, label: r.nombre })),
+                ]}
+                placeholder="Selecciona ruta..."
+              />
+
+              <SelectComponent
+                label="Nivel"
+                value={nivel}
+                onChange={(e) => setNivel(e.target.value)}
+                options={[
+                  { value: 'Principiante', label: 'Principiante' },
+                  { value: 'Intermedio', label: 'Intermedio' },
+                  { value: 'Avanzado', label: 'Avanzado' },
+                ]}
+              />
+            </div>
+          </div>
+
+          {/* Section 2: Descriptions */}
+          <div className="bg-slate-50/40 p-4 rounded-[1.5rem] border border-slate-100/50 space-y-4">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-9 h-9 rounded-xl bg-white text-emerald-600 flex items-center justify-center shadow-sm border border-emerald-100/50">
+                <IoLayersOutline size={18} />
+              </div>
+              <div className="flex flex-col">
+                <h3 className="text-[9px] font-black uppercase tracking-[0.25em] text-emerald-600/70">
+                  Módulo 02
+                </h3>
+                <span className="text-[13px] font-black text-slate-900 tracking-tight">
+                  Contenido y Medios
+                </span>
+              </div>
+            </div>
+
+            <TextareaComponent
+              label="Descripción General (Breve)"
+              maxLength={300}
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              placeholder="Breve resumen..."
+              className="h-28"
+            />
+
+            <InputComponent
+              label="Descripción Corta"
+              maxLength={150}
+              value={descripcionCorta}
+              onChange={(e) => setDescripcionCorta(e.target.value)}
+              placeholder="Subtítulo o frase corta"
+            />
+
+            <TextareaComponent
+              label="Descripción Detallada"
+              maxLength={5000}
+              value={descripcionLarga}
+              onChange={(e) => setDescripcionLarga(e.target.value)}
+              placeholder="Contenido extenso..."
+              className="h-36"
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <InputComponent
+                label="Imagen de Portada (URL)"
+                value={imagen}
+                onChange={(e) => setImagen(e.target.value)}
+                placeholder="URL de la imagen"
+              />
+              <InputComponent
+                label="Video Promocional (URL)"
+                value={video}
+                onChange={(e) => setVideo(e.target.value)}
+                placeholder="URL del video"
+              />
+            </div>
+
+            <TextareaComponent
+              label="Lo que aprenderás (separar ítems por comas)"
+              maxLength={1000}
+              value={loQueAprenderas}
+              onChange={(e) => setLoQueAprenderas(e.target.value)}
+              placeholder="Ej: Dominar Power BI desde cero, Crear dashboards interactivos, Automatizar reportes"
+              className="h-28"
+            />
+
+            <TextareaComponent
+              label="Requisitos Previos (separar ítems por comas)"
+              maxLength={1000}
+              value={requisitos}
+              onChange={(e) => setRequisitos(e.target.value)}
+              placeholder="Ej: Conocimientos básicos de Excel, Computadora con Windows 10 u 11"
+              className="h-28"
+            />
+          </div>
+
+          {/* Section 3: Specs and Pricing */}
+          <div className="bg-slate-50/40 p-4 rounded-[1.5rem] border border-slate-100/50 space-y-4">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-9 h-9 rounded-xl bg-white text-amber-600 flex items-center justify-center shadow-sm border border-amber-100/50">
+                <IoTimeOutline size={18} />
+              </div>
+              <div className="flex flex-col">
+                <h3 className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-600/70">
+                  Módulo 03
+                </h3>
+                <span className="text-[13px] font-black text-slate-900 tracking-tight">
+                  Detalles de Valor
+                </span>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <InputComponent
+                label="Duración (Horas)"
+                type="number"
+                value={duracion}
+                onChange={(e) => setDuracion(e.target.value)}
+                placeholder="Ej: 40"
+              />
+              <InputComponent
+                label="Semanas Est."
+                type="number"
+                value={tiempo}
+                onChange={(e) => setTiempo(e.target.value)}
+                placeholder="Ej: 4"
+              />
+              <InputComponent
+                label="Precio (S/)"
+                type="number"
+                value={precio}
+                onChange={(e) => setPrecio(e.target.value)}
+                placeholder="Ej: 199.00"
+              />
+            </div>
+          </div>
+
+          {/* Section 4: Settings */}
+          <div className="pt-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-8">
+              <SelectComponent
+                label="Estado del Curso"
+                value={estado}
+                onChange={(e) => setEstado(e.target.value as any)}
+                options={[
+                  { value: 'Publicado', label: 'Publicado' },
+                  { value: 'Activo', label: 'Activo (Borrador)' },
+                  { value: 'Inactivo', label: 'Inactivo' },
+                  { value: 'Archivado', label: 'Archivado' },
+                ]}
+                className="!py-2.5 !px-5 text-sm"
+              />
+
+              <label className="flex items-center gap-3 cursor-pointer group pt-6">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={destacado}
+                    onChange={(e) => setDestacado(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <div
+                    className={`w-12 h-6 rounded-full transition-colors ${destacado ? 'bg-sky-500' : 'bg-gray-200'}`}
+                  />
+                  <div
+                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${destacado ? 'translate-x-6' : ''}`}
+                  />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-sky-600 transition-colors">
+                  ¿Destacado?
+                </span>
+              </label>
+            </div>
           </div>
         </div>
       </div>

@@ -131,6 +131,31 @@ export class CertificacionesRepository {
       relations: ['usuario', 'curso'],
     });
   }
+  private quitarAcentosSQL(expr: string): string {
+    const pares: [string, string][] = [
+      ['á', 'a'],
+      ['é', 'e'],
+      ['í', 'i'],
+      ['ó', 'o'],
+      ['ú', 'u'],
+      ['à', 'a'],
+      ['è', 'e'],
+      ['ì', 'i'],
+      ['ò', 'o'],
+      ['ù', 'u'],
+      ['ä', 'a'],
+      ['ë', 'e'],
+      ['ï', 'i'],
+      ['ö', 'o'],
+      ['ü', 'u'],
+      ['ñ', 'n'],
+    ];
+
+    return pares.reduce(
+      (acc, [con, sin]) => `REPLACE(${acc}, '${con}', '${sin}')`,
+      `LOWER(${expr})`,
+    );
+  }
 
   async buscar(query: string, tipo?: string) {
     const q = (query || '').trim().replace(/\s+/g, ' ');
@@ -170,24 +195,23 @@ export class CertificacionesRepository {
 
       const conditions = tokens.map((token, index) => {
         const parameterName = `nombreToken${index}`;
-
         parameters[parameterName] = token;
 
-        return `
-      (
-      LOWER(COALESCE(cert.nombre_estudiante, '')) REGEXP
-        CONCAT('(^|[[:space:]-])', :${parameterName}, '([[:space:]-]|$)')
+        const nombreEstudianteExpr = this.quitarAcentosSQL(
+          `COALESCE(cert.nombre_estudiante, '')`,
+        );
+        const nombreUsuarioExpr = this.quitarAcentosSQL(
+          `CONCAT_WS(' ', COALESCE(usuario.nombre, ''), COALESCE(usuario.apellido, ''))`,
+        );
 
-      OR LOWER(
-        CONCAT_WS(
-          ' ',
-          COALESCE(usuario.nombre, ''),
-          COALESCE(usuario.apellido, '')
-          )
-        ) REGEXP
+        return `
+    (
+      ${nombreEstudianteExpr} REGEXP
         CONCAT('(^|[[:space:]-])', :${parameterName}, '([[:space:]-]|$)')
-      )
-    `;
+      OR ${nombreUsuarioExpr} REGEXP
+        CONCAT('(^|[[:space:]-])', :${parameterName}, '([[:space:]-]|$)')
+    )
+  `;
       });
 
       queryBuilder.where(

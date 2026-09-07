@@ -1,10 +1,13 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+
 import { CursosRepository } from './cursos.repository';
+
 import {
   CreateCursoDto,
   UpdateCursoDto,
   CambiarEstadoDto,
 } from './dto/cursos.dto';
+
 import { DataSource } from 'typeorm';
 import { Curso } from '../entities/curso.entity';
 
@@ -27,15 +30,21 @@ export class CursosService {
 
   async findById(id: number) {
     const curso = await this.cursosRepo.findById(id);
-    if (!curso)
+
+    if (!curso) {
       throw new HttpException('Curso no encontrado', HttpStatus.NOT_FOUND);
+    }
+
     return curso;
   }
 
   async findBySlug(slug: string) {
     const curso = await this.cursosRepo.findBySlug(slug);
-    if (!curso)
+
+    if (!curso) {
       throw new HttpException('Curso no encontrado', HttpStatus.NOT_FOUND);
+    }
+
     return curso;
   }
 
@@ -48,7 +57,8 @@ export class CursosService {
   }
 
   async create(dto: CreateCursoDto, userId: number) {
-    const { rutas, ...data } = dto;
+    const { rutas } = dto;
+
     const cursoData: any = {
       nombre: dto.nombre,
       descripcion: dto.descripcion,
@@ -70,11 +80,20 @@ export class CursosService {
           : dto.video_previsualizacion,
       estado: dto.estado,
       destacado: dto.destacado,
-      id_docente: dto.id_docente || userId,
+
+      // null = explícitamente sin docente
+      // undefined = usar el usuario creador como docente
+      id_docente:
+        dto.id_docente === null
+          ? null
+          : dto.id_docente !== undefined
+            ? dto.id_docente
+            : userId,
     };
 
     // Usamos transacción para garantizar ACID
     const queryRunner = this.dataSource.createQueryRunner();
+
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
@@ -94,10 +113,13 @@ export class CursosService {
           queryRunner.manager,
         );
       }
+
       await queryRunner.commitTransaction();
+
       return this.findById(curso.id_curso);
     } catch (err) {
       await queryRunner.rollbackTransaction();
+
       throw new HttpException(
         'Error al crear el curso: ' + err.message,
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -108,9 +130,10 @@ export class CursosService {
   }
 
   async update(id: number, dto: UpdateCursoDto) {
-    const { rutas, ...data } = dto;
+    const { rutas } = dto;
 
     const queryRunner = this.dataSource.createQueryRunner();
+
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
@@ -137,30 +160,41 @@ export class CursosService {
       destacado: dto.destacado,
     };
 
+    // undefined = no modificar
+    // null = quitar docente
     if (dto.id_docente !== undefined) {
       updateData.id_docente = dto.id_docente;
     }
 
-    // Remove undefined fields to not overwrite with null if not intended (optional)
-    Object.keys(updateData).forEach(
-      (key) => updateData[key] === undefined && delete updateData[key],
-    );
+    // Evita sobrescribir campos opcionales con undefined.
+    Object.keys(updateData).forEach((key) => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
 
     try {
       // Usar el queryRunner.manager para que la actualización sea parte de la transacción
       await queryRunner.manager.update(
         Curso,
         { id_curso: id },
-        { ...updateData, fecha_actualizacion: new Date() },
+        {
+          ...updateData,
+          fecha_actualizacion: new Date(),
+        },
       );
 
-      if (rutas) {
+      // Si llega [] se eliminan las rutas existentes.
+      if (rutas !== undefined) {
         await this.cursosRepo.assignRutas(id, rutas, queryRunner.manager);
       }
+
       await queryRunner.commitTransaction();
+
       return this.findById(id);
     } catch (err) {
       await queryRunner.rollbackTransaction();
+
       throw new HttpException(
         'Error al actualizar el curso: ' + err.message,
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -171,12 +205,17 @@ export class CursosService {
   }
 
   async cambiarEstado(id: number, dto: CambiarEstadoDto) {
-    return this.cursosRepo.update(id, { estado: dto.estado });
+    return this.cursosRepo.update(id, {
+      estado: dto.estado,
+    });
   }
 
   async delete(id: number) {
     await this.cursosRepo.delete(id);
-    return { message: 'Curso eliminado correctamente' };
+
+    return {
+      message: 'Curso eliminado correctamente',
+    };
   }
 
   async getContenido(cursoId: number, userId: number) {

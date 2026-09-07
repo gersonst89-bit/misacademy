@@ -860,7 +860,7 @@ export default function UsuariosPage() {
                   <InputComponent
                     type="password"
                     label="Password"
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder="Mínimo 8 caracteres"
                     value={selectedUsuario.password || ''}
                     onChange={(e) =>
                       setSelectedUsuario({

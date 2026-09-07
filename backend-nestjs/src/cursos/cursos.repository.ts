@@ -93,10 +93,18 @@ export class CursosRepository {
   }
 
   async findById(id: number) {
-    return this.cursoRepo.findOne({
+    const curso: any = await this.cursoRepo.findOne({
       where: { id_curso: id },
-      relations: ['docente'],
+      relations: ['docente', 'rutas'],
     });
+    if (curso) {
+      curso.lo_que_aprenderas =
+        curso.objetivos || curso.lo_que_aprenderas || '';
+      curso.video_previsualizacion =
+        curso.video_preview || curso.video_previsualizacion || '';
+      curso.duracion = curso.duracion_horas || curso.duracion || 0;
+    }
+    return curso;
   }
 
   async findMenu() {

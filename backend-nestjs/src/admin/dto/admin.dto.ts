@@ -16,6 +16,9 @@ export class CreateUsuarioDto {
   @IsOptional() @IsString() dni?: string;
   @IsOptional() @IsString() telefono?: string;
   @IsOptional() @IsBoolean() email_verificado?: boolean;
+  @IsOptional()
+  @IsString()
+  estado?: string;
 }
 export class UpdateUsuarioDto {
   @IsOptional() @IsString() nombre?: string;
