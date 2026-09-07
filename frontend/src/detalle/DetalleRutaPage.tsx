@@ -110,10 +110,9 @@ const getAccentTheme = (lineaSlug: string) => {
 // ─── Utils ───────────────────────────────────────────────────────────────────
 const LoadingSpinner: React.FC = () => (
   <div className="flex justify-center items-center h-40">
-    <div className="relative w-10 h-10">
-      <div className="absolute border-4 border-sky-600 border-t-transparent rounded-full w-10 h-10 animate-spin" />
-      <div className="absolute border-4 border-sky-400 border-t-transparent rounded-full w-6 h-6 top-2 left-2 animate-spin animation-delay-150" />
-    </div>
+    <span className="text-xs font-semibold uppercase tracking-[0.25em] text-white/40 animate-pulse">
+      Cargando
+    </span>
   </div>
 );
 

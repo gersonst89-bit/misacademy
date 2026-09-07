@@ -119,16 +119,10 @@ const CursoDetalle: React.FC = () => {
   // LOADING
   // ─────────────────────────────────────────────────────────────────────────────
   const LoadingSpinner = () => (
-    <div className="flex flex-col justify-center items-center h-screen bg-[#03070c]">
-      <div className="relative w-20 h-20">
-        <div className="absolute inset-0 border-4 border-sky-500/20 rounded-full"></div>
-
-        <div className="absolute inset-0 border-4 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-
-      <p className="mt-6 text-sky-500 font-black tracking-[0.3em] uppercase text-[10px] animate-pulse">
-        Cargando Experiencia
-      </p>
+    <div className="flex justify-center items-center h-screen bg-[#03070c]">
+      <span className="text-xs font-semibold uppercase tracking-[0.25em] text-white/40 animate-pulse">
+        Cargando
+      </span>
     </div>
   );
 
@@ -189,6 +183,10 @@ const CursoDetalle: React.FC = () => {
 
         setLecciones(leccionesPublicadas);
 
+        // La línea académica es información secundaria.
+        // No bloqueamos la aparición del curso esperando esta petición.
+        setIsLoading(false);
+
         try {
           const resLinea = await apiClient.get(
             `/lineas-academicas/curso/${cursoData.id_curso}/linea`,
@@ -200,8 +198,6 @@ const CursoDetalle: React.FC = () => {
         } catch (e) {
           console.warn('No se pudo determinar la línea académica del curso.', e);
         }
-
-        setIsLoading(false);
       } catch (err) {
         console.error('Error cargando curso:', err);
 

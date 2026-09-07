@@ -12,10 +12,9 @@ import { usePageTitle } from '../hooks/usePageTitle';
 // Loader
 const LoadingSpinner = () => (
   <div className="flex justify-center items-center h-screen bg-[#03070c]">
-    <div className="relative w-16 h-16">
-      <div className="absolute inset-0 border-4 border-sky-500/10 rounded-full"></div>
-      <div className="absolute inset-0 border-4 border-sky-500 border-t-transparent rounded-full animate-spin shadow-[0_0_20px_rgba(14,165,233,0.3)]"></div>
-    </div>
+    <span className="text-xs font-semibold uppercase tracking-[0.25em] text-white/40 animate-pulse">
+      Cargando
+    </span>
   </div>
 );
 

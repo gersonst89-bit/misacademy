@@ -29,7 +29,7 @@ function Hero() {
     <section className="relative min-h-screen w-full flex items-start justify-center text-white overflow-hidden bg-[#050a15] px-6 pt-8 pb-16 md:pt-12 md:pb-20">
       {/* Único glow central, sin partículas */}
       <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-yP-1/2 w-[800px] h-[800px] bg-sky-500/8 blur-[150px] rounded-full animate-pulse"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-sky-500/8 blur-[150px] rounded-full animate-pulse"
         style={{ animationDuration: '6s' }}
       />
       <div

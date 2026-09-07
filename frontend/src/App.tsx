@@ -9,9 +9,10 @@ import ScrollToTop from './Components/ScrollToTop';
 import DefaultLayout from './Components/DefaultLayout';
 import NoHeaderFooterLayout from './Components/NoHeaderFooterLayout';
 import Preloader from './Components/Preloader';
+import Hero from './Components/Hero';
 
 // Lazy Loaded Pages & Components
-const Hero = lazy(() => import('./Components/Hero'));
+
 const WhyChoose = lazy(() => import('./Components/WhyChooseUs'));
 const LineasCursos = lazy(() => import('./Components/LineasCursos'));
 const Metodologia = lazy(() => import('./Components/Metodologia'));
@@ -101,6 +102,16 @@ function EvaluationRouteWrapper() {
   );
 }
 
+function RouteLoading() {
+  return (
+    <div className="min-h-screen bg-[#03070c] flex items-center justify-center">
+      <span className="text-xs font-semibold uppercase tracking-[0.25em] text-white/40 animate-pulse">
+        Cargando
+      </span>
+    </div>
+  );
+}
+
 function App() {
   const [showPreloader, setShowPreloader] = useState<boolean>(true);
 
@@ -115,7 +126,7 @@ function App() {
     <Router>
       <ScrollToTop />
       <div className="App">
-        <Suspense fallback={null}>
+        <Suspense fallback={<RouteLoading />}>
           <Routes>
             {/* Home */}
             <Route
@@ -123,12 +134,15 @@ function App() {
               element={
                 <DefaultLayout>
                   <Hero />
-                  <WhyChoose />
-                  <LineasCursos />
-                  <Metodologia />
-                  <Opiniones />
-                  <CursosDestacadosHome />
-                  <RegisterForm />
+
+                  <Suspense fallback={null}>
+                    <WhyChoose />
+                    <LineasCursos />
+                    <Metodologia />
+                    <Opiniones />
+                    <CursosDestacadosHome />
+                    <RegisterForm />
+                  </Suspense>
                 </DefaultLayout>
               }
             />
@@ -387,4 +401,3 @@ function App() {
 }
 
 export default App;
-

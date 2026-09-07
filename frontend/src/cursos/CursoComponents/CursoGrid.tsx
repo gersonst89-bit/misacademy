@@ -63,6 +63,7 @@ const createSlug = (title: string): string => {
 
 const Cursos: React.FC<CursosProps> = ({ initialData, initialTotalPages = 1 }) => {
   const sectionRef = React.useRef<HTMLElement>(null);
+  const catalogEffectMounted = React.useRef(false);
   const dispatch = useDispatch<any>();
 
   const { lineas } = useSelector((state: any) => state.academic);
@@ -191,28 +192,30 @@ const Cursos: React.FC<CursosProps> = ({ initialData, initialTotalPages = 1 }) =
   }, [dispatch]);
 
   useEffect(() => {
+    if (!catalogEffectMounted.current) {
+      catalogEffectMounted.current = true;
+      return;
+    }
+
     setCurrentPage(1);
 
-    // Filtro por línea: el backend devuelve directamente
-    // los cursos correspondientes a esa línea.
+    // Filtro por línea
     if (selectedLinea !== null) {
       fetchCoursePage(1);
       return;
     }
 
-    // Al volver a "Todos", recuperamos la primera página
-    // normal del catálogo.
+    // Volver a "Todos"
     if (!searchQuery.trim()) {
       fetchCoursePage(1);
       return;
     }
 
-    // La búsqueda de texto sigue usando el catálogo completo.
+    // Búsqueda de texto
     if (!allCoursesLoaded) {
       loadAllCourses();
     }
   }, [selectedLinea, searchQuery]);
-
   /**
    * Si la carga inicial aún no llegó, dejamos la página en estado loading.
    */
